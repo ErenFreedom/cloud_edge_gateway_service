@@ -1,0 +1,195 @@
+.signup-container {
+
+  min-height: 100vh;
+
+  background: black;
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+}
+
+/* remove grey background */
+
+.signup-card {
+
+  width: 650px;
+
+  padding: 50px;
+
+  background: black;
+
+  border-radius: 20px;
+
+  color: white;
+
+}
+
+.signup-card h1 {
+
+  text-align: center;
+
+  margin-bottom: 30px;
+
+}
+
+/* section headings */
+
+.section-title {
+
+  margin-top: 20px;
+
+  margin-bottom: 10px;
+
+  font-size: 18px;
+
+  font-weight: 500;
+
+  color: #aaa;
+
+}
+
+.signup-card form {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 18px;
+
+}
+
+.signup-card input,
+.signup-card select {
+
+  padding: 16px;
+
+  border-radius: 1.5rem;
+
+  border: 1px solid #444;
+
+  background: black;
+
+  color: white;
+
+  font-size: 16px;
+
+}
+
+.signup-card input:focus,
+.signup-card select:focus {
+
+  outline: none;
+
+  border-color: #777;
+
+}
+
+/* PHONE INPUT FIX */
+
+.phone-container {
+
+  width: 100%;
+
+}
+
+.phone-input {
+
+  width: 100% !important;
+
+  height: 52px !important;
+
+  background: black !important;
+
+  color: white !important;
+
+  border: 1px solid #444 !important;
+
+  border-radius: 1.5rem !important;
+
+  padding-left: 60px !important;
+
+}
+
+.phone-button {
+
+  background: black !important;
+
+  border: none !important;
+
+  border-right: 1px solid #444 !important;
+
+}
+
+.signup-button {
+
+  margin-top: 20px;
+
+  display: flex;
+
+  justify-content: center;
+
+}
+
+
+/* PHONE DROPDOWN FIX */
+
+.react-tel-input .country-list {
+  background: white !important;
+  color: black !important;
+}
+
+.react-tel-input .country-list .country {
+  color: black !important;
+}
+
+.react-tel-input .country-list .country:hover {
+  background: #f0f0f0 !important;
+}
+
+
+/* VERIFY FIELD */
+
+.verify-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.verify-field input {
+  width: 100%;
+}
+
+/* VERIFY CIRCLE */
+
+.verify-circle {
+
+  width: 22px;
+  height: 22px;
+
+  border-radius: 50%;
+
+  border: 2px solid #888;
+
+  background: transparent;
+
+  cursor: pointer;
+
+  margin-left: -40px;
+
+  transition: all 0.3s;
+
+}
+
+/* VERIFIED STATE */
+
+.verify-circle.verified {
+
+  background: #00ff88;
+
+  border-color: #00ff88;
+
+}

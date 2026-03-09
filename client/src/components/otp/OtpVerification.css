@@ -1,0 +1,101 @@
+.otp-container {
+
+  min-height: 100vh;
+
+  background: black;
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+}
+
+.otp-card {
+
+  width: 420px;
+
+  padding: 50px;
+
+  background: black;
+
+  border-radius: 20px;
+
+  text-align: center;
+
+  color: white;
+
+}
+
+.otp-card h2 {
+
+  margin-bottom: 10px;
+
+}
+
+.otp-card p {
+
+  margin-bottom: 20px;
+
+  color: #bbb;
+
+}
+
+.otp-inputs {
+
+  display: flex;
+
+  justify-content: center;
+
+  gap: 12px;
+
+  margin-bottom: 20px;
+
+}
+
+.otp-inputs input {
+
+  width: 50px;
+
+  height: 55px;
+
+  text-align: center;
+
+  font-size: 22px;
+
+  border-radius: 10px;
+
+  border: 1px solid #555;
+
+  background: black;
+
+  color: white;
+
+}
+
+.otp-inputs input:focus {
+
+  outline: none;
+
+  border-color: #fff;
+
+}
+
+.otp-timer {
+
+  font-size: 14px;
+
+  color: #aaa;
+
+}
+
+.otp-resend span {
+
+  color: #fff;
+
+  cursor: pointer;
+
+  text-decoration: underline;
+
+}
