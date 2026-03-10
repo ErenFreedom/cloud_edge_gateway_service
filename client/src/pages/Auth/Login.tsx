@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { store } from "../../store/store";
 
 import toast from "react-hot-toast";
 
@@ -26,60 +27,58 @@ const Login = () => {
   const {
     loading,
     error,
-    loginSuccess,
-    loginOtpVerified
+    loginSuccess
   } = useSelector((state: RootState) => state.auth);
-
 
   const [form, setForm] = useState<LoginForm>({
     email: "",
     password: ""
   });
 
-
-  /* ---------------- REDIRECT LOGIC ---------------- */
+  /* ---------- LOGIN SUCCESS ---------- */
 
   useEffect(() => {
 
-    /* NORMAL USER → OTP */
-
     if (loginSuccess) {
+
+      const { pendingLoginId, pendingLoginEmail } =
+        store.getState().auth;
+
+      if (pendingLoginId) {
+
+        sessionStorage.setItem(
+          "pendingLoginId",
+          pendingLoginId
+        );
+
+        sessionStorage.setItem(
+          "pendingLoginEmail",
+          pendingLoginEmail ?? ""
+        );
+
+      }
 
       toast.success("OTP sent to your email");
 
-      setTimeout(() => {
-        navigate("/otp/login");
-      }, 1200);
+      navigate("/otp/login");
 
     }
 
+  }, [loginSuccess, navigate]);
 
-    /* PLATFORM ADMIN → DIRECT LOGIN */
 
-    if (loginOtpVerified) {
+  /* ---------- ERROR ---------- */
 
-      toast.success("Login successful");
-
-      setTimeout(() => {
-        navigate("/platform");
-      }, 800);
-
-    }
-
+  useEffect(() => {
 
     if (error) {
       toast.error(error);
     }
 
-  }, [
-    loginSuccess,
-    loginOtpVerified,
-    error,
-    navigate
-  ]);
+  }, [error]);
 
 
-  /* ---------------- INPUT HANDLER ---------------- */
+  /* ---------- INPUT ---------- */
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement>
@@ -95,7 +94,7 @@ const Login = () => {
   };
 
 
-  /* ---------------- SUBMIT ---------------- */
+  /* ---------- SUBMIT ---------- */
 
   const handleSubmit = (
     e: FormEvent<HTMLFormElement>
@@ -150,11 +149,7 @@ const Login = () => {
               disabled={isDisabled || loading}
               type="submit"
             >
-
-              {loading
-                ? "Logging in..."
-                : "Login"}
-
+              {loading ? "Logging in..." : "Login"}
             </Button>
 
           </div>

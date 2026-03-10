@@ -301,10 +301,15 @@ const authSlice = createSlice({
 
       })
 
-      .addCase(verifyLoginOtpThunk.fulfilled, (state) => {
+      .addCase(verifyLoginOtpThunk.fulfilled, (state, action) => {
 
         state.loading = false;
         state.loginOtpVerified = true;
+
+        const { accessToken, refreshToken } = action.payload;
+
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
 
       })
 
