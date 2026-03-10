@@ -281,11 +281,11 @@ const Dashboard = () => {
 
                 <div className="modal-buttons">
 
-                  <Button onClick={generateCredentials}>
+                  <Button size="medium" onClick={generateCredentials}>
                     Generate
                   </Button>
 
-                  <Button onClick={closeModal}>
+                  <Button size="medium" onClick={closeModal}>
                     Cancel
                   </Button>
 
@@ -327,11 +327,11 @@ const Dashboard = () => {
 
                 <div className="download-buttons">
 
-                  <Button onClick={downloadJSON}>
+                  <Button size="medium" onClick={downloadJSON}>
                     Download JSON
                   </Button>
 
-                  <Button onClick={downloadCSV}>
+                  <Button size="medium" onClick={downloadCSV}>
                     Download CSV
                   </Button>
 
@@ -340,7 +340,7 @@ const Dashboard = () => {
 
                 <div style={{ marginTop: "20px" }}>
 
-                  <Button onClick={closeModal}>
+                  <Button size="medium" onClick={closeModal}>
                     Close
                   </Button>
 

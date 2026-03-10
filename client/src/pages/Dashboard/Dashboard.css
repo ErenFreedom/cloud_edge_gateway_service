@@ -187,3 +187,154 @@
   background: #842029;
 
 }
+
+/* BACKDROP */
+
+.credential-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  width: 100vw;
+  height: 100vh;
+
+  background: rgba(0, 0, 0, 0.55);
+
+  backdrop-filter: blur(6px);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 1000;
+}
+
+
+/* MODAL BOX */
+
+.modal-content {
+  width: 420px;
+
+  background: #1f2937;
+
+  border-radius: 12px;
+
+  padding: 28px;
+
+  box-shadow:
+    0 20px 40px rgba(0,0,0,0.4),
+    0 0 0 1px rgba(255,255,255,0.05);
+
+  animation: modalFade 0.25s ease;
+}
+
+
+/* TITLE */
+
+.modal-content h2 {
+  margin-bottom: 10px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+
+/* INPUT */
+
+.modal-content input {
+  width: 100%;
+
+  padding: 10px;
+
+  margin-top: 12px;
+
+  border-radius: 6px;
+
+  border: 1px solid #374151;
+
+  background: #111827;
+
+  color: white;
+
+  outline: none;
+}
+
+
+/* BUTTON ROW */
+
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+
+/* CREDENTIAL DISPLAY */
+
+.credentials-display {
+  margin-top: 15px;
+}
+
+
+/* WARNING TEXT */
+
+.warning-text {
+  font-size: 13px;
+  margin-bottom: 15px;
+  color: #facc15;
+}
+
+
+/* CREDENTIAL FIELD */
+
+.credential-field {
+  background: #111827;
+
+  padding: 10px;
+
+  border-radius: 6px;
+
+  margin-bottom: 10px;
+
+  border: 1px solid #374151;
+}
+
+.credential-field label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.credential-field code {
+  display: block;
+  margin-top: 5px;
+  word-break: break-all;
+}
+
+
+/* DOWNLOAD BUTTONS */
+
+.download-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.download-buttons button {
+  min-width: 150px;
+}
+
+
+/* ANIMATION */
+
+@keyframes modalFade {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
