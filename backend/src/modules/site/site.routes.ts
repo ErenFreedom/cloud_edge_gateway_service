@@ -3,7 +3,9 @@ import { Router } from "express";
 import {
   createSite,
   verifySiteAdminOtp,
-  getSites
+  getSites,
+  unlockSiteCredentials,
+  regenerateSiteCredentials,
 } from "./site.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -28,6 +30,20 @@ router.post(
 router.post(
   "/verify-admin-otp",
   verifySiteAdminOtp
+);
+
+
+router.post(
+  "/unlock-site",
+  authMiddleware,
+  unlockSiteCredentials
+);
+
+
+router.post(
+  "/regenerate-credentials",
+  authMiddleware,
+  regenerateSiteCredentials
 );
 
 export default router;

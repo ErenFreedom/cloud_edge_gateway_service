@@ -4,7 +4,9 @@ import { AuthRequest } from "../../middleware/auth.middleware";
 import { getSitesService } from "./site.service";
 import {
   createSiteService,
-  verifySiteAdminOtpService
+  verifySiteAdminOtpService,
+  unlockSiteCredentialsService,
+  regenerateSiteCredentialsService,
 } from "./site.service";
 
 
@@ -92,6 +94,77 @@ export const getSites = async (
     );
 
     res.json(sites);
+
+  } catch (error: any) {
+
+    res.status(400).json({
+      message: error.message
+    });
+
+  }
+
+};
+
+export const unlockSiteCredentials = async (
+  req: AuthRequest,
+  res: Response
+) => {
+
+  try {
+
+    const user = req.user;
+
+    if (!user)
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const { password, siteId } = req.body;
+
+    const result = await unlockSiteCredentialsService(
+      user.userId,
+      password,
+      siteId
+    );
+
+    res.json(result);
+
+  } catch (error: any) {
+
+    res.status(400).json({
+      message: error.message
+    });
+
+  }
+
+};
+
+
+export const regenerateSiteCredentials = async (
+  req: AuthRequest,
+  res: Response
+) => {
+
+  try {
+
+    const user = req.user;
+
+    if (!user)
+      return res.status(401).json({
+        message: "Unauthorized"
+      });
+
+    const { password, siteId } = req.body;
+
+    const result =
+      await regenerateSiteCredentialsService(
+        user.userId,
+        password,
+        siteId
+      );
+
+    res.json({
+      message: "New credentials generated",
+      credentials: result
+    });
 
   } catch (error: any) {
 

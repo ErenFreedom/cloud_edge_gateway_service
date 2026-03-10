@@ -2,7 +2,8 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 import {
   getSites,
-  createSite
+  createSite,
+  regenerateSiteCredentials
 } from "../../services/sites.service";
 
 import type {
@@ -19,6 +20,10 @@ interface Site {
   state: string;
   country: string;
   gst_number: string | null;
+
+  site_uuid: string | null;
+  machine_fingerprint: string | null;
+
   status: string;
   created_at: string;
   activated_at: string | null;
@@ -29,13 +34,23 @@ interface SitesState {
   loading: boolean;
   error: string | null;
   siteCreated: boolean;
+
+  credentials: {
+    site_uuid: string;
+    site_secret: string;
+  } | null;
+
+  credentialsGenerated: boolean;
 }
 
 const initialState: SitesState = {
   sites: [],
   loading: false,
   error: null,
-  siteCreated: false
+  siteCreated: false,
+
+  credentials: null,
+  credentialsGenerated: false
 };
 
 
@@ -81,6 +96,35 @@ export const createSiteThunk = createAsyncThunk(
 );
 
 
+export const regenerateCredentialsThunk = createAsyncThunk(
+  "sites/regenerateCredentials",
+  async (
+    payload: { siteId: string; password: string },
+    thunkAPI
+  ) => {
+
+    try {
+
+      const data = await regenerateSiteCredentials(
+        payload.siteId,
+        payload.password
+      );
+
+      return data;
+
+    } catch (error: any) {
+
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message ||
+        "Failed to regenerate credentials"
+      );
+
+    }
+
+  }
+);
+
+
 const sitesSlice = createSlice({
 
   name: "sites",
@@ -94,7 +138,16 @@ const sitesSlice = createSlice({
       state.error = null;
       state.siteCreated = false;
 
+    },
+
+    resetCredentials: (state) => {
+
+      state.credentials = null;
+      state.credentialsGenerated = false;
+
     }
+
+
 
   },
 
@@ -144,12 +197,36 @@ const sitesSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
 
+      })
+
+      .addCase(regenerateCredentialsThunk.pending, (state) => {
+
+        state.loading = true;
+        state.error = null;
+
+      })
+
+      .addCase(regenerateCredentialsThunk.fulfilled, (state, action) => {
+
+        state.loading = false;
+
+        state.credentials = action.payload.credentials;
+
+        state.credentialsGenerated = true;
+
+      })
+
+      .addCase(regenerateCredentialsThunk.rejected, (state, action) => {
+
+        state.loading = false;
+        state.error = action.payload as string;
+
       });
 
   }
 
 });
 
-export const { resetSiteState } = sitesSlice.actions;
+export const { resetSiteState, resetCredentials} = sitesSlice.actions;
 
 export default sitesSlice.reducer;

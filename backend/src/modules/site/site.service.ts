@@ -9,7 +9,8 @@ import {
   createUserRepo,
   createSiteAdminOtpRepo,
   findValidSiteAdminOtp,
-  markSiteAdminOtpVerified
+  markSiteAdminOtpVerified,
+  updateSiteCredentialsRepo,
 } from "./site.repository";
 
 import { sendEmail } from "../../common/utils/email";
@@ -238,5 +239,105 @@ export const getSitesService = async (
   );
 
   return sites;
+
+};
+
+export const unlockSiteCredentialsService = async (
+  superAdminId: string,
+  password: string,
+  siteId: string
+) => {
+
+  const { rows } = await pool.query(
+    `
+    SELECT password_hash
+    FROM users
+    WHERE id = $1 AND role = 'super_admin'
+    `,
+    [superAdminId]
+  );
+
+  if (!rows.length)
+    throw new Error("Super admin not found");
+
+  const valid = await bcrypt.compare(
+    password,
+    rows[0].password_hash
+  );
+
+  if (!valid)
+    throw new Error("Invalid password");
+
+  const site = await pool.query(
+    `
+    SELECT
+      site_uuid,
+      machine_fingerprint
+    FROM sites
+    WHERE id = $1
+    `,
+    [siteId]
+  );
+
+  if (!site.rows.length)
+    throw new Error("Site not found");
+
+  return site.rows[0];
+
+};
+
+
+export const regenerateSiteCredentialsService = async (
+  superAdminId: string,
+  password: string,
+  siteId: string
+) => {
+
+
+  const { rows } = await pool.query(
+    `
+    SELECT password_hash
+    FROM users
+    WHERE id = $1 AND role = 'super_admin'
+    `,
+    [superAdminId]
+  );
+
+  if (!rows.length)
+    throw new Error("Super admin not found");
+
+  const valid = await bcrypt.compare(
+    password,
+    rows[0].password_hash
+  );
+
+  if (!valid)
+    throw new Error("Invalid password");
+
+
+  const siteUuid = crypto.randomUUID();
+
+  const rawSecret = crypto
+    .randomBytes(32)
+    .toString("hex");
+
+  const secretHash = await bcrypt.hash(
+    rawSecret,
+    10
+  );
+
+
+  await updateSiteCredentialsRepo(
+    siteId,
+    siteUuid,
+    secretHash
+  );
+
+  return {
+
+    site_uuid: siteUuid,
+    site_secret: rawSecret
+
+  };
 
 };

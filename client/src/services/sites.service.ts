@@ -46,3 +46,21 @@ export const createSite = async (
   return response.data;
 
 };
+
+
+export const regenerateSiteCredentials = async (
+  siteId: string,
+  password: string
+) => {
+
+  const response = await apiClient.post(
+    "/sites/regenerate-credentials",
+    {
+      siteId,
+      password
+    }
+  );
+
+  return response.data;
+
+};

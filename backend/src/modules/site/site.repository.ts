@@ -232,6 +232,8 @@ export const getSitesByOrganizationRepo = async (
       state,
       country,
       gst_number,
+      site_uuid,
+      machine_fingerprint,
       status,
       created_at,
       activated_at
@@ -243,5 +245,29 @@ export const getSitesByOrganizationRepo = async (
   );
 
   return rows;
+
+};
+
+
+export const updateSiteCredentialsRepo = async (
+  siteId: string,
+  siteUuid: string,
+  secretHash: string
+) => {
+
+  const { rows } = await pool.query(
+    `
+    UPDATE sites
+    SET
+      site_uuid = $1,
+      site_secret_hash = $2,
+      activated_at = now()
+    WHERE id = $3
+    RETURNING site_uuid
+    `,
+    [siteUuid, secretHash, siteId]
+  );
+
+  return rows[0];
 
 };
