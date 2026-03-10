@@ -1,57 +1,88 @@
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
-import { pool } from '../../config/database';
+import bcrypt from "bcrypt";
+import crypto from "crypto";
+import { PoolClient } from "pg";
+
+import { pool } from "../../config/database";
+
 import {
   createSiteRepo,
   createUserRepo,
   createSiteAdminOtpRepo,
   findValidSiteAdminOtp,
-  markSiteAdminOtpVerified,
-} from './site.repository';
-import { sendEmail } from '../../common/utils/email';
+  markSiteAdminOtpVerified
+} from "./site.repository";
+
+import { sendEmail } from "../../common/utils/email";
+
+import { CreateSitePayload } from "./site.types";
+import { getSitesByOrganizationRepo } from "./site.repository";
+
+
+
 
 export const createSiteService = async (
   superAdminId: string,
-  payload: any
+  payload: CreateSitePayload
 ) => {
-  const client = await pool.connect();
+
+  const client: PoolClient = await pool.connect();
 
   try {
-    await client.query('BEGIN');
+
+    await client.query("BEGIN");
+
+    
 
     const superAdmin = await client.query(
-      `SELECT * FROM users WHERE id = $1`,
+      `
+      SELECT id, organization_id, role
+      FROM users
+      WHERE id = $1
+      `,
       [superAdminId]
     );
 
     if (!superAdmin.rows.length)
-      throw new Error('Super admin not found');
+      throw new Error("Super admin not found");
+
+    if (superAdmin.rows[0].role !== "super_admin")
+      throw new Error("Only super admin can create sites");
 
     const organizationId =
       superAdmin.rows[0].organization_id;
 
-    const site = await createSiteRepo(client, {
-      organization_id: organizationId,
-      ...payload,
-    });
+    
 
-    const hash = await bcrypt.hash(
+    const site = await createSiteRepo(
+      client,
+      organizationId,
+      payload
+    );
+
+    
+
+    const passwordHash = await bcrypt.hash(
       payload.site_admin.password,
       10
     );
 
-    const user = await createUserRepo(client, {
-      organization_id: organizationId,
-      full_name: payload.site_admin.full_name,
-      email: payload.site_admin.email,
-      password_hash: hash,
-      aadhaar_pan_encrypted: Buffer.from(
-        payload.site_admin.aadhaar_pan
-      ).toString('base64'),
-      birthdate: payload.site_admin.birthdate,
-      gender: payload.site_admin.gender,
-      role: 'site_admin',
-    });
+    
+
+    const encryptedIdentity = Buffer
+      .from(payload.site_admin.aadhaar_pan)
+      .toString("base64");
+
+    
+
+    const siteAdmin = await createUserRepo(
+      client,
+      organizationId,
+      payload.site_admin,
+      passwordHash,
+      encryptedIdentity
+    );
+
+    
 
     const otp = Math.floor(
       100000 + Math.random() * 900000
@@ -59,53 +90,75 @@ export const createSiteService = async (
 
     const otpRecord = await createSiteAdminOtpRepo(
       client,
-      user.id,
+      siteAdmin.id,
       site.id,
       otp
     );
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
+
+    
 
     await sendEmail(
-      user.email,
-      'Verify Site Admin Email',
+      siteAdmin.email,
+      "Verify Site Admin Email",
       `<h3>Your OTP is: ${otp}</h3>`
     );
 
     return {
       message:
-        'Site created. OTP sent to Site Admin email.',
+        "Site created successfully. OTP sent to site admin email.",
       siteId: site.id,
-      otpId: otpRecord.id,
+      otpId: otpRecord.id
     };
+
   } catch (error) {
-    await client.query('ROLLBACK');
+
+    await client.query("ROLLBACK");
     throw error;
+
   } finally {
+
     client.release();
+
   }
+
 };
+
+
+
 
 export const verifySiteAdminOtpService = async (
   otpId: string,
   otp: string
 ) => {
+
   const record = await findValidSiteAdminOtp(
     otpId,
     otp
   );
 
   if (!record)
-    throw new Error('Invalid or expired OTP');
+    throw new Error("Invalid or expired OTP");
 
   await markSiteAdminOtpVerified(otpId);
 
   const siteId = record.site_id;
   const userId = record.user_id;
 
+  
   const siteUuid = crypto.randomUUID();
-  const rawSecret = crypto.randomBytes(32).toString('hex');
-  const secretHash = await bcrypt.hash(rawSecret, 10);
+
+  const rawSecret = crypto
+    .randomBytes(32)
+    .toString("hex");
+
+  const secretHash = await bcrypt.hash(
+    rawSecret,
+    10
+  );
+
+  
 
   await pool.query(
     `
@@ -117,25 +170,38 @@ export const verifySiteAdminOtpService = async (
     [userId]
   );
 
+  
+
   await pool.query(
     `
     UPDATE sites
-    SET site_uuid = $1,
-        site_secret_hash = $2,
-        status = 'active',
-        site_admin_email_activation_pending = false,
-        activated_at = now()
+    SET
+      site_uuid = $1,
+      site_secret_hash = $2,
+      status = 'active',
+      site_admin_email_activation_pending = false,
+      activated_at = now()
     WHERE id = $3
     `,
     [siteUuid, secretHash, siteId]
   );
 
+
+  const userEmail = (
+    await pool.query(
+      `SELECT email FROM users WHERE id=$1`,
+      [userId]
+    )
+  ).rows[0].email;
+
+
   await sendEmail(
-    (await pool.query(`SELECT email FROM users WHERE id=$1`, [userId])).rows[0].email,
-    'Site Activated Successfully 🎉',
+    userEmail,
+    "Site Activated Successfully 🎉",
     `
       <h2>Congratulations!</h2>
-      <p>Your site has been successfully activated.</p>
+
+      <p>Your site has been activated.</p>
 
       <p><strong>Site UUID:</strong> ${siteUuid}</p>
       <p><strong>Site Secret:</strong> ${rawSecret}</p>
@@ -144,5 +210,33 @@ export const verifySiteAdminOtpService = async (
     `
   );
 
-  return { message: 'Site activated successfully' };
+  return {
+    message: "Site activated successfully"
+  };
+
+};
+
+
+
+
+
+
+export const getSitesService = async (
+  userId: string,
+  role: string,
+  organizationId: string | null
+) => {
+
+  if (!organizationId)
+    throw new Error("User not linked to organization");
+
+  if (role !== "super_admin")
+    throw new Error("Only super admin can view sites");
+
+  const sites = await getSitesByOrganizationRepo(
+    organizationId
+  );
+
+  return sites;
+
 };

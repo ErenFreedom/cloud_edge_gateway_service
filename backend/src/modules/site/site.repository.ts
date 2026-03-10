@@ -1,6 +1,17 @@
-import { pool } from '../../config/database';
+import { PoolClient } from "pg";
+import { pool } from "../../config/database";
 
-export const createSiteRepo = async (client: any, data: any) => {
+import {
+  CreateSitePayload
+} from "./site.types";
+
+
+export const createSiteRepo = async (
+  client: PoolClient,
+  organizationId: string,
+  data: CreateSitePayload
+) => {
+
   const { rows } = await client.query(
     `
     INSERT INTO sites (
@@ -15,24 +26,39 @@ export const createSiteRepo = async (client: any, data: any) => {
       status,
       site_admin_email_activation_pending
     )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'inactive',true)
+    VALUES (
+      $1,$2,$3,$4,$5,$6,$7,$8,
+      'pending_activation',
+      true
+    )
     RETURNING *;
     `,
     [
-      data.organization_id,
+      organizationId,
       data.site_name,
-      data.phone,
+      data.phone ?? null,
       data.address_line1,
-      data.address_line2,
+      data.address_line2 ?? null,
       data.state,
       data.country,
-      data.gst_number,
+      data.gst_number ?? null
     ]
   );
+
   return rows[0];
+
 };
 
-export const createUserRepo = async (client: any, data: any) => {
+
+
+export const createUserRepo = async (
+  client: PoolClient,
+  organizationId: string,
+  user: CreateSitePayload["site_admin"],
+  passwordHash: string,
+  aadhaarEncrypted: string
+) => {
+
   const { rows } = await client.query(
     `
     INSERT INTO users (
@@ -47,29 +73,39 @@ export const createUserRepo = async (client: any, data: any) => {
       status,
       email_verified
     )
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',false)
+    VALUES (
+      $1,$2,$3,$4,$5,$6,$7,
+      'site_admin',
+      'pending',
+      false
+    )
     RETURNING *;
     `,
     [
-      data.organization_id,
-      data.full_name,
-      data.email,
-      data.password_hash,
-      data.aadhaar_pan_encrypted,
-      data.birthdate,
-      data.gender,
-      data.role,
+      organizationId,
+      user.full_name,
+      user.email,
+      passwordHash,
+      aadhaarEncrypted,
+      user.birthdate,
+      user.gender
     ]
   );
+
   return rows[0];
+
 };
 
+
+
+
 export const createSiteAdminOtpRepo = async (
-  client: any,
+  client: PoolClient,
   userId: string,
   siteId: string,
   otp: string
 ) => {
+
   const { rows } = await client.query(
     `
     INSERT INTO site_admin_otps (
@@ -78,21 +114,31 @@ export const createSiteAdminOtpRepo = async (
       otp_code,
       expires_at
     )
-    VALUES ($1,$2,$3,now() + interval '10 minutes')
+    VALUES (
+      $1,$2,$3,
+      now() + interval '10 minutes'
+    )
     RETURNING *;
     `,
     [userId, siteId, otp]
   );
+
   return rows[0];
+
 };
+
+
+
 
 export const findValidSiteAdminOtp = async (
   otpId: string,
   otp: string
 ) => {
+
   const { rows } = await pool.query(
     `
-    SELECT * FROM site_admin_otps
+    SELECT *
+    FROM site_admin_otps
     WHERE id = $1
     AND otp_code = $2
     AND verified = false
@@ -100,12 +146,102 @@ export const findValidSiteAdminOtp = async (
     `,
     [otpId, otp]
   );
+
   return rows[0];
+
 };
 
-export const markSiteAdminOtpVerified = async (otpId: string) => {
+
+
+
+export const markSiteAdminOtpVerified = async (
+  otpId: string
+) => {
+
   await pool.query(
-    `UPDATE site_admin_otps SET verified = true WHERE id = $1`,
+    `
+    UPDATE site_admin_otps
+    SET verified = true
+    WHERE id = $1
+    `,
     [otpId]
   );
+
+};
+
+
+
+
+export const activateSiteRepo = async (
+  client: PoolClient,
+  siteId: string
+) => {
+
+  const { rows } = await client.query(
+    `
+    UPDATE sites
+    SET
+      status = 'active',
+      activated_at = now(),
+      site_admin_email_activation_pending = false
+    WHERE id = $1
+    RETURNING *;
+    `,
+    [siteId]
+  );
+
+  return rows[0];
+
+};
+
+
+
+
+export const getSiteByIdRepo = async (
+  siteId: string
+) => {
+
+  const { rows } = await pool.query(
+    `
+    SELECT *
+    FROM sites
+    WHERE id = $1
+    `,
+    [siteId]
+  );
+
+  return rows[0];
+
+};
+
+
+
+
+export const getSitesByOrganizationRepo = async (
+  organizationId: string
+) => {
+
+  const { rows } = await pool.query(
+    `
+    SELECT
+      id,
+      site_name,
+      phone,
+      address_line1,
+      address_line2,
+      state,
+      country,
+      gst_number,
+      status,
+      created_at,
+      activated_at
+    FROM sites
+    WHERE organization_id = $1
+    ORDER BY created_at DESC
+    `,
+    [organizationId]
+  );
+
+  return rows;
+
 };

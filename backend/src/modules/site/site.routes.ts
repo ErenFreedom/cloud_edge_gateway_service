@@ -1,13 +1,33 @@
-import { Router } from 'express';
+import { Router } from "express";
+
 import {
   createSite,
   verifySiteAdminOtp,
-} from './site.controller';
-import { authMiddleware } from '../../middleware/auth.middleware';
+  getSites
+} from "./site.controller";
+
+import { authMiddleware } from "../../middleware/auth.middleware";
 
 const router = Router();
 
-router.post('/', authMiddleware, createSite);
-router.post('/verify-otp', verifySiteAdminOtp);
+
+router.get(
+  "/list",
+  authMiddleware,
+  getSites
+);
+
+
+router.post(
+  "/create",
+  authMiddleware,
+  createSite
+);
+
+
+router.post(
+  "/verify-admin-otp",
+  verifySiteAdminOtp
+);
 
 export default router;
