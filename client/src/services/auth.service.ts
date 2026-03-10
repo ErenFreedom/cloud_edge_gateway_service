@@ -20,7 +20,7 @@ export const loginUser = async (payload: LoginPayload) => {
 
 
 export interface VerifyLoginOtpPayload {
-  email: string;
+  tempLoginId: string;
   otp: string;
 }
 

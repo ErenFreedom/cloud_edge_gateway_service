@@ -17,25 +17,29 @@ const LoginOtp = () => {
   const navigate = useNavigate();
 
   const {
-    pendingEmail,
+    pendingLoginId,
+    pendingLoginEmail,
     loading,
     error,
     loginOtpVerified
   } = useSelector((state: RootState) => state.auth);
 
 
+  /* ---------- VERIFY OTP ---------- */
 
   const verifyOtp = async (otp: string) => {
 
-    if (!pendingEmail) {
+    if (!pendingLoginId) {
+
       toast.error("Session expired. Please login again.");
       navigate("/login");
       return;
+
     }
 
     dispatch(
       verifyLoginOtpThunk({
-        email: pendingEmail,
+        tempLoginId: pendingLoginId,
         otp
       })
     );
@@ -43,6 +47,7 @@ const LoginOtp = () => {
   };
 
 
+  /* ---------- RESEND OTP ---------- */
 
   const resendOtp = async () => {
 
@@ -51,6 +56,7 @@ const LoginOtp = () => {
   };
 
 
+  /* ---------- LOGIN SUCCESS ---------- */
 
   useEffect(() => {
 
@@ -71,15 +77,17 @@ const LoginOtp = () => {
   }, [loginOtpVerified, error, navigate]);
 
 
+  /* ---------- SESSION GUARD ---------- */
 
-  if (!pendingEmail) {
+  if (!pendingLoginId) {
     return null;
   }
+
 
   return (
 
     <OtpVerification
-      email={pendingEmail}
+      email={pendingLoginEmail ?? ""}
       onVerify={verifyOtp}
       onResend={resendOtp}
       loading={loading}

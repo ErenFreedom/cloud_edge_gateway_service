@@ -35,6 +35,8 @@ interface AuthState {
   loginOtpVerified: boolean;
 
   pendingRequestId: string | null;
+
+  pendingLoginId: string | null;
   pendingLoginEmail: string | null;
 
 }
@@ -51,6 +53,8 @@ const initialState: AuthState = {
   loginOtpVerified: false,
 
   pendingRequestId: null,
+
+  pendingLoginId: null,   // NEW
   pendingLoginEmail: null
 
 };
@@ -177,6 +181,8 @@ const authSlice = createSlice({
       state.loginOtpVerified = false;
 
       state.pendingRequestId = null;
+
+      state.pendingLoginId = null;
       state.pendingLoginEmail = null;
 
     }
@@ -269,6 +275,8 @@ const authSlice = createSlice({
         else {
 
           state.loginSuccess = true;
+
+          state.pendingLoginId = data.tempLoginId;
           state.pendingLoginEmail = email;
 
         }
