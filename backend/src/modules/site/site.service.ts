@@ -13,11 +13,19 @@ import {
   updateSiteCredentialsRepo,
   assignUserToSiteRepo,
   findUserByEmailRepo,
-} from "./site.repository";
+  updateSiteInfoRepo,
+  removeViewerRepo,
+  replaceSiteAdminRepo,
+  getUserByIdRepo,
+  updateUserInfoRepo,
+  updateUserPasswordRepo,
+  updateUserEmailRepo
 
+} from "./site.repository";
+import { EditSitePayload } from "./site.types"
 import { sendEmail } from "../../common/utils/email";
 
-import { CreateSitePayload } from "./site.types";
+import { CreateSitePayload, EditSiteUserPayload} from "./site.types";
 import { getSitesByOrganizationRepo } from "./site.repository";
 
 const attachViewerToSite = async (
@@ -481,3 +489,286 @@ export const regenerateSiteCredentialsService = async (
   };
 
 };
+
+
+export const editSiteService = async (
+  superAdminId: string,
+  siteId: string,
+  payload: EditSitePayload
+) => {
+
+  const client = await pool.connect()
+
+  try {
+
+    await client.query("BEGIN")
+
+    const superAdmin = await client.query(
+      `SELECT organization_id,role
+       FROM users
+       WHERE id=$1`,
+      [superAdminId]
+    )
+
+    if (!superAdmin.rows.length)
+      throw new Error("Super admin not found")
+
+    if (superAdmin.rows[0].role !== "super_admin")
+      throw new Error("Only super admin can edit site")
+
+    const organizationId =
+      superAdmin.rows[0].organization_id
+
+
+    const siteCheck = await client.query(
+      `
+      SELECT *
+      FROM sites
+      WHERE id=$1 AND organization_id=$2
+      `,
+      [siteId,organizationId]
+    )
+
+    if (!siteCheck.rows.length)
+      throw new Error("Site not found")
+
+
+    /* -------- UPDATE SITE INFO -------- */
+
+    await updateSiteInfoRepo(
+      client,
+      siteId,
+      payload
+    )
+
+
+    /* -------- ADD VIEWERS -------- */
+
+    if (payload.add_viewers?.length) {
+
+      for (const email of payload.add_viewers) {
+
+        const user = await findUserByEmailRepo(
+          client,
+          email
+        )
+
+        if (!user)
+          throw new Error(
+            `User with email ${email} not found`
+          )
+
+        await assignUserToSiteRepo(
+          client,
+          siteId,
+          user.id,
+          "site_viewer"
+        )
+
+      }
+
+    }
+
+
+    /* -------- REMOVE VIEWERS -------- */
+
+    if (payload.remove_viewers?.length) {
+
+      for (const email of payload.remove_viewers) {
+
+        const user = await findUserByEmailRepo(
+          client,
+          email
+        )
+
+        if (!user)
+          continue
+
+        await removeViewerRepo(
+          client,
+          siteId,
+          user.id
+        )
+
+      }
+
+    }
+
+
+    /* -------- CHANGE ADMIN -------- */
+
+    if (payload.new_admin_email) {
+
+      const user = await findUserByEmailRepo(
+        client,
+        payload.new_admin_email
+      )
+
+      if (!user)
+        throw new Error(
+          "New admin user not found"
+        )
+
+      await replaceSiteAdminRepo(
+        client,
+        siteId,
+        user.id
+      )
+
+    }
+
+
+    await client.query("COMMIT")
+
+    return {
+      message: "Site updated successfully"
+    }
+
+  }
+  catch (error) {
+
+    await client.query("ROLLBACK")
+    throw error
+
+  }
+  finally {
+
+    client.release()
+
+  }
+
+}
+
+
+export const editSiteUserService = async (
+  superAdminId: string,
+  payload: EditSiteUserPayload
+) => {
+
+  const client = await pool.connect()
+
+  try {
+
+    await client.query("BEGIN")
+
+    const superAdmin = await client.query(
+      `SELECT role FROM users WHERE id=$1`,
+      [superAdminId]
+    )
+
+    if (!superAdmin.rows.length)
+      throw new Error("Super admin not found")
+
+    if (superAdmin.rows[0].role !== "super_admin")
+      throw new Error("Only super admin can edit users")
+
+
+    const user = await getUserByIdRepo(
+      client,
+      payload.user_id
+    )
+
+    if (!user)
+      throw new Error("User not found")
+
+
+    /* -------- BASIC INFO UPDATE -------- */
+
+    const encryptedIdentity =
+      payload.aadhaar_pan
+        ? Buffer
+            .from(payload.aadhaar_pan)
+            .toString("base64")
+        : null
+
+    await updateUserInfoRepo(
+      client,
+      user.id,
+      {
+        ...payload,
+        aadhaar_pan_encrypted: encryptedIdentity
+      }
+    )
+
+
+    /* -------- PASSWORD CHANGE -------- */
+
+    if (payload.new_password) {
+
+      if (!payload.old_password)
+        throw new Error(
+          "Old password required"
+        )
+
+      const valid = await bcrypt.compare(
+        payload.old_password,
+        user.password_hash
+      )
+
+      if (!valid)
+        throw new Error(
+          "Invalid old password"
+        )
+
+      const newHash = await bcrypt.hash(
+        payload.new_password,
+        10
+      )
+
+      await updateUserPasswordRepo(
+        client,
+        user.id,
+        newHash
+      )
+
+    }
+
+
+    /* -------- EMAIL CHANGE -------- */
+
+    if (payload.new_email) {
+
+      if (!payload.current_password)
+        throw new Error(
+          "Password required to change email"
+        )
+
+      const valid = await bcrypt.compare(
+        payload.current_password,
+        user.password_hash
+      )
+
+      if (!valid)
+        throw new Error(
+          "Invalid password"
+        )
+
+      await updateUserEmailRepo(
+        client,
+        user.id,
+        payload.new_email
+      )
+
+    }
+
+
+    await client.query("COMMIT")
+
+    return {
+      message:"User updated successfully"
+    }
+
+  }
+  catch (error) {
+
+    await client.query("ROLLBACK")
+    throw error
+
+  }
+  finally {
+
+    client.release()
+
+  }
+
+}

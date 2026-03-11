@@ -7,6 +7,8 @@ import {
   verifySiteAdminOtpService,
   unlockSiteCredentialsService,
   regenerateSiteCredentialsService,
+  editSiteService,
+  editSiteUserService,
 } from "./site.service";
 
 
@@ -175,3 +177,72 @@ export const regenerateSiteCredentials = async (
   }
 
 };
+
+
+export const editSite = async (
+  req: AuthRequest,
+  res: Response
+) => {
+
+  try {
+
+    const user = req.user
+
+    if (!user)
+      return res.status(401).json({
+        message:"Unauthorized"
+      })
+
+    const siteId = req.params.siteId as string
+
+    const result = await editSiteService(
+      user.userId,
+      siteId,
+      req.body
+    )
+
+    res.json(result)
+
+  }
+  catch (error:any){
+
+    res.status(400).json({
+      message:error.message
+    })
+
+  }
+
+}
+
+export const editSiteUser = async (
+  req: AuthRequest,
+  res: Response
+) => {
+
+  try {
+
+    const user = req.user
+
+    if (!user)
+      return res.status(401).json({
+        message:"Unauthorized"
+      })
+
+    const result =
+      await editSiteUserService(
+        user.userId,
+        req.body
+      )
+
+    res.json(result)
+
+  }
+  catch(error:any){
+
+    res.status(400).json({
+      message:error.message
+    })
+
+  }
+
+}

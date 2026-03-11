@@ -1,11 +1,13 @@
 import { Router } from "express";
-
+import { editSiteValidator, editSiteUserValidator } from "./site.validator"
 import {
   createSite,
   verifySiteAdminOtp,
   getSites,
   unlockSiteCredentials,
   regenerateSiteCredentials,
+  editSite,
+  editSiteUser
 } from "./site.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -45,5 +47,20 @@ router.post(
   authMiddleware,
   regenerateSiteCredentials
 );
+
+
+router.put(
+  "/:siteId",
+  authMiddleware,
+  editSiteValidator,
+  editSite
+)
+
+router.put(
+  "/users/edit",
+  authMiddleware,
+  editSiteUserValidator,
+  editSiteUser
+)
 
 export default router;

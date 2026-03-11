@@ -314,3 +314,167 @@ export const findUserByEmailRepo = async (
   return rows[0];
 
 };
+
+
+export const updateSiteInfoRepo = async (
+  client: PoolClient,
+  siteId: string,
+  data: any
+) => {
+
+  const { rows } = await client.query(
+    `
+    UPDATE sites
+    SET
+      site_name = COALESCE($1, site_name),
+      phone = COALESCE($2, phone),
+      address_line1 = COALESCE($3, address_line1),
+      address_line2 = COALESCE($4, address_line2),
+      state = COALESCE($5, state),
+      country = COALESCE($6, country),
+      gst_number = COALESCE($7, gst_number)
+    WHERE id = $8
+    RETURNING *
+    `,
+    [
+      data.site_name,
+      data.phone,
+      data.address_line1,
+      data.address_line2,
+      data.state,
+      data.country,
+      data.gst_number,
+      siteId
+    ]
+  )
+
+  return rows[0]
+
+}
+
+export const removeViewerRepo = async (
+  client: PoolClient,
+  siteId: string,
+  userId: string
+) => {
+
+  await client.query(
+    `
+    DELETE FROM site_user_roles
+    WHERE site_id = $1
+    AND user_id = $2
+    AND role = 'site_viewer'
+    `,
+    [siteId, userId]
+  )
+
+}
+
+
+export const replaceSiteAdminRepo = async (
+  client: PoolClient,
+  siteId: string,
+  newAdminId: string
+) => {
+
+  await client.query(
+    `
+    DELETE FROM site_user_roles
+    WHERE site_id = $1
+    AND role = 'site_admin'
+    `,
+    [siteId]
+  )
+
+  await client.query(
+    `
+    INSERT INTO site_user_roles (site_id,user_id,role)
+    VALUES ($1,$2,'site_admin')
+    `,
+    [siteId,newAdminId]
+  )
+
+}
+
+
+export const getUserByIdRepo = async (
+  client: PoolClient,
+  userId: string
+) => {
+
+  const { rows } = await client.query(
+    `SELECT * FROM users WHERE id=$1`,
+    [userId]
+  )
+
+  return rows[0]
+
+}
+
+
+export const updateUserInfoRepo = async (
+  client: PoolClient,
+  userId: string,
+  data: any
+) => {
+
+  const { rows } = await client.query(
+    `
+    UPDATE users
+    SET
+      full_name = COALESCE($1, full_name),
+      phone = COALESCE($2, phone),
+      birthdate = COALESCE($3, birthdate),
+      gender = COALESCE($4, gender),
+      aadhaar_pan_encrypted = COALESCE($5, aadhaar_pan_encrypted)
+    WHERE id=$6
+    RETURNING *
+    `,
+    [
+      data.full_name,
+      data.phone,
+      data.birthdate,
+      data.gender,
+      data.aadhaar_pan_encrypted,
+      userId
+    ]
+  )
+
+  return rows[0]
+
+}
+
+
+export const updateUserPasswordRepo = async (
+  client: PoolClient,
+  userId: string,
+  passwordHash: string
+) => {
+
+  await client.query(
+    `
+    UPDATE users
+    SET password_hash=$1
+    WHERE id=$2
+    `,
+    [passwordHash,userId]
+  )
+
+}
+
+export const updateUserEmailRepo = async (
+  client: PoolClient,
+  userId: string,
+  email: string
+) => {
+
+  await client.query(
+    `
+    UPDATE users
+    SET email=$1
+    WHERE id=$2
+    `,
+    [email,userId]
+  )
+
+}
