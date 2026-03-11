@@ -23,6 +23,14 @@ import type {
 
 /* ---------------- STATE ---------------- */
 
+
+interface User {
+  id: string;
+  email: string;
+  role: string;
+}
+
+
 interface AuthState {
 
   loading: boolean;
@@ -39,6 +47,8 @@ interface AuthState {
   pendingLoginId: string | null;
   pendingLoginEmail: string | null;
 
+  user: User | null;   // ADD THIS
+
 }
 
 const initialState: AuthState = {
@@ -54,8 +64,10 @@ const initialState: AuthState = {
 
   pendingRequestId: null,
 
-  pendingLoginId: null,   // NEW
-  pendingLoginEmail: null
+  pendingLoginId: null,
+  pendingLoginEmail: null,
+
+  user: null   // ADD THIS
 
 };
 
@@ -185,6 +197,8 @@ const authSlice = createSlice({
       state.pendingLoginId = null;
       state.pendingLoginEmail = null;
 
+      state.user = null;   
+
     }
 
   },
@@ -266,6 +280,7 @@ const authSlice = createSlice({
             data.refreshToken
           );
 
+          state.user = data.user;     // ADD THIS
           state.loginOtpVerified = true;
 
         }
@@ -306,10 +321,12 @@ const authSlice = createSlice({
         state.loading = false;
         state.loginOtpVerified = true;
 
-        const { accessToken, refreshToken } = action.payload;
+        const { accessToken, refreshToken, user } = action.payload;
 
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
+
+        state.user = user;
 
       })
 

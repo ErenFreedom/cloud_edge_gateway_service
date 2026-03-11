@@ -58,7 +58,12 @@ export const loginService = async (
     return {
       accessToken,
       refreshToken,
-      requiresOtp: false
+      requiresOtp: false,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      }
     };
   }
 
@@ -123,7 +128,12 @@ export const verifyLoginOtpService = async (
 
   return {
     accessToken,
-    refreshToken
+    refreshToken,
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role
+    }
   };
 };
 

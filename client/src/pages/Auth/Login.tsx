@@ -27,7 +27,9 @@ const Login = () => {
   const {
     loading,
     error,
-    loginSuccess
+    loginSuccess,
+    loginOtpVerified,
+    user
   } = useSelector((state: RootState) => state.auth);
 
   const [form, setForm] = useState<LoginForm>({
@@ -39,10 +41,25 @@ const Login = () => {
 
   useEffect(() => {
 
+    const state = store.getState().auth;
+
+    /* PLATFORM ADMIN DIRECT LOGIN */
+
+    if (loginOtpVerified && state.user?.role === "platform_admin") {
+
+      toast.success("Welcome Platform Admin");
+
+      navigate("/platform");
+
+      return;
+
+    }
+
+    /* NORMAL USER OTP FLOW */
+
     if (loginSuccess) {
 
-      const { pendingLoginId, pendingLoginEmail } =
-        store.getState().auth;
+      const { pendingLoginId, pendingLoginEmail } = state;
 
       if (pendingLoginId) {
 
@@ -64,8 +81,7 @@ const Login = () => {
 
     }
 
-  }, [loginSuccess, navigate]);
-
+  }, [loginSuccess, loginOtpVerified, navigate]);
 
   /* ---------- ERROR ---------- */
 
