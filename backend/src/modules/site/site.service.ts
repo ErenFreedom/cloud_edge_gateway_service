@@ -11,6 +11,8 @@ import {
   findValidSiteAdminOtp,
   markSiteAdminOtpVerified,
   updateSiteCredentialsRepo,
+  assignUserToSiteRepo,
+  findUserByEmailRepo,
 } from "./site.repository";
 
 import { sendEmail } from "../../common/utils/email";
@@ -18,7 +20,54 @@ import { sendEmail } from "../../common/utils/email";
 import { CreateSitePayload } from "./site.types";
 import { getSitesByOrganizationRepo } from "./site.repository";
 
+const attachViewerToSite = async (
+  client: PoolClient,
+  organizationId: string,
+  siteId: string,
+  viewer: any
+) => {
 
+  const existingUser = await findUserByEmailRepo(
+    client,
+    viewer.email
+  );
+
+  let user;
+
+  if (existingUser) {
+
+    user = existingUser;
+
+  } else {
+
+    const passwordHash = await bcrypt.hash(
+      viewer.password,
+      10
+    );
+
+    const encryptedIdentity = Buffer
+      .from(viewer.aadhaar_pan)
+      .toString("base64");
+
+    user = await createUserRepo(
+      client,
+      organizationId,
+      viewer,
+      passwordHash,
+      encryptedIdentity
+    );
+
+  }
+
+  await assignUserToSiteRepo(
+    client,
+    siteId,
+    user.id,
+    "site_viewer"
+  );
+
+  return user;
+};
 
 
 export const createSiteService = async (
@@ -32,7 +81,7 @@ export const createSiteService = async (
 
     await client.query("BEGIN");
 
-    
+
 
     const superAdmin = await client.query(
       `
@@ -52,7 +101,8 @@ export const createSiteService = async (
     const organizationId =
       superAdmin.rows[0].organization_id;
 
-    
+
+
 
     const site = await createSiteRepo(
       client,
@@ -60,57 +110,148 @@ export const createSiteService = async (
       payload
     );
 
-    
+
+
 
     const passwordHash = await bcrypt.hash(
       payload.site_admin.password,
       10
     );
 
-    
+
+
 
     const encryptedIdentity = Buffer
       .from(payload.site_admin.aadhaar_pan)
       .toString("base64");
 
-    
 
-    const siteAdmin = await createUserRepo(
+
+
+    let siteAdmin;
+
+    const existingUser = await findUserByEmailRepo(
       client,
-      organizationId,
-      payload.site_admin,
-      passwordHash,
-      encryptedIdentity
+      payload.site_admin.email
     );
 
-    
+    if (existingUser) {
 
-    const otp = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
+      siteAdmin = existingUser;
 
-    const otpRecord = await createSiteAdminOtpRepo(
+    } else {
+
+      siteAdmin = await createUserRepo(
+        client,
+        organizationId,
+        payload.site_admin,
+        passwordHash,
+        encryptedIdentity
+      );
+
+    }
+
+
+
+
+    await assignUserToSiteRepo(
       client,
-      siteAdmin.id,
       site.id,
-      otp
+      siteAdmin.id,
+      "site_admin"
     );
+
+    /* ---------------- ADD VIEWERS IF PROVIDED ---------------- */
+
+    if (payload.viewers && payload.viewers.length > 0) {
+
+      for (const viewer of payload.viewers) {
+
+        const viewerUser = await attachViewerToSite(
+          client,
+          organizationId,
+          site.id,
+          viewer
+        );
+
+        /* If viewer email not verified → create OTP */
+
+        if (!viewerUser.email_verified) {
+
+          const otp = Math.floor(
+            100000 + Math.random() * 900000
+          ).toString();
+
+          const otpRecord = await createSiteAdminOtpRepo(
+            client,
+            viewerUser.id,
+            site.id,
+            otp
+          );
+
+          await sendEmail(
+            viewerUser.email,
+            "Verify Viewer Email",
+            `<h3>Your OTP is: ${otp}</h3>`
+          );
+
+        }
+
+      }
+
+    }
+
+
+
+
+    let otpRecord: any = null;
+    let otp: string | null = null;
+
+    if (!siteAdmin.email_verified) {
+
+      otp = Math.floor(
+        100000 + Math.random() * 900000
+      ).toString();
+
+      otpRecord = await createSiteAdminOtpRepo(
+        client,
+        siteAdmin.id,
+        site.id,
+        otp
+      );
+
+    }
+
+
 
     await client.query("COMMIT");
 
-    
 
-    await sendEmail(
-      siteAdmin.email,
-      "Verify Site Admin Email",
-      `<h3>Your OTP is: ${otp}</h3>`
-    );
+
+
+    if (otpRecord && otp) {
+
+      await sendEmail(
+        siteAdmin.email,
+        "Verify Site Admin Email",
+        `<h3>Your OTP is: ${otp}</h3>`
+      );
+
+    }
+
+
+
 
     return {
-      message:
-        "Site created successfully. OTP sent to site admin email.",
+
+      message: otpRecord
+        ? "Site created successfully. OTP sent to site admin email."
+        : "Site created and admin linked successfully.",
+
       siteId: site.id,
-      otpId: otpRecord.id
+
+      otpId: otpRecord ? otpRecord.id : null
+
     };
 
   } catch (error) {
@@ -125,7 +266,6 @@ export const createSiteService = async (
   }
 
 };
-
 
 
 
@@ -147,7 +287,7 @@ export const verifySiteAdminOtpService = async (
   const siteId = record.site_id;
   const userId = record.user_id;
 
-  
+
   const siteUuid = crypto.randomUUID();
 
   const rawSecret = crypto
@@ -159,7 +299,7 @@ export const verifySiteAdminOtpService = async (
     10
   );
 
-  
+
 
   await pool.query(
     `
@@ -171,7 +311,7 @@ export const verifySiteAdminOtpService = async (
     [userId]
   );
 
-  
+
 
   await pool.query(
     `

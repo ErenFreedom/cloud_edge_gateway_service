@@ -20,6 +20,15 @@ export interface CreateSitePayload {
     gender: string;
   };
 
+  viewers?: {
+    full_name: string;
+    email: string;
+    password: string;
+    aadhaar_pan: string;
+    birthdate: string;
+    gender: string;
+  }[];
+
 }
 
 export interface VerifySiteAdminOtpPayload {

@@ -271,3 +271,46 @@ export const updateSiteCredentialsRepo = async (
   return rows[0];
 
 };
+
+
+export const assignUserToSiteRepo = async (
+  client: PoolClient,
+  siteId: string,
+  userId: string,
+  role: 'site_admin' | 'site_viewer'
+) => {
+
+  const { rows } = await client.query(
+    `
+    INSERT INTO site_user_roles (
+      site_id,
+      user_id,
+      role
+    )
+    VALUES ($1,$2,$3)
+    RETURNING *
+    `,
+    [siteId, userId, role]
+  );
+
+  return rows[0];
+};
+
+
+export const findUserByEmailRepo = async (
+  client: PoolClient,
+  email: string
+) => {
+
+  const { rows } = await client.query(
+    `
+    SELECT *
+    FROM users
+    WHERE email = $1
+    `,
+    [email]
+  );
+
+  return rows[0];
+
+};
