@@ -1,7 +1,7 @@
 import { Response } from "express";
 
 import { AuthRequest } from "../../middleware/auth.middleware";
-import { getSitesService } from "./site.service";
+
 import {
   createSiteService,
   verifySiteAdminOtpService,
@@ -9,10 +9,8 @@ import {
   regenerateSiteCredentialsService,
   editSiteService,
   editSiteUserService,
+  getSitesService
 } from "./site.service";
-
-
-
 
 export const createSite = async (
   req: AuthRequest,
@@ -21,15 +19,15 @@ export const createSite = async (
 
   try {
 
-    const superAdminId = req.user?.userId;
+    const userId = req.user?.userId;
 
-    if (!superAdminId)
+    if (!userId)
       return res.status(401).json({
         message: "Unauthorized"
       });
 
     const result = await createSiteService(
-      superAdminId,
+      userId,
       req.body
     );
 
@@ -44,7 +42,6 @@ export const createSite = async (
   }
 
 };
-
 
 
 
@@ -73,6 +70,7 @@ export const verifySiteAdminOtp = async (
   }
 
 };
+
 
 
 export const getSites = async (
@@ -107,6 +105,8 @@ export const getSites = async (
 
 };
 
+
+
 export const unlockSiteCredentials = async (
   req: AuthRequest,
   res: Response
@@ -117,7 +117,9 @@ export const unlockSiteCredentials = async (
     const user = req.user;
 
     if (!user)
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        message: "Unauthorized"
+      });
 
     const { password, siteId } = req.body;
 
@@ -138,6 +140,7 @@ export const unlockSiteCredentials = async (
   }
 
 };
+
 
 
 export const regenerateSiteCredentials = async (
@@ -179,6 +182,7 @@ export const regenerateSiteCredentials = async (
 };
 
 
+
 export const editSite = async (
   req: AuthRequest,
   res: Response
@@ -186,33 +190,35 @@ export const editSite = async (
 
   try {
 
-    const user = req.user
+    const user = req.user;
 
     if (!user)
       return res.status(401).json({
-        message:"Unauthorized"
-      })
+        message: "Unauthorized"
+      });
 
-    const siteId = req.params.siteId as string
+    const siteId = req.params.siteId as string;
 
     const result = await editSiteService(
       user.userId,
       siteId,
       req.body
-    )
+    );
 
-    res.json(result)
+    res.json(result);
 
   }
-  catch (error:any){
+  catch (error: any) {
 
     res.status(400).json({
-      message:error.message
-    })
+      message: error.message
+    });
 
   }
 
-}
+};
+
+
 
 export const editSiteUser = async (
   req: AuthRequest,
@@ -221,28 +227,28 @@ export const editSiteUser = async (
 
   try {
 
-    const user = req.user
+    const user = req.user;
 
     if (!user)
       return res.status(401).json({
-        message:"Unauthorized"
-      })
+        message: "Unauthorized"
+      });
 
     const result =
       await editSiteUserService(
         user.userId,
         req.body
-      )
+      );
 
-    res.json(result)
+    res.json(result);
 
   }
-  catch(error:any){
+  catch (error: any) {
 
     res.status(400).json({
-      message:error.message
-    })
+      message: error.message
+    });
 
   }
 
-}
+};

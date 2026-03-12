@@ -64,3 +64,21 @@ export const regenerateSiteCredentials = async (
   return response.data;
 
 };
+
+
+export const verifySiteAdminOtp = async (
+  otpId: string,
+  otp: string
+) => {
+
+  const response = await apiClient.post(
+    "/sites/verify-admin-otp",
+    {
+      otpId,
+      otp
+    }
+  );
+
+  return response.data;
+
+};

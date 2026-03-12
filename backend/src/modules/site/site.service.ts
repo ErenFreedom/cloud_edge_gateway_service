@@ -19,13 +19,15 @@ import {
   getUserByIdRepo,
   updateUserInfoRepo,
   updateUserPasswordRepo,
-  updateUserEmailRepo
+  updateUserEmailRepo,
+  getSitesForManagerRepo,
+  verifyManagerSiteAccessRepo
 
 } from "./site.repository";
 import { EditSitePayload } from "./site.types"
 import { sendEmail } from "../../common/utils/email";
 
-import { CreateSitePayload, EditSiteUserPayload} from "./site.types";
+import { CreateSitePayload, EditSiteUserPayload } from "./site.types";
 import { getSitesByOrganizationRepo } from "./site.repository";
 
 const attachViewerToSite = async (
@@ -379,116 +381,219 @@ export const getSitesService = async (
   if (!organizationId)
     throw new Error("User not linked to organization");
 
-  if (role !== "super_admin")
-    throw new Error("Only super admin can view sites");
 
-  const sites = await getSitesByOrganizationRepo(
-    organizationId
-  );
 
-  return sites;
+  if (role === "super_admin") {
+
+    const sites = await getSitesByOrganizationRepo(
+      organizationId
+    );
+
+    return sites;
+
+  }
+
+
+
+  if (role === "org_site_manager") {
+
+    const client = await pool.connect();
+
+    try {
+
+      const sites =
+        await getSitesForManagerRepo(
+          client,
+          userId
+        );
+
+      return sites;
+
+    }
+    finally {
+
+      client.release();
+
+    }
+
+  }
+
+
+  throw new Error("Unauthorized to view sites");
 
 };
 
 export const unlockSiteCredentialsService = async (
-  superAdminId: string,
+  userId: string,
   password: string,
   siteId: string
 ) => {
 
-  const { rows } = await pool.query(
-    `
-    SELECT password_hash
-    FROM users
-    WHERE id = $1 AND role = 'super_admin'
-    `,
-    [superAdminId]
-  );
+  const client = await pool.connect()
 
-  if (!rows.length)
-    throw new Error("Super admin not found");
+  try {
 
-  const valid = await bcrypt.compare(
-    password,
-    rows[0].password_hash
-  );
+    const { rows } = await client.query(
+      `
+      SELECT password_hash, role
+      FROM users
+      WHERE id = $1
+      `,
+      [userId]
+    )
 
-  if (!valid)
-    throw new Error("Invalid password");
+    if (!rows.length)
+      throw new Error("User not found")
 
-  const site = await pool.query(
-    `
-    SELECT
-      site_uuid,
-      machine_fingerprint
-    FROM sites
-    WHERE id = $1
-    `,
-    [siteId]
-  );
+    const role = rows[0].role
 
-  if (!site.rows.length)
-    throw new Error("Site not found");
+    if (
+      role !== "super_admin" &&
+      role !== "org_site_manager"
+    )
+      throw new Error("Unauthorized")
 
-  return site.rows[0];
+    const valid = await bcrypt.compare(
+      password,
+      rows[0].password_hash
+    )
 
-};
+    if (!valid)
+      throw new Error("Invalid password")
+
+
+    /* MANAGER SITE ACCESS CHECK */
+
+    if (role === "org_site_manager") {
+
+      const hasAccess =
+        await verifyManagerSiteAccessRepo(
+          client,
+          userId,
+          siteId
+        )
+
+      if (!hasAccess)
+        throw new Error("Access denied for this site")
+
+    }
+
+
+    const site = await client.query(
+      `
+      SELECT
+        site_uuid,
+        machine_fingerprint
+      FROM sites
+      WHERE id = $1
+      `,
+      [siteId]
+    )
+
+    if (!site.rows.length)
+      throw new Error("Site not found")
+
+    return site.rows[0]
+
+  }
+  finally {
+
+    client.release()
+
+  }
+
+}
 
 
 export const regenerateSiteCredentialsService = async (
-  superAdminId: string,
+  userId: string,
   password: string,
   siteId: string
 ) => {
 
+  const client = await pool.connect()
 
-  const { rows } = await pool.query(
-    `
-    SELECT password_hash
-    FROM users
-    WHERE id = $1 AND role = 'super_admin'
-    `,
-    [superAdminId]
-  );
+  try {
 
-  if (!rows.length)
-    throw new Error("Super admin not found");
+    const { rows } = await client.query(
+      `
+      SELECT password_hash, role
+      FROM users
+      WHERE id = $1
+      `,
+      [userId]
+    )
 
-  const valid = await bcrypt.compare(
-    password,
-    rows[0].password_hash
-  );
+    if (!rows.length)
+      throw new Error("User not found")
 
-  if (!valid)
-    throw new Error("Invalid password");
+    const role = rows[0].role
 
-
-  const siteUuid = crypto.randomUUID();
-
-  const rawSecret = crypto
-    .randomBytes(32)
-    .toString("hex");
-
-  const secretHash = await bcrypt.hash(
-    rawSecret,
-    10
-  );
+    if (
+      role !== "super_admin" &&
+      role !== "org_site_manager"
+    )
+      throw new Error("Unauthorized")
 
 
-  await updateSiteCredentialsRepo(
-    siteId,
-    siteUuid,
-    secretHash
-  );
+    const valid = await bcrypt.compare(
+      password,
+      rows[0].password_hash
+    )
 
-  return {
+    if (!valid)
+      throw new Error("Invalid password")
 
-    site_uuid: siteUuid,
-    site_secret: rawSecret
 
-  };
+    /* MANAGER SITE ACCESS CHECK */
 
-};
+    if (role === "org_site_manager") {
+
+      const hasAccess =
+        await verifyManagerSiteAccessRepo(
+          client,
+          userId,
+          siteId
+        )
+
+      if (!hasAccess)
+        throw new Error("Access denied for this site")
+
+    }
+
+
+    const siteUuid = crypto.randomUUID()
+
+    const rawSecret = crypto
+      .randomBytes(32)
+      .toString("hex")
+
+    const secretHash = await bcrypt.hash(
+      rawSecret,
+      10
+    )
+
+    await updateSiteCredentialsRepo(
+      siteId,
+      siteUuid,
+      secretHash
+    )
+
+    return {
+
+      site_uuid: siteUuid,
+      site_secret: rawSecret
+
+    }
+
+  }
+  finally {
+
+    client.release()
+
+  }
+
+}
 
 
 export const editSiteService = async (
@@ -513,8 +618,10 @@ export const editSiteService = async (
     if (!superAdmin.rows.length)
       throw new Error("Super admin not found")
 
-    if (superAdmin.rows[0].role !== "super_admin")
-      throw new Error("Only super admin can edit site")
+    const role = superAdmin.rows[0].role
+
+    if (role !== "super_admin" && role !== "org_site_manager")
+      throw new Error("Unauthorized")
 
     const organizationId =
       superAdmin.rows[0].organization_id
@@ -522,15 +629,33 @@ export const editSiteService = async (
 
     const siteCheck = await client.query(
       `
-      SELECT *
-      FROM sites
-      WHERE id=$1 AND organization_id=$2
-      `,
-      [siteId,organizationId]
+SELECT *
+FROM sites
+WHERE id=$1 AND organization_id=$2
+`,
+      [siteId, organizationId]
     )
 
     if (!siteCheck.rows.length)
       throw new Error("Site not found")
+
+
+
+    if (role === "org_site_manager") {
+
+      const hasAccess =
+        await verifyManagerSiteAccessRepo(
+          client,
+          superAdminId,
+          siteId
+        )
+
+      if (!hasAccess)
+        throw new Error("Access denied for this site")
+
+    }
+
+
 
 
     /* -------- UPDATE SITE INFO -------- */
@@ -659,8 +784,10 @@ export const editSiteUserService = async (
     if (!superAdmin.rows.length)
       throw new Error("Super admin not found")
 
-    if (superAdmin.rows[0].role !== "super_admin")
-      throw new Error("Only super admin can edit users")
+    const role = superAdmin.rows[0].role
+
+    if (role !== "super_admin" && role !== "org_site_manager")
+      throw new Error("Unauthorized")
 
 
     const user = await getUserByIdRepo(
@@ -672,13 +799,44 @@ export const editSiteUserService = async (
       throw new Error("User not found")
 
 
+    /* MANAGER SITE ACCESS CHECK */
+
+    if (role === "org_site_manager") {
+
+      const siteLink = await client.query(
+        `
+    SELECT site_id
+    FROM site_user_roles
+    WHERE user_id = $1
+    `,
+        [user.id]
+      )
+
+      if (!siteLink.rows.length)
+        throw new Error("User not linked to any site")
+
+      const siteId = siteLink.rows[0].site_id
+
+      const hasAccess =
+        await verifyManagerSiteAccessRepo(
+          client,
+          superAdminId,
+          siteId
+        )
+
+      if (!hasAccess)
+        throw new Error("Access denied for this site")
+
+    }
+
+
     /* -------- BASIC INFO UPDATE -------- */
 
     const encryptedIdentity =
       payload.aadhaar_pan
         ? Buffer
-            .from(payload.aadhaar_pan)
-            .toString("base64")
+          .from(payload.aadhaar_pan)
+          .toString("base64")
         : null
 
     await updateUserInfoRepo(
@@ -755,7 +913,7 @@ export const editSiteUserService = async (
     await client.query("COMMIT")
 
     return {
-      message:"User updated successfully"
+      message: "User updated successfully"
     }
 
   }

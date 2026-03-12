@@ -8,7 +8,7 @@ import organizationRoutes from './modules/organization/organization.routes';
 import authRoutes from './modules/auth/auth.routes';
 import siteRoutes from './modules/site/site.routes';
 import platformRoutes from './modules/platform/platform.routes';
-
+import orgSiteManagerRoutes from "./modules/orgSiteManager/orgSiteManager.routes"
 import { authMiddleware } from './middleware/auth.middleware';
 import { roleMiddleware } from './middleware/role.middleware';
 
@@ -23,7 +23,7 @@ app.use(cookieParser());
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/sites', siteRoutes);
-
+app.use("/api/org-site-managers",orgSiteManagerRoutes);
 
 app.use(
   '/api/platform',

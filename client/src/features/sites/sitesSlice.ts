@@ -3,7 +3,8 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   getSites,
   createSite,
-  regenerateSiteCredentials
+  regenerateSiteCredentials,
+  verifySiteAdminOtp
 } from "../../services/sites.service";
 
 import type {
@@ -35,6 +36,9 @@ interface SitesState {
   error: string | null;
   siteCreated: boolean;
 
+  otpId: string | null;
+  requiresOtp: boolean;
+
   credentials: {
     site_uuid: string;
     site_secret: string;
@@ -48,6 +52,9 @@ const initialState: SitesState = {
   loading: false,
   error: null,
   siteCreated: false,
+
+  otpId: null,
+  requiresOtp: false,
 
   credentials: null,
   credentialsGenerated: false
@@ -88,6 +95,35 @@ export const createSiteThunk = createAsyncThunk(
 
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to create site"
+      );
+
+    }
+
+  }
+);
+
+
+export const verifySiteAdminOtpThunk = createAsyncThunk(
+  "sites/verifySiteAdminOtp",
+  async (
+    payload: { otpId: string; otp: string },
+    thunkAPI
+  ) => {
+
+    try {
+
+      const data = await verifySiteAdminOtp(
+        payload.otpId,
+        payload.otp
+      );
+
+      return data;
+
+    } catch (error: any) {
+
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message ||
+        "Failed to verify OTP"
       );
 
     }
@@ -137,6 +173,8 @@ const sitesSlice = createSlice({
 
       state.error = null;
       state.siteCreated = false;
+      state.otpId = null;
+      state.requiresOtp = false;
 
     },
 
@@ -185,10 +223,13 @@ const sitesSlice = createSlice({
 
       })
 
-      .addCase(createSiteThunk.fulfilled, (state) => {
+      .addCase(createSiteThunk.fulfilled, (state, action) => {
 
         state.loading = false;
         state.siteCreated = true;
+
+        state.otpId = action.payload.otpId || null;
+        state.requiresOtp = !!action.payload.otpId;
 
       })
 
@@ -221,12 +262,37 @@ const sitesSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
 
+      })
+
+      .addCase(verifySiteAdminOtpThunk.pending, (state) => {
+
+        state.loading = true;
+        state.error = null;
+
+      })
+
+      .addCase(verifySiteAdminOtpThunk.fulfilled, (state) => {
+
+        state.loading = false;
+
+        state.requiresOtp = false;
+        state.otpId = null;
+
+        state.siteCreated = true;
+
+      })
+
+      .addCase(verifySiteAdminOtpThunk.rejected, (state, action) => {
+
+        state.loading = false;
+        state.error = action.payload as string;
+
       });
 
   }
 
 });
 
-export const { resetSiteState, resetCredentials} = sitesSlice.actions;
+export const { resetSiteState, resetCredentials } = sitesSlice.actions;
 
 export default sitesSlice.reducer;

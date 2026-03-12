@@ -478,3 +478,44 @@ export const updateUserEmailRepo = async (
   )
 
 }
+
+export const getSitesForManagerRepo = async (
+  client: PoolClient,
+  managerId: string
+) => {
+
+  const result = await client.query(
+    `
+    SELECT s.*
+    FROM sites s
+    JOIN org_site_manager_sites osms
+      ON osms.site_id = s.id
+    WHERE osms.manager_id = $1
+    `,
+    [managerId]
+  )
+
+  return result.rows
+
+}
+
+
+export const verifyManagerSiteAccessRepo = async (
+  client: PoolClient,
+  managerId: string,
+  siteId: string
+) => {
+
+  const result = await client.query(
+    `
+    SELECT 1
+    FROM org_site_manager_sites
+    WHERE manager_id = $1
+    AND site_id = $2
+    `,
+    [managerId, siteId]
+  )
+
+  return (result.rowCount ?? 0) > 0
+
+}

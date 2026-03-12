@@ -7,7 +7,8 @@ import type { RootState, AppDispatch } from "../../store/store";
 import {
   fetchSitesThunk,
   regenerateCredentialsThunk,
-  resetCredentials
+  resetCredentials,
+  createSiteThunk, resetSiteState, verifySiteAdminOtpThunk
 } from "../../features/sites/sitesSlice";
 
 import Button from "../../components/ui/Button";
@@ -18,11 +19,37 @@ const Dashboard = () => {
 
   const dispatch = useDispatch<AppDispatch>();
 
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otp, setOtp] = useState("");
+
+  const [siteForm, setSiteForm] = useState({
+    site_name: "",
+    phone: "",
+    address_line1: "",
+    address_line2: "",
+    state: "",
+    country: "",
+    gst_number: "",
+
+    site_admin: {
+      full_name: "",
+      email: "",
+      password: "",
+      aadhaar_pan: "",
+      birthdate: "",
+      gender: ""
+    }
+  });
+
   const {
     sites,
     loading,
     credentials,
-    credentialsGenerated
+    credentialsGenerated,
+    siteCreated,
+    requiresOtp,
+    otpId
   } = useSelector((state: RootState) => state.sites);
 
 
@@ -34,10 +61,71 @@ const Dashboard = () => {
 
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
 
+  const updateField = (field: string, value: string) => {
+    setSiteForm((prev) => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const updateAdminField = (field: string, value: string) => {
+    setSiteForm((prev) => ({
+      ...prev,
+      site_admin: {
+        ...prev.site_admin,
+        [field]: value
+      }
+    }));
+  };
+
+  const submitOtp = () => {
+
+    if (!otpId) return;
+
+    dispatch(
+      verifySiteAdminOtpThunk({
+        otpId,
+        otp
+      })
+    );
+
+  };
+
+
+  const submitCreateSite = () => {
+
+    dispatch(createSiteThunk(siteForm));
+
+  };
+
 
   useEffect(() => {
     dispatch(fetchSitesThunk());
   }, [dispatch]);
+
+
+
+  useEffect(() => {
+
+    if (requiresOtp) {
+
+      setCreateModalOpen(false);
+      setOtpModalOpen(true);
+
+      return;
+
+    }
+
+    if (siteCreated) {
+
+      setCreateModalOpen(false);
+
+      dispatch(fetchSitesThunk());
+      dispatch(resetSiteState());
+
+    }
+
+  }, [siteCreated, requiresOtp]);
 
 
   const logout = () => {
@@ -66,6 +154,8 @@ const Dashboard = () => {
     dispatch(resetCredentials());
 
   };
+
+
 
 
   const generateCredentials = () => {
@@ -130,7 +220,10 @@ const Dashboard = () => {
 
         <div className="header-actions">
 
-          <Button size="medium">
+          <Button
+            size="medium"
+            onClick={() => setCreateModalOpen(true)}
+          >
             Add Site
           </Button>
 
@@ -349,6 +442,172 @@ const Dashboard = () => {
               </div>
 
             )}
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {createModalOpen && (
+
+        <div className="credential-modal">
+
+          <div className="modal-content">
+
+            <h2>Create New Site</h2>
+
+            <input
+              placeholder="Site Name"
+              value={siteForm.site_name}
+              onChange={(e) => updateField("site_name", e.target.value)}
+            />
+
+            <input
+              placeholder="Phone"
+              value={siteForm.phone}
+              onChange={(e) => updateField("phone", e.target.value)}
+            />
+
+            <input
+              placeholder="Address Line 1"
+              value={siteForm.address_line1}
+              onChange={(e) => updateField("address_line1", e.target.value)}
+            />
+
+            <input
+              placeholder="Address Line 2"
+              value={siteForm.address_line2}
+              onChange={(e) => updateField("address_line2", e.target.value)}
+            />
+
+            <input
+              placeholder="State"
+              value={siteForm.state}
+              onChange={(e) => updateField("state", e.target.value)}
+            />
+
+            <input
+              placeholder="Country"
+              value={siteForm.country}
+              onChange={(e) => updateField("country", e.target.value)}
+            />
+
+            <input
+              placeholder="GST"
+              value={siteForm.gst_number}
+              onChange={(e) => updateField("gst_number", e.target.value)}
+            />
+
+            <h3>Site Admin</h3>
+
+            <input
+              placeholder="Admin Name"
+              value={siteForm.site_admin.full_name}
+              onChange={(e) =>
+                updateAdminField("full_name", e.target.value)
+              }
+            />
+
+            <input
+              placeholder="Admin Email"
+              value={siteForm.site_admin.email}
+              onChange={(e) =>
+                updateAdminField("email", e.target.value)
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Admin Password"
+              value={siteForm.site_admin.password}
+              onChange={(e) =>
+                updateAdminField("password", e.target.value)
+              }
+            />
+
+            <input
+              placeholder="Aadhaar / PAN"
+              value={siteForm.site_admin.aadhaar_pan}
+              onChange={(e) =>
+                updateAdminField("aadhaar_pan", e.target.value)
+              }
+            />
+
+            <input
+              type="date"
+              value={siteForm.site_admin.birthdate}
+              onChange={(e) =>
+                updateAdminField("birthdate", e.target.value)
+              }
+            />
+
+            <select
+              value={siteForm.site_admin.gender}
+              onChange={(e) =>
+                updateAdminField("gender", e.target.value)
+              }
+            >
+              <option value="">Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+
+            <div className="modal-buttons">
+
+              <Button size="medium" onClick={submitCreateSite}>
+                Create Site
+              </Button>
+
+              <Button
+                size="medium"
+                onClick={() => setCreateModalOpen(false)}
+              >
+                Cancel
+              </Button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {otpModalOpen && (
+
+        <div className="credential-modal">
+
+          <div className="modal-content">
+
+            <h2>Verify Site Admin OTP</h2>
+
+            <p>
+              An OTP has been sent to the site admin email.
+            </p>
+
+            <input
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+            />
+
+            <div className="modal-buttons">
+
+              <Button size="medium" onClick={submitOtp}>
+                Verify OTP
+              </Button>
+
+              <Button
+                size="medium"
+                onClick={() => setOtpModalOpen(false)}
+              >
+                Cancel
+              </Button>
+
+            </div>
 
           </div>
 
