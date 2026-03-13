@@ -21,7 +21,8 @@ import {
   updateUserPasswordRepo,
   updateUserEmailRepo,
   getSitesForManagerRepo,
-  verifyManagerSiteAccessRepo
+  verifyManagerSiteAccessRepo,
+  getSiteDetailsRepo
 
 } from "./site.repository";
 import { EditSitePayload } from "./site.types"
@@ -298,6 +299,18 @@ export const verifySiteAdminOtpService = async (
   const userId = record.user_id;
 
 
+  await pool.query(
+    `
+    UPDATE users
+    SET
+      email_verified = true,
+      status = 'active'
+    WHERE id = $1
+    `,
+    [userId]
+  );
+
+
   const siteUuid = crypto.randomUUID();
 
   const rawSecret = crypto
@@ -309,34 +322,24 @@ export const verifySiteAdminOtpService = async (
     10
   );
 
-
-
-  await pool.query(
-    `
-    UPDATE users
-    SET email_verified = true,
-        status = 'active'
-    WHERE id = $1
-    `,
-    [userId]
+  await updateSiteCredentialsRepo(
+    siteId,
+    siteUuid,
+    secretHash
   );
-
 
 
   await pool.query(
     `
     UPDATE sites
     SET
-      site_uuid = $1,
-      site_secret_hash = $2,
-      status = 'active',
-      site_admin_email_activation_pending = false,
-      activated_at = now()
-    WHERE id = $3
+      site_admin_email_activation_pending = false
+    WHERE id = $1
     `,
-    [siteUuid, secretHash, siteId]
+    [siteId]
   );
 
+  /* SEND CREDENTIALS EMAIL */
 
   const userEmail = (
     await pool.query(
@@ -345,28 +348,27 @@ export const verifySiteAdminOtpService = async (
     )
   ).rows[0].email;
 
-
   await sendEmail(
     userEmail,
-    "Site Activated Successfully 🎉",
+    "Site Credentials Generated",
     `
-      <h2>Congratulations!</h2>
+      <h2>Email Verified Successfully</h2>
 
-      <p>Your site has been activated.</p>
+      <p>Your site credentials have been generated.</p>
 
       <p><strong>Site UUID:</strong> ${siteUuid}</p>
       <p><strong>Site Secret:</strong> ${rawSecret}</p>
 
-      <p>Please store these credentials securely.</p>
+      <p>Note: Site will become active only after connector installation.</p>
     `
   );
 
   return {
-    message: "Site activated successfully"
+    message:
+      "Email verified successfully. Site credentials generated. Awaiting activation."
   };
 
 };
-
 
 
 
@@ -930,3 +932,71 @@ export const editSiteUserService = async (
   }
 
 }
+
+
+// /**
+//  * 
+//  * @param userId 
+//  * @param role 
+//  * @param siteId 
+//  * @returns 
+//  */
+
+
+
+
+
+
+
+
+
+
+
+export const getSiteDetailsService = async (
+  userId: string,
+  role: string,
+  siteId: string
+) => {
+
+  const client = await pool.connect();
+
+  try {
+
+    if (
+      role !== "super_admin" &&
+      role !== "org_site_manager"
+    ) {
+      throw new Error("Unauthorized");
+    }
+
+    /* MANAGER SITE ACCESS CHECK */
+
+    if (role === "org_site_manager") {
+
+      const hasAccess =
+        await verifyManagerSiteAccessRepo(
+          client,
+          userId,
+          siteId
+        );
+
+      if (!hasAccess)
+        throw new Error("Access denied for this site");
+    }
+
+    const result =
+      await getSiteDetailsRepo(client, siteId);
+
+    if (!result)
+      throw new Error("Site not found");
+
+    return result;
+
+  }
+  finally {
+
+    client.release();
+
+  }
+
+};

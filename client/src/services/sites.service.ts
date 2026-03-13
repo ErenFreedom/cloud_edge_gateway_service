@@ -82,3 +82,37 @@ export const verifySiteAdminOtp = async (
   return response.data;
 
 };
+
+
+export const getSiteDetails = async (siteId: string) => {
+
+  const response = await apiClient.get(
+    `/sites/${siteId}/details`
+  );
+
+  return response.data;
+
+};
+
+
+export const updateSite = async (
+  siteId: string,
+  payload: {
+    site_name?: string;
+    phone?: string;
+    address_line1?: string;
+    address_line2?: string;
+    state?: string;
+    country?: string;
+    gst_number?: string;
+  }
+) => {
+
+  const response = await apiClient.put(
+    `/sites/${siteId}`,
+    payload
+  );
+
+  return response.data;
+
+};

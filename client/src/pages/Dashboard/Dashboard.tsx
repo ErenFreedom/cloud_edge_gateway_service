@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FaUserCircle } from "react-icons/fa";
-
+import { FaUserCircle, FaEye, FaEdit } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import type { RootState, AppDispatch } from "../../store/store";
 
 import {
@@ -18,7 +18,7 @@ import "./Dashboard.css";
 const Dashboard = () => {
 
   const dispatch = useDispatch<AppDispatch>();
-
+  const navigate = useNavigate();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [otp, setOtp] = useState("");
@@ -41,6 +41,14 @@ const Dashboard = () => {
       gender: ""
     }
   });
+
+  const viewSite = (siteId: string) => {
+    navigate(`/sites/${siteId}`);
+  };
+
+  const editSite = (siteId: string) => {
+    navigate(`/sites/${siteId}/edit`);
+  };
 
   const {
     sites,
@@ -334,6 +342,22 @@ const Dashboard = () => {
                 >
                   Generate New Credentials
                 </Button>
+
+                <div className="site-icons">
+
+                  <FaEye
+                    className="site-action-icon"
+                    title="View Site"
+                    onClick={() => viewSite(site.id)}
+                  />
+
+                  <FaEdit
+                    className="site-action-icon"
+                    title="Edit Site"
+                    onClick={() => editSite(site.id)}
+                  />
+
+                </div>
 
               </div>
 

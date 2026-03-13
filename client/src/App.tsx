@@ -12,7 +12,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import PlatformDashboard from "./pages/platform/PlatformDashboard";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-
+import SiteDetails from "./pages/SiteDetails/SiteDetails";
 function App() {
   return (
     <BrowserRouter>
@@ -55,6 +55,9 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/sites/:siteId" element={<SiteDetails />} />
+        <Route path="/sites/:siteId/edit" element={<SiteDetails />} />
 
       </Routes>
 

@@ -65,6 +65,7 @@ export const createUserRepo = async (
       organization_id,
       full_name,
       email,
+      phone,
       password_hash,
       aadhaar_pan_encrypted,
       birthdate,
@@ -74,7 +75,7 @@ export const createUserRepo = async (
       email_verified
     )
     VALUES (
-      $1,$2,$3,$4,$5,$6,$7,
+      $1,$2,$3,$4,$5,$6,$7,$8,
       'site_admin',
       'pending',
       false
@@ -85,6 +86,7 @@ export const createUserRepo = async (
       organizationId,
       user.full_name,
       user.email,
+      user.phone ?? null,
       passwordHash,
       aadhaarEncrypted,
       user.birthdate,
@@ -93,9 +95,7 @@ export const createUserRepo = async (
   );
 
   return rows[0];
-
 };
-
 
 
 
@@ -260,8 +260,7 @@ export const updateSiteCredentialsRepo = async (
     UPDATE sites
     SET
       site_uuid = $1,
-      site_secret_hash = $2,
-      activated_at = now()
+      site_secret_hash = $2
     WHERE id = $3
     RETURNING site_uuid
     `,
@@ -519,3 +518,85 @@ export const verifyManagerSiteAccessRepo = async (
   return (result.rowCount ?? 0) > 0
 
 }
+
+
+export const getSiteDetailsRepo = async (
+  client: PoolClient,
+  siteId: string
+) => {
+
+  /* -------- SITE INFO -------- */
+
+  const siteResult = await client.query(
+    `
+    SELECT
+      id,
+      site_name,
+      phone,
+      address_line1,
+      address_line2,
+      state,
+      country,
+      gst_number,
+      created_at
+    FROM sites
+    WHERE id = $1
+    `,
+    [siteId]
+  );
+
+  if (!siteResult.rows.length) {
+    return null;
+  }
+
+  /* -------- SITE USERS -------- */
+
+  const usersResult = await client.query(
+    `
+    SELECT
+      u.id,
+      u.organization_id,
+      u.full_name,
+      u.email,
+      u.phone,
+
+      '******' AS password_hash,
+      '******' AS aadhaar_pan,
+
+      u.birthdate,
+      u.gender,
+      u.role,
+      u.status,
+      u.created_at,
+      u.email_verified,
+      u.platform_role
+
+    FROM users u
+    JOIN site_user_roles sur
+      ON sur.user_id = u.id
+
+    WHERE sur.site_id = $1
+    `,
+    [siteId]
+  );
+
+  const users = usersResult.rows;
+
+  const siteAdmin = users.find(
+    (u) => u.role === "site_admin"
+  );
+
+  const viewers = users.filter(
+    (u) => u.role === "site_viewer"
+  );
+
+  return {
+    site: siteResult.rows[0],
+    site_admin: siteAdmin || null,
+    viewers
+  };
+
+
+  
+};
+

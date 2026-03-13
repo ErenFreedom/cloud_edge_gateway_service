@@ -14,6 +14,7 @@ export interface CreateSitePayload {
   site_admin: {
     full_name: string;
     email: string;
+    phone?: string;
     password: string;
     aadhaar_pan: string;
     birthdate: string;
@@ -23,6 +24,7 @@ export interface CreateSitePayload {
   viewers?: {
     full_name: string;
     email: string;
+    phone?: string;
     password: string;
     aadhaar_pan: string;
     birthdate: string;
@@ -30,7 +32,6 @@ export interface CreateSitePayload {
   }[];
 
 }
-
 export interface VerifySiteAdminOtpPayload {
 
   siteId: string;
@@ -61,6 +62,28 @@ export interface EditSitePayload {
 
 }
 
+
+export interface SiteUser {
+
+  id: string
+
+  full_name: string
+  email: string
+  phone: string | null
+
+  password_hash: string
+  aadhaar_pan: string
+
+  birthdate: string
+  gender: string
+
+  role: string
+  status: string
+
+  created_at: string
+  email_verified: boolean
+  platform_role: string | null
+}
 
 export interface EditSiteUserPayload {
 

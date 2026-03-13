@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request,Response } from "express";
 
 import { AuthRequest } from "../../middleware/auth.middleware";
 
@@ -9,7 +9,8 @@ import {
   regenerateSiteCredentialsService,
   editSiteService,
   editSiteUserService,
-  getSitesService
+  getSitesService,
+  getSiteDetailsService
 } from "./site.service";
 
 export const createSite = async (
@@ -244,6 +245,37 @@ export const editSiteUser = async (
 
   }
   catch (error: any) {
+
+    res.status(400).json({
+      message: error.message
+    });
+
+  }
+
+};
+
+
+export const getSiteDetailsController = async (
+  req: Request<{ siteId: string }>,
+  res: Response
+) => {
+
+  try {
+
+    const user = (req as any).user;
+
+    const { siteId } = req.params;
+
+    const result =
+      await getSiteDetailsService(
+        user.userId,
+        user.role,
+        siteId
+      );
+
+    res.json(result);
+
+  } catch (error: any) {
 
     res.status(400).json({
       message: error.message

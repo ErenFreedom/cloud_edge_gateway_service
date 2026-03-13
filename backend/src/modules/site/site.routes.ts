@@ -7,7 +7,8 @@ import {
   unlockSiteCredentials,
   regenerateSiteCredentials,
   editSite,
-  editSiteUser
+  editSiteUser,
+  getSiteDetailsController
 } from "./site.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -62,5 +63,12 @@ router.put(
   editSiteUserValidator,
   editSiteUser
 )
+
+router.get(
+  "/:siteId/details",
+  authMiddleware,
+  getSiteDetailsController
+);
+
 
 export default router;

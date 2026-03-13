@@ -338,3 +338,28 @@
     opacity: 1;
   }
 }
+
+
+.site-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.site-icons {
+  display: flex;
+  gap: 12px;
+}
+
+.site-action-icon {
+  font-size: 18px;
+  cursor: pointer;
+  color: #bbb;
+  transition: all 0.2s ease;
+}
+
+.site-action-icon:hover {
+  color: white;
+  transform: scale(1.15);
+}

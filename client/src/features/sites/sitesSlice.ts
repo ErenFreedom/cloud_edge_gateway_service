@@ -4,7 +4,9 @@ import {
   getSites,
   createSite,
   regenerateSiteCredentials,
-  verifySiteAdminOtp
+  verifySiteAdminOtp,
+  getSiteDetails,
+  updateSite
 } from "../../services/sites.service";
 
 import type {
@@ -30,10 +32,26 @@ interface Site {
   activated_at: string | null;
 }
 
+
+interface SiteUser {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  site_role: "site_admin" | "site_viewer";
+}
+
+interface SiteDetails {
+  site: Site;
+  users: SiteUser[];
+}
+
 interface SitesState {
   sites: Site[];
+
   loading: boolean;
   error: string | null;
+
   siteCreated: boolean;
 
   otpId: string | null;
@@ -45,7 +63,13 @@ interface SitesState {
   } | null;
 
   credentialsGenerated: boolean;
+
+  selectedSite: SiteDetails | null;
+  siteDetailsLoading: boolean;
+
+  siteUpdated: boolean;
 }
+
 
 const initialState: SitesState = {
   sites: [],
@@ -57,7 +81,11 @@ const initialState: SitesState = {
   requiresOtp: false,
 
   credentials: null,
-  credentialsGenerated: false
+  credentialsGenerated: false,
+
+  selectedSite: null,
+  siteDetailsLoading: false,
+  siteUpdated: false,
 };
 
 
@@ -161,6 +189,55 @@ export const regenerateCredentialsThunk = createAsyncThunk(
 );
 
 
+export const fetchSiteDetailsThunk = createAsyncThunk(
+  "sites/fetchSiteDetails",
+  async (siteId: string, thunkAPI) => {
+
+    try {
+
+      const data = await getSiteDetails(siteId);
+
+      return data;
+
+    } catch (error: any) {
+
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch site details"
+      );
+
+    }
+
+  }
+);
+
+export const updateSiteThunk = createAsyncThunk(
+  "sites/updateSite",
+  async (
+    payload: { siteId: string; data: any },
+    thunkAPI
+  ) => {
+
+    try {
+
+      const result = await updateSite(
+        payload.siteId,
+        payload.data
+      );
+
+      return result;
+
+    } catch (error: any) {
+
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to update site"
+      );
+
+    }
+
+  }
+);
+
+
 const sitesSlice = createSlice({
 
   name: "sites",
@@ -182,6 +259,12 @@ const sitesSlice = createSlice({
 
       state.credentials = null;
       state.credentialsGenerated = false;
+
+    },
+
+    resetSiteUpdateState: (state) => {
+
+      state.siteUpdated = false;
 
     }
 
@@ -266,7 +349,7 @@ const sitesSlice = createSlice({
 
       .addCase(verifySiteAdminOtpThunk.pending, (state) => {
 
-        state.loading = true;
+        state.loading = true; 
         state.error = null;
 
       })
@@ -287,12 +370,57 @@ const sitesSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
 
+      })
+
+      .addCase(fetchSiteDetailsThunk.pending, (state) => {
+
+        state.siteDetailsLoading = true;
+        state.error = null;
+
+      })
+
+      .addCase(fetchSiteDetailsThunk.fulfilled, (state, action) => {
+
+        state.siteDetailsLoading = false;
+        state.selectedSite = action.payload;
+
+      })
+
+      .addCase(fetchSiteDetailsThunk.rejected, (state, action) => {
+
+        state.siteDetailsLoading = false;
+        state.error = action.payload as string;
+
+      })
+
+      .addCase(updateSiteThunk.pending, (state) => {
+
+        state.loading = true;
+        state.error = null;
+        state.siteUpdated = false;
+
+      })
+
+      .addCase(updateSiteThunk.fulfilled, (state, action) => {
+
+        state.loading = false;
+        state.siteUpdated = true;
+
+        state.selectedSite = action.payload;
+
+      })
+
+      .addCase(updateSiteThunk.rejected, (state, action) => {
+
+        state.loading = false;
+        state.error = action.payload as string;
+
       });
 
   }
 
 });
 
-export const { resetSiteState, resetCredentials } = sitesSlice.actions;
+export const { resetSiteState, resetCredentials,  resetSiteUpdateState } = sitesSlice.actions;
 
 export default sitesSlice.reducer;
