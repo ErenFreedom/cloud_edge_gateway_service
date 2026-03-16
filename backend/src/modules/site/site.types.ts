@@ -46,19 +46,17 @@ export interface EditSitePayload {
 
   site_name?: string
   phone?: string
-
   address_line1?: string
   address_line2?: string
-
   state?: string
   country?: string
-
   gst_number?: string
 
-  new_admin_email?: string
-
   add_viewers?: string[]
+
   remove_viewers?: string[]
+
+  new_admin_email?: string
 
 }
 
@@ -100,5 +98,21 @@ export interface EditSiteUserPayload {
 
   new_email?: string
   current_password?: string
+
+}
+
+
+export interface RequestEmailChangePayload {
+
+  user_id: string
+  old_email: string
+  new_email: string
+
+}
+
+export interface VerifyEmailChangePayload {
+
+  otp_id: string
+  otp: string
 
 }

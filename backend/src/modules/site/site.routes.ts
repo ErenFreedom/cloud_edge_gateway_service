@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { editSiteValidator, editSiteUserValidator } from "./site.validator"
+import { editSiteValidator, editSiteUserValidator , requestEmailChangeValidator, verifyEmailChangeValidator} from "./site.validator"
 import {
   createSite,
   verifySiteAdminOtp,
@@ -8,7 +8,9 @@ import {
   regenerateSiteCredentials,
   editSite,
   editSiteUser,
-  getSiteDetailsController
+  getSiteDetailsController,
+  requestEmailChangeController,
+  verifyEmailChangeController
 } from "./site.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -69,6 +71,18 @@ router.get(
   authMiddleware,
   getSiteDetailsController
 );
+
+router.post(
+  "/user/request-email-change",
+  requestEmailChangeValidator,
+  requestEmailChangeController
+)
+
+router.post(
+  "/user/verify-email-change",
+  verifyEmailChangeValidator,
+  verifyEmailChangeController
+)
 
 
 export default router;

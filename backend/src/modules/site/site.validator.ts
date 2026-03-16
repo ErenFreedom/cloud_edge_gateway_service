@@ -160,3 +160,32 @@ export const editSiteUserValidator = [
     .isString()
 
 ];
+
+
+export const requestEmailChangeValidator = [
+
+  body("user_id")
+    .isUUID()
+    .withMessage("Invalid user id"),
+
+  body("old_email")
+    .isEmail()
+    .withMessage("Old email must be valid"),
+
+  body("new_email")
+    .isEmail()
+    .withMessage("New email must be valid")
+
+]
+
+export const verifyEmailChangeValidator = [
+
+  body("otp_id")
+    .isUUID()
+    .withMessage("Invalid otp id"),
+
+  body("otp")
+    .isLength({ min: 6, max: 6 })
+    .withMessage("Invalid OTP")
+
+]

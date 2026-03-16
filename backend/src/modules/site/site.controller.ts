@@ -10,7 +10,9 @@ import {
   editSiteService,
   editSiteUserService,
   getSitesService,
-  getSiteDetailsService
+  getSiteDetailsService,
+  requestEmailChangeService,
+  verifyEmailChangeService
 } from "./site.service";
 
 export const createSite = async (
@@ -284,3 +286,51 @@ export const getSiteDetailsController = async (
   }
 
 };
+
+
+export const requestEmailChangeController = async (
+  req: AuthRequest,
+  res: Response
+) => {
+
+  try {
+
+    const user = req.user
+
+    if (!user)
+      return res.status(401).json({
+        message: "Unauthorized"
+      })
+
+    const result =
+      await requestEmailChangeService(
+        user.userId,
+        req.body
+      )
+
+    res.json(result)
+
+  } catch (error: any) {
+
+    res.status(400).json({
+      message: error.message
+    })
+
+  }
+
+}
+
+
+export const verifyEmailChangeController = async (
+  req: Request,
+  res: Response
+) => {
+
+  const result =
+    await verifyEmailChangeService(
+      req.body
+    )
+
+  res.json(result)
+
+}

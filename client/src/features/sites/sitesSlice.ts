@@ -6,7 +6,10 @@ import {
   regenerateSiteCredentials,
   verifySiteAdminOtp,
   getSiteDetails,
-  updateSite
+  updateSite,
+  requestEmailChange,
+  verifyEmailChange,
+  editSiteUser
 } from "../../services/sites.service";
 
 import type {
@@ -38,15 +41,26 @@ interface SiteUser {
   full_name: string;
   email: string;
   phone?: string | null;
-  site_role: "site_admin" | "site_viewer";
+
+  role: "site_admin" | "site_viewer";
+
+  status?: string;
+  birthdate?: string | null;
+  gender?: string | null;
+
+  email_verified?: boolean;
+  created_at?: string;
 }
+
 
 interface SiteDetails {
   site: Site;
-  users: SiteUser[];
+  site_admin: SiteUser | null;
+  viewers: SiteUser[];
 }
 
 interface SitesState {
+
   sites: Site[];
 
   loading: boolean;
@@ -68,10 +82,16 @@ interface SitesState {
   siteDetailsLoading: boolean;
 
   siteUpdated: boolean;
+
+  emailChangeOtpId: string | null;
+  emailChangeRequested: boolean;
+  emailChangeVerified: boolean;
+  siteUserUpdated: boolean;
 }
 
 
 const initialState: SitesState = {
+
   sites: [],
   loading: false,
   error: null,
@@ -85,8 +105,15 @@ const initialState: SitesState = {
 
   selectedSite: null,
   siteDetailsLoading: false,
+
   siteUpdated: false,
+
+  emailChangeOtpId: null,
+  emailChangeRequested: false,
+  emailChangeVerified: false,
+  siteUserUpdated: false,
 };
+
 
 
 export const fetchSitesThunk = createAsyncThunk(
@@ -238,6 +265,81 @@ export const updateSiteThunk = createAsyncThunk(
 );
 
 
+export const requestEmailChangeThunk = createAsyncThunk(
+  "sites/requestEmailChange",
+  async (
+    payload: { userId: string; newEmail: string },
+    thunkAPI
+  ) => {
+
+    try {
+
+      const data = await requestEmailChange(payload);
+
+      return data;
+
+    } catch (error: any) {
+
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message ||
+        "Failed to request email change"
+      );
+
+    }
+
+  }
+);
+
+
+export const verifyEmailChangeThunk = createAsyncThunk(
+  "sites/verifyEmailChange",
+  async (
+    payload: { otpId: string; otp: string },
+    thunkAPI
+  ) => {
+
+    try {
+
+      const data = await verifyEmailChange(payload);
+
+      return data;
+
+    } catch (error: any) {
+
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message ||
+        "Failed to verify email change"
+      );
+
+    }
+
+  }
+);
+
+
+export const editSiteUserThunk = createAsyncThunk(
+  "sites/editSiteUser",
+  async (payload: any, thunkAPI) => {
+
+    try {
+
+      const result = await editSiteUser(payload)
+
+      return result
+
+    } catch (error: any) {
+
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message ||
+        "Failed to update site user"
+      )
+
+    }
+
+  }
+)
+
+
 const sitesSlice = createSlice({
 
   name: "sites",
@@ -265,6 +367,18 @@ const sitesSlice = createSlice({
     resetSiteUpdateState: (state) => {
 
       state.siteUpdated = false;
+
+    },
+    resetEmailChangeState: (state) => {
+
+      state.emailChangeRequested = false;
+      state.emailChangeVerified = false;
+      state.emailChangeOtpId = null;
+
+    },
+    resetSiteUserState: (state) => {
+
+      state.siteUserUpdated = false
 
     }
 
@@ -349,7 +463,7 @@ const sitesSlice = createSlice({
 
       .addCase(verifySiteAdminOtpThunk.pending, (state) => {
 
-        state.loading = true; 
+        state.loading = true;
         state.error = null;
 
       })
@@ -401,12 +515,10 @@ const sitesSlice = createSlice({
 
       })
 
-      .addCase(updateSiteThunk.fulfilled, (state, action) => {
+      .addCase(updateSiteThunk.fulfilled, (state) => {
 
         state.loading = false;
         state.siteUpdated = true;
-
-        state.selectedSite = action.payload;
 
       })
 
@@ -415,12 +527,79 @@ const sitesSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
 
+      })
+      .addCase(requestEmailChangeThunk.pending, (state) => {
+
+        state.loading = true;
+        state.error = null;
+
+      })
+
+      .addCase(requestEmailChangeThunk.fulfilled, (state, action) => {
+
+        state.loading = false;
+
+        state.emailChangeRequested = true;
+        state.emailChangeOtpId = action.payload.otpId;
+
+      })
+
+      .addCase(requestEmailChangeThunk.rejected, (state, action) => {
+
+        state.loading = false;
+        state.error = action.payload as string;
+
+      })
+
+      .addCase(verifyEmailChangeThunk.pending, (state) => {
+
+        state.loading = true;
+        state.error = null;
+
+      })
+
+      .addCase(verifyEmailChangeThunk.fulfilled, (state) => {
+
+        state.loading = false;
+
+        state.emailChangeVerified = true;
+        state.emailChangeOtpId = null;
+
+      })
+
+      .addCase(verifyEmailChangeThunk.rejected, (state, action) => {
+
+        state.loading = false;
+        state.error = action.payload as string;
+
+      })
+
+      .addCase(editSiteUserThunk.pending, (state) => {
+
+        state.loading = true
+        state.error = null
+        state.siteUserUpdated = false
+
+      })
+
+      .addCase(editSiteUserThunk.fulfilled, (state) => {
+
+        state.loading = false
+        state.siteUserUpdated = true
+
+      })
+
+      .addCase(editSiteUserThunk.rejected, (state, action) => {
+
+        state.loading = false
+        state.error = action.payload as string
+
       });
 
   }
 
 });
 
-export const { resetSiteState, resetCredentials,  resetSiteUpdateState } = sitesSlice.actions;
+export const { resetSiteState, resetCredentials, resetSiteUpdateState, resetEmailChangeState, resetSiteUserState } = sitesSlice.actions;
 
 export default sitesSlice.reducer;

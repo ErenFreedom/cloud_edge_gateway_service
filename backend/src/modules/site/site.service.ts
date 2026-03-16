@@ -22,13 +22,16 @@ import {
   updateUserEmailRepo,
   getSitesForManagerRepo,
   verifyManagerSiteAccessRepo,
-  getSiteDetailsRepo
+  getSiteDetailsRepo,
+  createEmailChangeOtpRepo,
+  findValidEmailChangeOtpRepo,
+  markEmailChangeOtpVerifiedRepo
 
 } from "./site.repository";
 import { EditSitePayload } from "./site.types"
 import { sendEmail } from "../../common/utils/email";
 
-import { CreateSitePayload, EditSiteUserPayload } from "./site.types";
+import { CreateSitePayload, EditSiteUserPayload, RequestEmailChangePayload, VerifyEmailChangePayload } from "./site.types";
 import { getSitesByOrganizationRepo } from "./site.repository";
 
 const attachViewerToSite = async (
@@ -685,6 +688,9 @@ WHERE id=$1 AND organization_id=$2
             `User with email ${email} not found`
           )
 
+        if (user.role === "site_admin")
+          throw new Error("Admin cannot be added as viewer")
+
         await assignUserToSiteRepo(
           client,
           siteId,
@@ -1000,3 +1006,140 @@ export const getSiteDetailsService = async (
   }
 
 };
+
+
+export const requestEmailChangeService = async (
+  superAdminId: string,
+  payload: RequestEmailChangePayload
+) => {
+
+  const client = await pool.connect()
+
+  try {
+
+    await client.query("BEGIN")
+
+    const admin = await client.query(
+      `SELECT role FROM users WHERE id=$1`,
+      [superAdminId]
+    )
+
+    if (!admin.rows.length)
+      throw new Error("User not found")
+
+    if (
+      admin.rows[0].role !== "super_admin" &&
+      admin.rows[0].role !== "org_site_manager"
+    )
+      throw new Error("Unauthorized")
+
+
+    const user = await getUserByIdRepo(
+      client,
+      payload.user_id
+    )
+
+    if (!user)
+      throw new Error("User not found")
+
+    if (user.email !== payload.old_email)
+      throw new Error("Old email mismatch")
+
+
+    const otp = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString()
+
+
+    const otpRecord =
+      await createEmailChangeOtpRepo(
+        client,
+        user.id,
+        payload.new_email,
+        otp
+      )
+
+    await client.query("COMMIT")
+
+
+    await sendEmail(
+      payload.new_email,
+      "Verify Email Change",
+      `<h3>Your OTP is: ${otp}</h3>`
+    )
+
+    return {
+
+      message: "OTP sent to new email",
+      otp_id: otpRecord.id
+
+    }
+
+  }
+  catch (error) {
+
+    await client.query("ROLLBACK")
+    throw error
+
+  }
+  finally {
+
+    client.release()
+
+  }
+
+}
+
+
+export const verifyEmailChangeService = async (
+  payload: VerifyEmailChangePayload
+) => {
+
+  const client = await pool.connect()
+
+  try {
+
+    await client.query("BEGIN")
+
+    const record =
+      await findValidEmailChangeOtpRepo(
+        payload.otp_id,
+        payload.otp
+      )
+
+    if (!record)
+      throw new Error("Invalid or expired OTP")
+
+
+    await markEmailChangeOtpVerifiedRepo(
+      client,
+      payload.otp_id
+    )
+
+
+    await updateUserEmailRepo(
+      client,
+      record.user_id,
+      record.new_email
+    )
+
+    await client.query("COMMIT")
+
+    return {
+      message: "Email updated successfully"
+    }
+
+  }
+  catch (error) {
+
+    await client.query("ROLLBACK")
+    throw error
+
+  }
+  finally {
+
+    client.release()
+
+  }
+
+}

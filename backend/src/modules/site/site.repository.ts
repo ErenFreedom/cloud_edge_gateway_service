@@ -287,6 +287,8 @@ export const assignUserToSiteRepo = async (
       role
     )
     VALUES ($1,$2,$3)
+    ON CONFLICT (site_id,user_id)
+    DO NOTHING
     RETURNING *
     `,
     [siteId, userId, role]
@@ -294,7 +296,6 @@ export const assignUserToSiteRepo = async (
 
   return rows[0];
 };
-
 
 export const findUserByEmailRepo = async (
   client: PoolClient,
@@ -538,7 +539,14 @@ export const getSiteDetailsRepo = async (
       state,
       country,
       gst_number,
-      created_at
+
+      site_uuid,
+      machine_fingerprint,
+
+      status,
+      created_at,
+      activated_at
+
     FROM sites
     WHERE id = $1
     `,
@@ -596,7 +604,69 @@ export const getSiteDetailsRepo = async (
     viewers
   };
 
-
-  
 };
 
+
+
+export const createEmailChangeOtpRepo = async (
+  client: PoolClient,
+  userId: string,
+  newEmail: string,
+  otp: string
+) => {
+
+  const expiresAt = new Date(
+    Date.now() + 10 * 60 * 1000
+  )
+
+  const result = await client.query(
+    `
+    INSERT INTO email_change_otps
+    (user_id,new_email,otp,expires_at)
+    VALUES ($1,$2,$3,$4)
+    RETURNING id
+    `,
+    [userId,newEmail,otp,expiresAt]
+  )
+
+  return result.rows[0]
+
+}
+
+
+export const findValidEmailChangeOtpRepo = async (
+  otpId: string,
+  otp: string
+) => {
+
+  const result = await pool.query(
+    `
+    SELECT *
+    FROM email_change_otps
+    WHERE id=$1
+      AND otp=$2
+      AND verified=false
+      AND expires_at > NOW()
+    `,
+    [otpId,otp]
+  )
+
+  return result.rows[0]
+
+}
+
+export const markEmailChangeOtpVerifiedRepo = async (
+  client: PoolClient,
+  otpId: string
+) => {
+
+  await client.query(
+    `
+    UPDATE email_change_otps
+    SET verified=true
+    WHERE id=$1
+    `,
+    [otpId]
+  )
+
+}
