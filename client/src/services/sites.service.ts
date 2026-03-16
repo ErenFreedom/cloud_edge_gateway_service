@@ -11,6 +11,11 @@ export interface CreateSitePayload {
   country: string;
   gst_number?: string;
 
+  /* NEW */
+
+  latitude: number;
+  longitude: number;
+
   site_admin: {
     full_name: string;
     email: string;
@@ -19,7 +24,6 @@ export interface CreateSitePayload {
     birthdate: string;
     gender: string;
   };
-
 }
 
 export interface SiteUser {
@@ -50,6 +54,7 @@ export interface SiteUser {
 
 
 export interface SiteInfo {
+
   id: string
   site_name: string
 
@@ -62,6 +67,11 @@ export interface SiteInfo {
 
   gst_number: string | null
 
+  /* NEW */
+
+  latitude: number | null
+  longitude: number | null
+
   site_uuid: string | null
   machine_fingerprint: string | null
 
@@ -70,6 +80,7 @@ export interface SiteInfo {
   created_at: string
   activated_at: string | null
 }
+
 
 export interface SiteDetails {
   site: SiteInfo
@@ -161,6 +172,10 @@ export const updateSite = async (
     state?: string;
     country?: string;
     gst_number?: string;
+
+
+    latitude?: number;
+    longitude?: number;
   }
 ) => {
 

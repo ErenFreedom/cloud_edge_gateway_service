@@ -18,14 +18,23 @@ import type {
 
 
 interface Site {
+
   id: string;
   site_name: string;
+
   phone: string | null;
+
   address_line1: string;
   address_line2: string | null;
+
   state: string;
   country: string;
+
   gst_number: string | null;
+
+
+  latitude: number | null
+  longitude: number | null
 
   site_uuid: string | null;
   machine_fingerprint: string | null;
@@ -34,6 +43,7 @@ interface Site {
   created_at: string;
   activated_at: string | null;
 }
+
 
 
 interface SiteUser {

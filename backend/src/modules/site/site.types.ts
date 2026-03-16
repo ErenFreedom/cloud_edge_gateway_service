@@ -11,6 +11,10 @@ export interface CreateSitePayload {
 
   gst_number?: string;
 
+
+  latitude: number;
+  longitude: number;
+
   site_admin: {
     full_name: string;
     email: string;
@@ -32,6 +36,8 @@ export interface CreateSitePayload {
   }[];
 
 }
+
+
 export interface VerifySiteAdminOtpPayload {
 
   siteId: string;
@@ -52,13 +58,17 @@ export interface EditSitePayload {
   country?: string
   gst_number?: string
 
-  add_viewers?: string[]
 
+  latitude?: number
+  longitude?: number
+
+  add_viewers?: string[]
   remove_viewers?: string[]
 
   new_admin_email?: string
 
 }
+
 
 
 export interface SiteUser {

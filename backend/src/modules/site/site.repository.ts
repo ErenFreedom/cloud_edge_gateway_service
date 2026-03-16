@@ -15,23 +15,25 @@ export const createSiteRepo = async (
   const { rows } = await client.query(
     `
     INSERT INTO sites (
-      organization_id,
-      site_name,
-      phone,
-      address_line1,
-      address_line2,
-      state,
-      country,
-      gst_number,
-      status,
-      site_admin_email_activation_pending
-    )
-    VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,
-      'pending_activation',
-      true
-    )
-    RETURNING *;
+  organization_id,
+  site_name,
+  phone,
+  address_line1,
+  address_line2,
+  state,
+  country,
+  gst_number,
+  latitude,
+  longitude,
+  status,
+  site_admin_email_activation_pending
+)
+VALUES (
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+  'pending_activation',
+  true
+)
+RETURNING *;
     `,
     [
       organizationId,
@@ -41,7 +43,11 @@ export const createSiteRepo = async (
       data.address_line2 ?? null,
       data.state,
       data.country,
-      data.gst_number ?? null
+      data.gst_number ?? null,
+
+
+      data.latitude,
+      data.longitude
     ]
   );
 
@@ -224,19 +230,23 @@ export const getSitesByOrganizationRepo = async (
   const { rows } = await pool.query(
     `
     SELECT
-      id,
-      site_name,
-      phone,
-      address_line1,
-      address_line2,
-      state,
-      country,
-      gst_number,
-      site_uuid,
-      machine_fingerprint,
-      status,
-      created_at,
-      activated_at
+  id,
+  site_name,
+  phone,
+  address_line1,
+  address_line2,
+  state,
+  country,
+  gst_number,
+
+  latitude,
+  longitude,
+
+  site_uuid,
+  machine_fingerprint,
+  status,
+  created_at,
+  activated_at
     FROM sites
     WHERE organization_id = $1
     ORDER BY created_at DESC
@@ -325,16 +335,21 @@ export const updateSiteInfoRepo = async (
   const { rows } = await client.query(
     `
     UPDATE sites
-    SET
-      site_name = COALESCE($1, site_name),
-      phone = COALESCE($2, phone),
-      address_line1 = COALESCE($3, address_line1),
-      address_line2 = COALESCE($4, address_line2),
-      state = COALESCE($5, state),
-      country = COALESCE($6, country),
-      gst_number = COALESCE($7, gst_number)
-    WHERE id = $8
-    RETURNING *
+SET
+  site_name = COALESCE($1, site_name),
+  phone = COALESCE($2, phone),
+  address_line1 = COALESCE($3, address_line1),
+  address_line2 = COALESCE($4, address_line2),
+  state = COALESCE($5, state),
+  country = COALESCE($6, country),
+  gst_number = COALESCE($7, gst_number),
+
+
+  latitude = COALESCE($8, latitude),
+  longitude = COALESCE($9, longitude)
+
+WHERE id = $10
+RETURNING *
     `,
     [
       data.site_name,
@@ -344,6 +359,11 @@ export const updateSiteInfoRepo = async (
       data.state,
       data.country,
       data.gst_number,
+
+
+      data.latitude,
+      data.longitude,
+
       siteId
     ]
   )
@@ -391,7 +411,7 @@ export const replaceSiteAdminRepo = async (
     INSERT INTO site_user_roles (site_id,user_id,role)
     VALUES ($1,$2,'site_admin')
     `,
-    [siteId,newAdminId]
+    [siteId, newAdminId]
   )
 
 }
@@ -457,7 +477,7 @@ export const updateUserPasswordRepo = async (
     SET password_hash=$1
     WHERE id=$2
     `,
-    [passwordHash,userId]
+    [passwordHash, userId]
   )
 
 }
@@ -474,7 +494,7 @@ export const updateUserEmailRepo = async (
     SET email=$1
     WHERE id=$2
     `,
-    [email,userId]
+    [email, userId]
   )
 
 }
@@ -531,21 +551,23 @@ export const getSiteDetailsRepo = async (
   const siteResult = await client.query(
     `
     SELECT
-      id,
-      site_name,
-      phone,
-      address_line1,
-      address_line2,
-      state,
-      country,
-      gst_number,
+  id,
+  site_name,
+  phone,
+  address_line1,
+  address_line2,
+  state,
+  country,
+  gst_number,
 
-      site_uuid,
-      machine_fingerprint,
+  latitude,
+  longitude,
 
-      status,
-      created_at,
-      activated_at
+  site_uuid,
+  machine_fingerprint,
+  status,
+  created_at,
+  activated_at
 
     FROM sites
     WHERE id = $1
@@ -626,7 +648,7 @@ export const createEmailChangeOtpRepo = async (
     VALUES ($1,$2,$3,$4)
     RETURNING id
     `,
-    [userId,newEmail,otp,expiresAt]
+    [userId, newEmail, otp, expiresAt]
   )
 
   return result.rows[0]
@@ -648,7 +670,7 @@ export const findValidEmailChangeOtpRepo = async (
       AND verified=false
       AND expires_at > NOW()
     `,
-    [otpId,otp]
+    [otpId, otp]
   )
 
   return result.rows[0]

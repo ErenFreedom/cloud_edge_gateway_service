@@ -51,6 +51,14 @@ export const createSiteValidator = [
     .isString()
     .withMessage("Viewer phone must be string"),
 
+  body('latitude')
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Invalid latitude'),
+
+  body('longitude')
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Invalid longitude'),
+
 ];
 
 
@@ -109,7 +117,15 @@ export const editSiteValidator = [
 
   body("remove_viewers")
     .optional()
-    .isArray()
+    .isArray(),
+
+  body("latitude")
+    .optional()
+    .isFloat({ min: -90, max: 90 }),
+
+  body("longitude")
+    .optional()
+    .isFloat({ min: -180, max: 180 }),
 
 ];
 
