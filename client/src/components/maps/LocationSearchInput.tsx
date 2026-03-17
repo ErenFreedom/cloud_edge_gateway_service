@@ -19,7 +19,7 @@ const LocationSearchInput = ({ onSelect }: Props) => {
     const autocomplete = new window.google.maps.places.Autocomplete(
       inputRef.current,
       {
-        types: ["geocode"]
+        types: []
       }
     );
 

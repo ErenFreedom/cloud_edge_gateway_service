@@ -5,6 +5,7 @@ import { FaUserEdit, FaUserMinus, FaUserPlus } from "react-icons/fa";
 import type { RootState, AppDispatch } from "../../store/store";
 import SiteLocationPicker from "../../components/maps/SiteLocationPicker";
 import { reverseGeocode } from "../../utils/geocode";
+import LocationSearchInput from "../../components/maps/LocationSearchInput";
 import {
     fetchSiteDetailsThunk,
     updateSiteThunk,
@@ -230,22 +231,15 @@ const SiteDetails = () => {
                         <div>
                             <label>Address</label>
 
-                            {isEditMode ? (
-                                <input
-                                    value={formData.address_line1 || ""}
-                                    onChange={(e) =>
-                                        updateField("address_line1", e.target.value)
-                                    }
-                                />
-                            ) : (
-                                <p>{site.address_line1}</p>
-                            )}
+                            <p>
+                                {formData.address_line1 || site.address_line1}
+                            </p>
                         </div>
 
                         <div>
                             <label>Location</label>
                             <p>
-                                {site.state}, {site.country}
+                                {formData.state || site.state}, {formData.country || site.country}
                             </p>
                         </div>
 
@@ -276,6 +270,27 @@ const SiteDetails = () => {
 
                     <h2>📍 Site Location</h2>
 
+                    {/* 🔍 SEARCH BAR (ONLY IN EDIT MODE) */}
+                    {isEditMode && (
+                        <LocationSearchInput
+                            onSelect={(data) => {
+                                setFormData((prev: any) => ({
+                                    ...prev,
+                                    latitude: data.lat,
+                                    longitude: data.lng,
+                                    address_line1: data.address,
+                                    state: data.state,
+                                    country: data.country
+                                }));
+                            }}
+                        />
+                    )}
+                    {isEditMode && (
+                        <p style={{ fontSize: "12px", color: "#9ca3af", marginBottom: "10px" }}>
+                            🔍 Search or drag marker to update location
+                        </p>
+                    )}
+
                     <div className="map-wrapper">
 
                         <SiteLocationPicker
@@ -283,7 +298,7 @@ const SiteDetails = () => {
                             longitude={formData.longitude || site.longitude || 77.2090}
                             onChange={async (lat, lng) => {
 
-                                if (!isEditMode) return; // ❌ disable if not editing
+                                if (!isEditMode) return;
 
                                 const geo = await reverseGeocode(lat, lng);
 
@@ -303,11 +318,6 @@ const SiteDetails = () => {
                         />
 
                     </div>
-
-                    <p style={{ marginTop: "10px", fontSize: "13px", color: "#9ca3af" }}>
-                        Lat: {(formData.latitude || site.latitude)?.toFixed(6)} |
-                        Lng: {(formData.longitude || site.longitude)?.toFixed(6)}
-                    </p>
 
                 </div>
 
