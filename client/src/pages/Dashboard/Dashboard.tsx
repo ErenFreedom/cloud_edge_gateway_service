@@ -3,7 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { FaUserCircle, FaEye, FaEdit } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import type { RootState, AppDispatch } from "../../store/store";
-
+import SiteLocationPicker from "../../components/maps/SiteLocationPicker";
+import LocationSearchInput from "../../components/maps/LocationSearchInput";
+import { reverseGeocode } from "../../utils/geocode";
 import {
   fetchSitesThunk,
   regenerateCredentialsThunk,
@@ -21,6 +23,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [otpModalOpen, setOtpModalOpen] = useState(false);
+  //const [error, setError] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
 
   const [siteForm, setSiteForm] = useState({
@@ -31,6 +34,10 @@ const Dashboard = () => {
     state: "",
     country: "",
     gst_number: "",
+
+
+    latitude: 28.6139,
+    longitude: 77.2090,
 
     site_admin: {
       full_name: "",
@@ -134,6 +141,14 @@ const Dashboard = () => {
     }
 
   }, [siteCreated, requiresOtp]);
+
+  useEffect(() => {
+    if (createModalOpen) {
+      setTimeout(() => {
+        window.dispatchEvent(new Event("resize"));
+      }, 300);
+    }
+  }, [createModalOpen]);
 
 
   const logout = () => {
@@ -497,7 +512,7 @@ const Dashboard = () => {
             <input
               placeholder="Address Line 1"
               value={siteForm.address_line1}
-              onChange={(e) => updateField("address_line1", e.target.value)}
+              readOnly
             />
 
             <input
@@ -506,16 +521,17 @@ const Dashboard = () => {
               onChange={(e) => updateField("address_line2", e.target.value)}
             />
 
+
             <input
               placeholder="State"
               value={siteForm.state}
-              onChange={(e) => updateField("state", e.target.value)}
+              readOnly
             />
 
             <input
               placeholder="Country"
               value={siteForm.country}
-              onChange={(e) => updateField("country", e.target.value)}
+              readOnly
             />
 
             <input
@@ -523,6 +539,59 @@ const Dashboard = () => {
               value={siteForm.gst_number}
               onChange={(e) => updateField("gst_number", e.target.value)}
             />
+
+
+
+            {/* ⭐ ADD HERE */}
+
+            <div className="map-section">
+
+              <h3>📍 Select Site Location</h3>
+
+              <LocationSearchInput
+                onSelect={(data) => {
+                  setSiteForm((prev) => ({
+                    ...prev,
+                    latitude: data.lat,
+                    longitude: data.lng,
+                    address_line1: data.address,
+                    state: data.state,
+                    country: data.country
+                  }));
+                }}
+              />
+
+              <SiteLocationPicker
+                latitude={siteForm.latitude}
+                longitude={siteForm.longitude}
+                onChange={async (lat, lng) => {
+
+                  const geo = await reverseGeocode(lat, lng);
+
+                  setSiteForm((prev) => ({
+                    ...prev,
+                    latitude: lat,
+                    longitude: lng,
+
+                    ...(geo && {
+                      address_line1: geo.address_line1,
+                      state: geo.state,
+                      country: geo.country
+                    })
+                  }));
+                }}
+              />
+
+            </div>
+
+            <p>
+              <strong>Lat:</strong> {siteForm.latitude.toFixed(6)} |
+              <strong> Lng:</strong> {siteForm.longitude.toFixed(6)}
+            </p>
+
+            {/* EXISTING */}
+
+
 
             <h3>Site Admin</h3>
 

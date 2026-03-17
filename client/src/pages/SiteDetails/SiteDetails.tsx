@@ -3,7 +3,8 @@ import { useParams, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { FaUserEdit, FaUserMinus, FaUserPlus } from "react-icons/fa";
 import type { RootState, AppDispatch } from "../../store/store";
-
+import SiteLocationPicker from "../../components/maps/SiteLocationPicker";
+import { reverseGeocode } from "../../utils/geocode";
 import {
     fetchSiteDetailsThunk,
     updateSiteThunk,
@@ -266,6 +267,47 @@ const SiteDetails = () => {
                         </div>
 
                     </div>
+
+                </div>
+
+                {/* MAP SECTION */}
+
+                <div className="site-section">
+
+                    <h2>📍 Site Location</h2>
+
+                    <div className="map-wrapper">
+
+                        <SiteLocationPicker
+                            latitude={formData.latitude || site.latitude || 28.6139}
+                            longitude={formData.longitude || site.longitude || 77.2090}
+                            onChange={async (lat, lng) => {
+
+                                if (!isEditMode) return; // ❌ disable if not editing
+
+                                const geo = await reverseGeocode(lat, lng);
+
+                                setFormData((prev: any) => ({
+                                    ...prev,
+                                    latitude: lat,
+                                    longitude: lng,
+
+                                    ...(geo && {
+                                        address_line1: geo.address_line1,
+                                        state: geo.state,
+                                        country: geo.country
+                                    })
+                                }));
+
+                            }}
+                        />
+
+                    </div>
+
+                    <p style={{ marginTop: "10px", fontSize: "13px", color: "#9ca3af" }}>
+                        Lat: {(formData.latitude || site.latitude)?.toFixed(6)} |
+                        Lng: {(formData.longitude || site.longitude)?.toFixed(6)}
+                    </p>
 
                 </div>
 
