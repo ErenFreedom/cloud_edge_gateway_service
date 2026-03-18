@@ -245,6 +245,13 @@ const Dashboard = () => {
 
           <Button
             size="medium"
+            onClick={() => navigate("/org-site-manager")}
+          >
+            Org Manager Panel
+          </Button>
+
+          <Button
+            size="medium"
             onClick={() => setCreateModalOpen(true)}
           >
             Add Site

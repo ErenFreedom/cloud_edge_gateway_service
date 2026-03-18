@@ -8,3 +8,13 @@ export interface CreateOrgSiteManagerPayload {
   gender: string
   site_ids: string[]
 }
+
+export interface AssignSitesPayload {
+  managerId: string
+  siteIds: string[]
+}
+
+export interface RemoveSitesPayload {
+  managerId: string
+  siteIds: string[]
+}

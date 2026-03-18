@@ -2,6 +2,8 @@ import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "../features/auth/authSlice";
 import platformReducer from "../features/platform/platformSlice";
 import sitesReducer from "../features/sites/sitesSlice";
+import orgManagerReducer from "../features/orgManager/orgManagerSlice";
+
 
 export const store = configureStore({
 
@@ -9,8 +11,8 @@ export const store = configureStore({
 
     auth: authReducer,
     platform: platformReducer,
-    sites: sitesReducer
-
+    sites: sitesReducer,
+    orgManager: orgManagerReducer,
   }
 
 });

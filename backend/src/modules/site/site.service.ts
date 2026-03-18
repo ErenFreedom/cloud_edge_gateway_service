@@ -665,7 +665,7 @@ WHERE id=$1 AND organization_id=$2
 
     /* -------- UPDATE SITE INFO -------- */
 
-    await updateSiteInfoRepo(
+    const updatedSite = await updateSiteInfoRepo(
       client,
       siteId,
       payload
@@ -797,7 +797,6 @@ export const editSiteUserService = async (
     if (role !== "super_admin" && role !== "org_site_manager")
       throw new Error("Unauthorized")
 
-
     const user = await getUserByIdRepo(
       client,
       payload.user_id
@@ -807,34 +806,36 @@ export const editSiteUserService = async (
       throw new Error("User not found")
 
 
-    /* MANAGER SITE ACCESS CHECK */
+    /* ✅ MANAGER SITE ACCESS CHECK (FIXED) */
 
     if (role === "org_site_manager") {
 
-      const siteLink = await client.query(
-        `
-    SELECT site_id
-    FROM site_user_roles
-    WHERE user_id = $1
-    `,
-        [user.id]
-      )
+      const siteLinks = await client.query(`
+        SELECT site_id
+        FROM site_user_roles
+        WHERE user_id = $1
+      `, [user.id])
 
-      if (!siteLink.rows.length)
+      if (!siteLinks.rows.length)
         throw new Error("User not linked to any site")
 
-      const siteId = siteLink.rows[0].site_id
+      let hasAccess = false
 
-      const hasAccess =
-        await verifyManagerSiteAccessRepo(
+      for (const row of siteLinks.rows) {
+        const access = await verifyManagerSiteAccessRepo(
           client,
           superAdminId,
-          siteId
+          row.site_id
         )
 
-      if (!hasAccess)
-        throw new Error("Access denied for this site")
+        if (access) {
+          hasAccess = true
+          break
+        }
+      }
 
+      if (!hasAccess)
+        throw new Error("Access denied for this user")
     }
 
 
@@ -842,9 +843,7 @@ export const editSiteUserService = async (
 
     const encryptedIdentity =
       payload.aadhaar_pan
-        ? Buffer
-          .from(payload.aadhaar_pan)
-          .toString("base64")
+        ? Buffer.from(payload.aadhaar_pan).toString("base64")
         : null
 
     await updateUserInfoRepo(
@@ -862,9 +861,7 @@ export const editSiteUserService = async (
     if (payload.new_password) {
 
       if (!payload.old_password)
-        throw new Error(
-          "Old password required"
-        )
+        throw new Error("Old password required")
 
       const valid = await bcrypt.compare(
         payload.old_password,
@@ -872,9 +869,7 @@ export const editSiteUserService = async (
       )
 
       if (!valid)
-        throw new Error(
-          "Invalid old password"
-        )
+        throw new Error("Invalid old password")
 
       const newHash = await bcrypt.hash(
         payload.new_password,
@@ -886,7 +881,6 @@ export const editSiteUserService = async (
         user.id,
         newHash
       )
-
     }
 
 
@@ -895,9 +889,7 @@ export const editSiteUserService = async (
     if (payload.new_email) {
 
       if (!payload.current_password)
-        throw new Error(
-          "Password required to change email"
-        )
+        throw new Error("Password required to change email")
 
       const valid = await bcrypt.compare(
         payload.current_password,
@@ -905,16 +897,13 @@ export const editSiteUserService = async (
       )
 
       if (!valid)
-        throw new Error(
-          "Invalid password"
-        )
+        throw new Error("Invalid password")
 
       await updateUserEmailRepo(
         client,
         user.id,
         payload.new_email
       )
-
     }
 
 
@@ -1033,7 +1022,6 @@ export const requestEmailChangeService = async (
     )
       throw new Error("Unauthorized")
 
-
     const user = await getUserByIdRepo(
       client,
       payload.user_id
@@ -1046,10 +1034,42 @@ export const requestEmailChangeService = async (
       throw new Error("Old email mismatch")
 
 
+    /* ✅ MANAGER ACCESS CHECK */
+
+    if (admin.rows[0].role === "org_site_manager") {
+
+      const siteLinks = await client.query(`
+        SELECT site_id
+        FROM site_user_roles
+        WHERE user_id = $1
+      `, [payload.user_id])
+
+      if (!siteLinks.rows.length)
+        throw new Error("User not linked to any site")
+
+      let hasAccess = false
+
+      for (const row of siteLinks.rows) {
+        const access = await verifyManagerSiteAccessRepo(
+          client,
+          superAdminId,
+          row.site_id
+        )
+
+        if (access) {
+          hasAccess = true
+          break
+        }
+      }
+
+      if (!hasAccess)
+        throw new Error("Access denied for this user")
+    }
+
+
     const otp = Math.floor(
       100000 + Math.random() * 900000
     ).toString()
-
 
     const otpRecord =
       await createEmailChangeOtpRepo(
@@ -1061,7 +1081,6 @@ export const requestEmailChangeService = async (
 
     await client.query("COMMIT")
 
-
     await sendEmail(
       payload.new_email,
       "Verify Email Change",
@@ -1069,10 +1088,8 @@ export const requestEmailChangeService = async (
     )
 
     return {
-
       message: "OTP sent to new email",
       otp_id: otpRecord.id
-
     }
 
   }
@@ -1092,6 +1109,7 @@ export const requestEmailChangeService = async (
 
 
 export const verifyEmailChangeService = async (
+  requestedBy: string,
   payload: VerifyEmailChangePayload
 ) => {
 
@@ -1111,11 +1129,40 @@ export const verifyEmailChangeService = async (
       throw new Error("Invalid or expired OTP")
 
 
+    /* ✅ MANAGER ACCESS CHECK */
+
+    const siteLinks = await client.query(`
+      SELECT site_id
+      FROM site_user_roles
+      WHERE user_id = $1
+    `, [record.user_id])
+
+    if (!siteLinks.rows.length)
+      throw new Error("User not linked to any site")
+
+    let hasAccess = false
+
+    for (const row of siteLinks.rows) {
+      const access = await verifyManagerSiteAccessRepo(
+        client,
+        requestedBy,
+        row.site_id
+      )
+
+      if (access) {
+        hasAccess = true
+        break
+      }
+    }
+
+    if (!hasAccess)
+      throw new Error("Access denied")
+
+
     await markEmailChangeOtpVerifiedRepo(
       client,
       payload.otp_id
     )
-
 
     await updateUserEmailRepo(
       client,

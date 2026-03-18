@@ -13,6 +13,8 @@ import PlatformDashboard from "./pages/platform/PlatformDashboard";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteDetails from "./pages/SiteDetails/SiteDetails";
+
+import OrgSiteManagerPage from "./pages/OrgSiteManager/OrgSiteManagerPage";
 function App() {
   return (
     <BrowserRouter>
@@ -58,6 +60,7 @@ function App() {
 
         <Route path="/sites/:siteId" element={<SiteDetails />} />
         <Route path="/sites/:siteId/edit" element={<SiteDetails />} />
+        <Route path="/org-site-manager" element={<OrgSiteManagerPage />} />
 
       </Routes>
 

@@ -322,15 +322,33 @@ export const requestEmailChangeController = async (
 
 
 export const verifyEmailChangeController = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
 
-  const result =
-    await verifyEmailChangeService(
-      req.body
-    )
+  try {
 
-  res.json(result)
+    const user = req.user
+
+    if (!user)
+      return res.status(401).json({
+        message: "Unauthorized"
+      })
+
+    const result =
+      await verifyEmailChangeService(
+        user.userId,   
+        req.body
+      )
+
+    res.json(result)
+
+  } catch (error: any) {
+
+    res.status(400).json({
+      message: error.message
+    })
+
+  }
 
 }

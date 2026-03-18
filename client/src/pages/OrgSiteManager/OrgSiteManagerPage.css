@@ -1,0 +1,164 @@
+.org-container {
+  padding: 20px;
+  background: #0b0f19;
+  min-height: 100vh;
+  color: white;
+}
+
+/* HEADER */
+.org-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+/* BUTTON */
+.primary-btn {
+  background: linear-gradient(45deg, #00c6ff, #0072ff);
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+/* CARD */
+.scope-card {
+  background: #121826;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+/* ROW */
+.scope-row {
+  display: flex;
+  gap: 20px;
+  margin: 20px 0;
+}
+
+/* BOX */
+.scope-box {
+  flex: 1;
+}
+
+/* INPUT */
+select, input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  margin-top: 8px;
+  background: #1e293b;
+  color: white;
+}
+
+/* CHECKBOX */
+.checkbox-list {
+  margin-top: 10px;
+}
+
+.checkbox-list label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+/* MODAL */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+
+/* MODAL ACTIONS */
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+
+/* MULTI SELECT */
+.multi-select {
+  margin-top: 10px;
+  position: relative;
+}
+
+/* HEADER */
+.dropdown-header {
+  background: #1e293b;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* LIST */
+.dropdown-list {
+  width: 100%;
+  background: #1e293b;
+  border-radius: 8px;
+  margin-top: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid #334155;
+}
+
+/* ITEM */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: red;
+  white-space: nowrap;   /* 🔥 prevents weird wrapping */
+}
+
+.dropdown-item input {
+  width: auto;
+}
+
+
+.dropdown-item span {
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+
+/* CHIP */
+.chip-container {
+  margin-top: 10px;
+}
+
+.chip {
+  display: inline-block;
+  background: #0072ff;
+  padding: 5px 10px;
+  border-radius: 15px;
+  margin-right: 5px;
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+
+.modal {
+  background: #121826;
+  padding: 25px;
+  border-radius: 12px;
+  width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+
+.dropdown-item:hover {
+  background: #334155;
+}
