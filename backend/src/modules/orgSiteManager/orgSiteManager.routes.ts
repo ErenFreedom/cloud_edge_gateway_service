@@ -9,7 +9,8 @@ import {
   removeSitesFromManager,
   getManagersAndSites,
   getManagerScope,
-  verifyManagerOtp
+  verifyManagerOtp,
+  getMySites
 } from "./orgSiteManager.controller"
 
 import {
@@ -57,6 +58,12 @@ router.post(
   "/verify-otp",
   authMiddleware,
   verifyManagerOtp
+);
+
+router.get(
+  "/my-sites",
+  authMiddleware,
+  getMySites
 );
 
 

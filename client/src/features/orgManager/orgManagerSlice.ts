@@ -5,7 +5,8 @@ import {
   removeSitesFromManager,
   fetchManagersAndSites,
   fetchManagerScope,
-  verifyManagerOtp
+  verifyManagerOtp,
+  fetchMySites
 } from "../../services/orgManager.service";
 
 /* -------- STATE -------- */
@@ -18,7 +19,8 @@ interface OrgManagerState {
   managers: any[];
   sites: any[];
   currentScope: any[];
-  
+  mySites: any[];
+
 }
 
 const initialState: OrgManagerState = {
@@ -28,8 +30,9 @@ const initialState: OrgManagerState = {
 
   managers: [],
   sites: [],
-  currentScope: []
-  
+  currentScope: [],
+  mySites: []
+
 };
 
 /* -------- THUNKS -------- */
@@ -118,6 +121,20 @@ export const fetchScopeThunk = createAsyncThunk(
   }
 );
 
+
+export const fetchMySitesThunk = createAsyncThunk(
+  "orgManager/fetchMySites",
+  async (_, thunkAPI) => {
+    try {
+      return await fetchMySites();
+    } catch (err: any) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Fetch my sites failed"
+      );
+    }
+  }
+);
+
 /* -------- SLICE -------- */
 
 const orgManagerSlice = createSlice({
@@ -193,6 +210,19 @@ const orgManagerSlice = createSlice({
         state.currentScope = action.payload;
       })
       .addCase(fetchScopeThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      /* FETCH MY SITES */
+      .addCase(fetchMySitesThunk.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchMySitesThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.mySites = action.payload;
+      })
+      .addCase(fetchMySitesThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

@@ -10,42 +10,48 @@ import SiteAdminOtp from "./pages/Auth/SiteAdminOtp";
 
 import Dashboard from "./pages/Dashboard/Dashboard";
 import PlatformDashboard from "./pages/platform/PlatformDashboard";
+import OrgManagerDashboard from "./pages/OrgManagerDashboard/OrgManagerDashboard";
 
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteDetails from "./pages/SiteDetails/SiteDetails";
-
 import OrgSiteManagerPage from "./pages/OrgSiteManager/OrgSiteManagerPage";
+
 function App() {
   return (
     <BrowserRouter>
-
       <Routes>
 
+        {/* PUBLIC */}
+
         <Route path="/" element={<LandingPage />} />
-
         <Route path="/signup" element={<SignUp />} />
-
         <Route path="/login" element={<Login />} />
 
-
         <Route path="/otp/signup" element={<SignupOtp />} />
-
         <Route path="/otp/login" element={<LoginOtp />} />
-
         <Route path="/otp/site-admin" element={<SiteAdminOtp />} />
 
-
-        {/* ORGANIZATION USERS */}
+        {/* SUPER ADMIN */}
 
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute role="super_admin">
               <Dashboard />
             </ProtectedRoute>
           }
         />
 
+        {/* ORG SITE MANAGER */}
+
+        <Route
+          path="/manager-dashboard"
+          element={
+            <ProtectedRoute role="org_site_manager">
+              <OrgManagerDashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* PLATFORM ADMIN */}
 
@@ -58,12 +64,36 @@ function App() {
           }
         />
 
-        <Route path="/sites/:siteId" element={<SiteDetails />} />
-        <Route path="/sites/:siteId/edit" element={<SiteDetails />} />
-        <Route path="/org-site-manager" element={<OrgSiteManagerPage />} />
+        {/* SHARED */}
+
+        <Route
+          path="/sites/:siteId"
+          element={
+            <ProtectedRoute>
+              <SiteDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sites/:siteId/edit"
+          element={
+            <ProtectedRoute role="super_admin">
+              <SiteDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/org-site-manager"
+          element={
+            <ProtectedRoute role="super_admin">
+              <OrgSiteManagerPage />
+            </ProtectedRoute>
+          }
+        />
 
       </Routes>
-
     </BrowserRouter>
   );
 }

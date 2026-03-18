@@ -292,3 +292,22 @@ export const countManagerSitesRepo = async (
 
   return Number(result.rows[0].count);
 };
+
+
+export const getManagerSitesRepo = async (
+  client: PoolClient,
+  managerId: string
+) => {
+
+  const result = await client.query(
+    `
+    SELECT s.*
+    FROM site_manager_sites sms
+    JOIN sites s ON s.id = sms.site_id
+    WHERE sms.manager_id = $1
+    `,
+    [managerId]
+  );
+
+  return result.rows;
+};

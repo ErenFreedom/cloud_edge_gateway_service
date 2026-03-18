@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import { createOrgSiteManagerService , assignSitesToManagerService, removeSitesFromManagerService
-  , getManagersAndSitesService, getManagerScopeService, verifyManagerOtpService
+  , getManagersAndSitesService, getManagerScopeService, verifyManagerOtpService, getMySitesService
 } from "./orgSiteManager.service"
 import { AuthRequest } from "../../middleware/auth.middleware"
 
@@ -191,4 +191,30 @@ export const getManagerScope = async (
 
   }
 
+};
+
+
+export const getMySites = async (
+  req: AuthRequest,
+  res: Response
+) => {
+
+  try {
+
+    const user = req.user;
+
+    if (!user)
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const result = await getMySitesService(user.userId);
+
+    res.json(result);
+
+  } catch (err: any) {
+
+    res.status(400).json({
+      message: err.message
+    });
+
+  }
 };

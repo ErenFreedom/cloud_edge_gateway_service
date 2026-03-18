@@ -80,3 +80,13 @@ export const fetchManagerScope = async (managerId: string) => {
 
   return res.data;
 };
+
+
+export const fetchMySites = async () => {
+
+  const res = await apiClient.get(
+    "/org-site-managers/my-sites"
+  );
+
+  return res.data;
+};

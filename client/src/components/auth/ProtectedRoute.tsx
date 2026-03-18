@@ -10,12 +10,14 @@ const ProtectedRoute = ({ children, role }: Props) => {
 
   const user = getUserFromToken();
 
+  /* 🔒 NOT LOGGED IN */
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
+  /* 🔒 ROLE CHECK */
   if (role && user.role !== role) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />; // ✅ safe fallback
   }
 
   return <>{children}</>;

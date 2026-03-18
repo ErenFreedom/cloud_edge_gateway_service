@@ -16,6 +16,7 @@ import {
   verifyManagerOtpRepo,
   markOtpVerifiedRepo,
   activateManagerRepo,
+  getManagerSitesRepo,
 } from "./orgSiteManager.repository"
 
 import { CreateOrgSiteManagerPayload } from "./orgSiteManager.types"
@@ -429,6 +430,39 @@ export const getManagerScopeService = async (
     const scope = await getManagerScopeRepo(client, managerId);
 
     return scope;
+
+  } finally {
+    client.release();
+  }
+};
+
+
+export const getMySitesService = async (
+  userId: string
+) => {
+
+  const client = await pool.connect();
+
+  try {
+
+    const user = await client.query(
+      `
+      SELECT role
+      FROM users
+      WHERE id = $1
+      `,
+      [userId]
+    );
+
+    if (!user.rows.length)
+      throw new Error("User not found");
+
+    if (user.rows[0].role !== "org_site_manager")
+      throw new Error("Unauthorized");
+
+    const sites = await getManagerSitesRepo(client, userId);
+
+    return sites;
 
   } finally {
     client.release();

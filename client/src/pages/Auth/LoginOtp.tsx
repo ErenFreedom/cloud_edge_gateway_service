@@ -17,7 +17,6 @@ const LoginOtp = () => {
     (state: RootState) => state.auth
   );
 
-  // ✅ Read ONCE on mount into a ref — never re-reads on re-render
   const loginIdRef = useRef<string | null>(
     sessionStorage.getItem("pendingLoginId")
   );
@@ -49,15 +48,32 @@ const LoginOtp = () => {
 
   /* ---------- SUCCESS ---------- */
   useEffect(() => {
-    if (loginOtpVerified) {
-      // ✅ Clear storage AFTER saving to ref, so no re-render race
-      sessionStorage.removeItem("pendingLoginId");
-      sessionStorage.removeItem("pendingLoginEmail");
-      toast.success("Login successful");
-      navigate("/dashboard");
-      dispatch(resetAuthState());
+  if (loginOtpVerified) {
+
+    sessionStorage.removeItem("pendingLoginId");
+    sessionStorage.removeItem("pendingLoginEmail");
+
+    toast.success("Login successful");
+
+    const token = localStorage.getItem("accessToken");
+
+    if (token) {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+
+      if (payload.role === "super_admin") {
+        navigate("/dashboard");
+      }
+      else if (payload.role === "org_site_manager") {
+        navigate("/manager-dashboard");
+      }
+      else {
+        navigate("/login");
+      }
     }
-  }, [loginOtpVerified]);
+
+    dispatch(resetAuthState());
+  }
+}, [loginOtpVerified]);
 
   /* ---------- ERROR ---------- */
   useEffect(() => {
