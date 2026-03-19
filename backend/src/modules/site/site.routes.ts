@@ -1,5 +1,15 @@
 import { Router } from "express";
-import { editSiteValidator, editSiteUserValidator , requestEmailChangeValidator, verifyEmailChangeValidator} from "./site.validator"
+
+import {
+  createSiteValidator,
+  editSiteValidator,
+  editSiteUserValidator,
+  requestEmailChangeValidator,
+  verifyEmailChangeValidator
+} from "./site.validator";
+
+import { validateRequest } from "../../middleware/validateRequest";
+
 import {
   createSite,
   verifySiteAdminOtp,
@@ -28,6 +38,8 @@ router.get(
 router.post(
   "/create",
   authMiddleware,
+  createSiteValidator,
+  validateRequest,
   createSite
 );
 
@@ -56,15 +68,19 @@ router.put(
   "/:siteId",
   authMiddleware,
   editSiteValidator,
+  validateRequest,
   editSite
-)
+);
+
 
 router.put(
   "/users/edit",
   authMiddleware,
   editSiteUserValidator,
+  validateRequest,
   editSiteUser
-)
+);
+
 
 router.get(
   "/:siteId/details",
@@ -72,17 +88,19 @@ router.get(
   getSiteDetailsController
 );
 
+
 router.post(
   "/user/request-email-change",
   requestEmailChangeValidator,
+  validateRequest,
   requestEmailChangeController
-)
+);
 
 router.post(
   "/user/verify-email-change",
   verifyEmailChangeValidator,
+  validateRequest,
   verifyEmailChangeController
-)
-
+);
 
 export default router;

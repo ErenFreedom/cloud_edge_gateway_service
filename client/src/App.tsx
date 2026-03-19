@@ -78,7 +78,7 @@ function App() {
         <Route
           path="/sites/:siteId/edit"
           element={
-            <ProtectedRoute role="super_admin">
+            <ProtectedRoute>
               <SiteDetails />
             </ProtectedRoute>
           }

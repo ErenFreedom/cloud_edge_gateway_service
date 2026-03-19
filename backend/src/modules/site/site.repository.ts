@@ -508,9 +508,9 @@ export const getSitesForManagerRepo = async (
     `
     SELECT s.*
     FROM sites s
-    JOIN org_site_manager_sites osms
-      ON osms.site_id = s.id
-    WHERE osms.manager_id = $1
+    JOIN site_manager_sites sms
+      ON sms.site_id = s.id
+    WHERE sms.manager_id = $1
     `,
     [managerId]
   )
@@ -518,6 +518,7 @@ export const getSitesForManagerRepo = async (
   return result.rows
 
 }
+
 
 
 export const verifyManagerSiteAccessRepo = async (
@@ -529,7 +530,7 @@ export const verifyManagerSiteAccessRepo = async (
   const result = await client.query(
     `
     SELECT 1
-    FROM org_site_manager_sites
+    FROM site_manager_sites
     WHERE manager_id = $1
     AND site_id = $2
     `,
@@ -539,6 +540,7 @@ export const verifyManagerSiteAccessRepo = async (
   return (result.rowCount ?? 0) > 0
 
 }
+
 
 
 export const getSiteDetailsRepo = async (
