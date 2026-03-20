@@ -29,7 +29,7 @@ const Login = () => {
     error,
     loginSuccess,
     loginOtpVerified,
-    user
+    //user
   } = useSelector((state: RootState) => state.auth);
 
   const [form, setForm] = useState<LoginForm>({
