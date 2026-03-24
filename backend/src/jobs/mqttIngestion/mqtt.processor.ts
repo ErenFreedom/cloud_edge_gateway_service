@@ -11,22 +11,33 @@ export const processMessage = (
 
     const payload = data as SensorPayload;
 
-    if (!payload.sensor_id || !payload.timestamp) {
+    // ✅ FIXED validation (important)
+    if (
+      payload.sensor_id === undefined ||
+      payload.timestamp === undefined
+    ) {
       throw new Error("Missing required fields");
     }
 
     return {
       topic,
       payload,
-      client_id: payload.client_id ?? null,
+
+      // 🔥 KEY FIX HERE
+      organization_id: payload.client_id ?? null,
+
       site_id: payload.site_id ?? null,
       sensor_id: payload.sensor_id ?? null,
+
       device: payload.device ?? null,
       location: payload.location ?? null,
       value: payload.value ?? null,
       quality: payload.quality ?? null,
       quality_good: payload.quality_good ?? null,
-      timestamp: payload.timestamp ? new Date(payload.timestamp) : null,
+
+      timestamp: payload.timestamp
+        ? new Date(payload.timestamp)
+        : null,
     };
   } catch (err: unknown) {
     if (err instanceof Error) {

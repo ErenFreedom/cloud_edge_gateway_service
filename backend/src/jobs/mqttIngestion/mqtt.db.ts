@@ -26,7 +26,10 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
     values.push(
       row.topic,
       row.payload,
-      row.client_id,
+
+      // 🔥 FIXED HERE
+      row.organization_id,
+
       row.site_id,
       row.sensor_id,
       row.device,
@@ -41,7 +44,7 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
   await pool.query(
     `
     INSERT INTO raw_data
-    (topic, payload, client_id, site_id, sensor_id,
+    (topic, payload, organization_id, site_id, sensor_id,
      device, location, value, quality, quality_good, timestamp_value)
     VALUES ${placeholders.join(",")}
     `,
