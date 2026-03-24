@@ -9,29 +9,68 @@ export const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
+/**
+ * 🔥 In-memory cache for fast lookup
+ */
+const sensorCache = new Map<number, string>();
+
+/**
+ * 🔥 Map external sensor_id → UUID
+ */
+export const getSensorUUID = async (
+  externalId: number
+): Promise<string | null> => {
+  if (sensorCache.has(externalId)) {
+    return sensorCache.get(externalId)!;
+  }
+
+  const res = await pool.query(
+    `SELECT id FROM sensors WHERE external_sensor_id = $1 LIMIT 1`,
+    [String(externalId)]
+  );
+
+  const uuid = res.rows[0]?.id || null;
+
+  if (uuid) {
+    sensorCache.set(externalId, uuid);
+  }
+
+  return uuid;
+};
+
+/**
+ * 🔥 Batch Insert with mapping
+ */
 export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
   if (rows.length === 0) return;
 
   const values: unknown[] = [];
   const placeholders: string[] = [];
 
-  rows.forEach((row, i) => {
-    const idx = i * 11;
+  let paramIndex = 1;
+
+  for (const row of rows) {
+    if (!row.sensor_id) continue;
+
+    // 🔥 Map sensor_id
+    const sensorUUID = await getSensorUUID(row.sensor_id);
+
+    if (!sensorUUID) {
+      console.error("❌ Sensor not found:", row.sensor_id);
+      continue;
+    }
 
     placeholders.push(
-      `($${idx+1},$${idx+2},$${idx+3},$${idx+4},$${idx+5},
-        $${idx+6},$${idx+7},$${idx+8},$${idx+9},$${idx+10},$${idx+11})`
+      `($${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},
+        $${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
     );
 
     values.push(
       row.topic,
       row.payload,
-
-      // 🔥 FIXED HERE
       row.organization_id,
-
       row.site_id,
-      row.sensor_id,
+      sensorUUID, // 🔥 FIX HERE
       row.device,
       row.location,
       row.value,
@@ -39,15 +78,27 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
       row.quality_good,
       row.timestamp
     );
-  });
+  }
 
-  await pool.query(
-    `
-    INSERT INTO raw_data
-    (topic, payload, organization_id, site_id, sensor_id,
-     device, location, value, quality, quality_good, timestamp_value)
-    VALUES ${placeholders.join(",")}
-    `,
-    values
-  );
+  if (values.length === 0) return;
+
+  try {
+    await pool.query(
+      `
+      INSERT INTO raw_data
+      (topic, payload, organization_id, site_id, sensor_id,
+       device, location, value, quality, quality_good, timestamp_value)
+      VALUES ${placeholders.join(",")}
+      `,
+      values
+    );
+
+    console.log(`✅ Inserted batch of ${rows.length}`);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error("❌ Batch insert failed:", err.message);
+    } else {
+      console.error("❌ Batch insert failed:", err);
+    }
+  }
 };

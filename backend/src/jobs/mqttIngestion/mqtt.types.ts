@@ -14,7 +14,7 @@ export interface ProcessedRow {
   topic: string;
   payload: SensorPayload;
 
-  organization_id: string | null; // 🔥 mapped from client_id
+  organization_id: string | null; 
   site_id: string | null;
   sensor_id: number | null;
 
