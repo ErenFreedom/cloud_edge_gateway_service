@@ -15,27 +15,49 @@ export const pool = new Pool({
 const sensorCache = new Map<number, string>();
 
 /**
- * 🔥 Map external sensor_id → UUID
+ * 🔥 Get or Create Sensor UUID
  */
-export const getSensorUUID = async (
-  externalId: number
-): Promise<string | null> => {
+export const getOrCreateSensorUUID = async (
+  externalId: number,
+  organization_id: string,
+  site_id: string
+): Promise<string> => {
+
+  // ✅ Cache hit
   if (sensorCache.has(externalId)) {
     return sensorCache.get(externalId)!;
   }
 
-  const res = await pool.query(
+  // 🔍 Check if exists
+  const existing = await pool.query(
     `SELECT id FROM sensors WHERE external_sensor_id = $1 LIMIT 1`,
     [String(externalId)]
   );
 
-  const uuid = res.rows[0]?.id || null;
-
-  if (uuid) {
+  if (existing.rows.length > 0) {
+    const uuid = existing.rows[0].id;
     sensorCache.set(externalId, uuid);
+    return uuid;
   }
 
-  return uuid;
+  // 🔥 CREATE NEW SENSOR
+  const inserted = await pool.query(
+    `
+    INSERT INTO sensors 
+    (organization_id, site_id, sensor_uuid, external_sensor_id)
+    VALUES ($1, $2, gen_random_uuid(), $3)
+    RETURNING id
+    `,
+    [organization_id, site_id, String(externalId)]
+  );
+
+  const newUUID = inserted.rows[0].id;
+
+  console.log("✅ Created sensor:", externalId);
+
+  sensorCache.set(externalId, newUUID);
+
+  return newUUID;
 };
 
 /**
@@ -48,17 +70,20 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
   const placeholders: string[] = [];
 
   let paramIndex = 1;
+  let insertedCount = 0;
 
   for (const row of rows) {
-    if (!row.sensor_id) continue;
-
-    // 🔥 Map sensor_id
-    const sensorUUID = await getSensorUUID(row.sensor_id);
-
-    if (!sensorUUID) {
-      console.error("❌ Sensor not found:", row.sensor_id);
+    if (!row.sensor_id || !row.organization_id || !row.site_id) {
+      console.error("❌ Missing required row data");
       continue;
     }
+
+    // 🔥 AUTO CREATE OR GET SENSOR
+    const sensorUUID = await getOrCreateSensorUUID(
+      row.sensor_id,
+      row.organization_id,
+      row.site_id
+    );
 
     placeholders.push(
       `($${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},
@@ -70,7 +95,7 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
       row.payload,
       row.organization_id,
       row.site_id,
-      sensorUUID, // 🔥 FIX HERE
+      sensorUUID,
       row.device,
       row.location,
       row.value,
@@ -78,9 +103,14 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
       row.quality_good,
       row.timestamp
     );
+
+    insertedCount++;
   }
 
-  if (values.length === 0) return;
+  if (values.length === 0) {
+    console.log("⚠️ No valid rows to insert");
+    return;
+  }
 
   try {
     await pool.query(
@@ -93,7 +123,7 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
       values
     );
 
-    console.log(`✅ Inserted batch of ${rows.length}`);
+    console.log(`✅ Inserted batch of ${insertedCount}`);
   } catch (err: unknown) {
     if (err instanceof Error) {
       console.error("❌ Batch insert failed:", err.message);
