@@ -10,3 +10,21 @@ export const validateActivation = (body: any) => {
     throw new Error("Missing activation fields");
   }
 };
+
+export const validateActivationRequest = (body: any) => {
+  if (!body.site_id || !body.machine_fingerprint) {
+    throw new Error("Missing activation request fields");
+  }
+};
+
+export const validateApprove = (body: any) => {
+  if (!body.request_id) {
+    throw new Error("Missing request_id");
+  }
+};
+
+export const validateReject = (body: any) => {
+  if (!body.request_id) {
+    throw new Error("Missing request_id");
+  }
+};

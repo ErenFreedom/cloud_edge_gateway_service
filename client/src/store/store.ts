@@ -3,7 +3,7 @@ import authReducer from "../features/auth/authSlice";
 import platformReducer from "../features/platform/platformSlice";
 import sitesReducer from "../features/sites/sitesSlice";
 import orgManagerReducer from "../features/orgManager/orgManagerSlice";
-
+import activationReducer from "../features/activation/activationSlice";
 
 export const store = configureStore({
 
@@ -13,6 +13,7 @@ export const store = configureStore({
     platform: platformReducer,
     sites: sitesReducer,
     orgManager: orgManagerReducer,
+    activation: activationReducer,
   }
 
 });

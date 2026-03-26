@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 import { ProcessedRow } from "./mqtt.types";
-
+const siteStatusCache = new Map<string, string>();
 export const pool = new Pool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
@@ -9,13 +9,34 @@ export const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
+
+export const getSiteStatus = async (siteId: string): Promise<string | null> => {
+  if (siteStatusCache.has(siteId)) {
+    return siteStatusCache.get(siteId)!;
+  }
+
+  const res = await pool.query(
+    `SELECT status FROM sites WHERE id = $1 LIMIT 1`,
+    [siteId]
+  );
+
+  const status = res.rows[0]?.status || null;
+
+  if (status) {
+    siteStatusCache.set(siteId, status);
+  }
+
+  return status;
+};
+
+
 /**
- * 🔥 In-memory cache for fast lookup
+ * In-memory cache for fast lookup
  */
 const sensorCache = new Map<number, string>();
 
 /**
- * 🔥 Get or Create Sensor UUID
+ * Get or Create Sensor UUID
  */
 export const getOrCreateSensorUUID = async (
   externalId: number,
@@ -40,7 +61,7 @@ export const getOrCreateSensorUUID = async (
     return uuid;
   }
 
-  // 🔥 CREATE NEW SENSOR
+  //  CREATE NEW SENSOR
   const inserted = await pool.query(
     `
     INSERT INTO sensors 
@@ -61,7 +82,7 @@ export const getOrCreateSensorUUID = async (
 };
 
 /**
- * 🔥 Batch Insert with mapping
+ *  Batch Insert with mapping
  */
 export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
   if (rows.length === 0) return;
@@ -78,7 +99,20 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
       continue;
     }
 
-    // 🔥 AUTO CREATE OR GET SENSOR
+    // CHECK SITE STATUS
+    const siteStatus = await getSiteStatus(row.site_id);
+
+    if (!siteStatus) {
+      console.error("❌ Site not found:", row.site_id);
+      continue;
+    }
+
+    if (siteStatus !== "active") {
+      console.log(`🚫 Data blocked for site ${row.site_id} (status: ${siteStatus})`);
+      continue;
+    }
+
+    //  SENSOR MAPPING (unchanged)
     const sensorUUID = await getOrCreateSensorUUID(
       row.sensor_id,
       row.organization_id,
@@ -87,7 +121,7 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
 
     placeholders.push(
       `($${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},
-        $${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
+      $${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
     );
 
     values.push(
@@ -105,11 +139,6 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
     );
 
     insertedCount++;
-  }
-
-  if (values.length === 0) {
-    console.log("⚠️ No valid rows to insert");
-    return;
   }
 
   try {

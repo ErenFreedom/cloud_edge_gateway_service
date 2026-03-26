@@ -13,6 +13,12 @@ import {
   createSiteThunk, resetSiteState, verifySiteAdminOtpThunk
 } from "../../features/sites/sitesSlice";
 
+import {
+  fetchActivationRequestsThunk,
+  approveActivationThunk,
+  rejectActivationThunk
+} from "../../features/activation/activationSlice";
+
 import Button from "../../components/ui/Button";
 
 import "./Dashboard.css";
@@ -25,6 +31,7 @@ const Dashboard = () => {
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   //const [error, setError] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
+  const [activationModalOpen, setActivationModalOpen] = useState(false);
 
   const [siteForm, setSiteForm] = useState({
     site_name: "",
@@ -68,6 +75,12 @@ const Dashboard = () => {
   } = useSelector((state: RootState) => state.sites);
 
 
+  const {
+    requests: activationRequests,
+    loading: activationLoading
+  } = useSelector((state: RootState) => state.activation);
+
+
   const [profileOpen, setProfileOpen] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -75,6 +88,8 @@ const Dashboard = () => {
   const [password, setPassword] = useState("");
 
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+
+
 
   const updateField = (field: string, value: string) => {
     setSiteForm((prev) => ({
@@ -118,6 +133,12 @@ const Dashboard = () => {
     dispatch(fetchSitesThunk());
   }, [dispatch]);
 
+  useEffect(() => {
+    if (activationModalOpen) {
+      dispatch(fetchActivationRequestsThunk());
+    }
+  }, [activationModalOpen]);
+
 
 
   useEffect(() => {
@@ -158,6 +179,18 @@ const Dashboard = () => {
 
     window.location.href = "/login";
 
+  };
+
+  const handleApprove = (id: string) => {
+    dispatch(approveActivationThunk(id)).then(() => {
+      dispatch(fetchActivationRequestsThunk());
+    });
+  };
+
+  const handleReject = (id: string) => {
+    dispatch(rejectActivationThunk(id)).then(() => {
+      dispatch(fetchActivationRequestsThunk());
+    });
   };
 
 
@@ -242,6 +275,13 @@ const Dashboard = () => {
       <div className="dashboard-header">
 
         <div className="header-actions">
+
+          <Button
+            size="medium"
+            onClick={() => setActivationModalOpen(true)}
+          >
+            Activation Requests ({activationRequests.length})
+          </Button>
 
           <Button
             size="medium"
@@ -707,6 +747,72 @@ const Dashboard = () => {
                 Cancel
               </Button>
 
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+
+      {activationModalOpen && (
+
+        <div className="credential-modal">
+
+          <div className="modal-content">
+
+            <h2>Pending Activation Requests</h2>
+
+            {activationLoading && <p>Loading...</p>}
+
+            {!activationLoading && activationRequests.length === 0 && (
+              <p>No pending requests</p>
+            )}
+
+            <div className="activation-list">
+
+              {activationRequests.map((req: any) => (
+
+                <div key={req.id} className="activation-card">
+
+                  <div>
+                    <p><strong>Site:</strong> {req.site_name}</p>
+                    <p><strong>Fingerprint:</strong> {req.machine_fingerprint}</p>
+                  </div>
+
+                  <div className="activation-actions">
+
+                    <Button
+                      size="small"
+                      onClick={() => handleApprove(req.id)}
+                    >
+                      Approve
+                    </Button>
+
+                    <Button
+                      size="small"
+                      onClick={() => handleReject(req.id)}
+                    >
+                      Reject
+                    </Button>
+
+                  </div>
+
+                </div>
+
+              ))}
+
+            </div>
+
+            <div style={{ marginTop: "20px" }}>
+              <Button
+                size="medium"
+                onClick={() => setActivationModalOpen(false)}
+              >
+                Close
+              </Button>
             </div>
 
           </div>

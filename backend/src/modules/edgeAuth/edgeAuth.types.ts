@@ -12,3 +12,20 @@ export interface ActivateSitePayload {
   site_secret: string;
   machine_fingerprint: string;
 }
+
+export interface ActivationRequestPayload {
+  site_id: string;
+  machine_fingerprint: string;
+}
+
+export interface ApproveActivationPayload {
+  request_id: string;
+}
+
+export interface RejectActivationPayload {
+  request_id: string;
+}
+
+export interface SiteActionPayload {
+  site_id: string;
+}

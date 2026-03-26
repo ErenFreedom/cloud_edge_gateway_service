@@ -1,14 +1,19 @@
-
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import {
   findUserWithSiteRepo,
   getSiteByIdRepo,
-  activateSiteRepo
+  activateSiteRepo,
+  createActivationRequestRepo,
+  getPendingRequestsRepo,
+  getActivationRequestByIdRepo,
+  updateActivationRequestStatusRepo,
+  updateSiteStatusRepo
 } from "./edgeAuth.repo";
 import {
   EdgeLoginPayload,
-  ActivateSitePayload
+  ActivateSitePayload,
+  ActivationRequestPayload
 } from "./edgeAuth.types";
 
 export const edgeLoginService = async (data: EdgeLoginPayload) => {
@@ -25,7 +30,8 @@ export const edgeLoginService = async (data: EdgeLoginPayload) => {
   if (!site.machine_fingerprint) {
     return {
       activation_required: true,
-      site_id: site.site_id
+      site_id: site.site_id,
+      organization_id: site.organization_id 
     };
   }
 
@@ -59,9 +65,81 @@ export const edgeLoginService = async (data: EdgeLoginPayload) => {
   return {
     success: true,
     message: "Login successful",
-    site_id: site.site_id
+    site_id: site.site_id,
+    organization_id: site.organization_id
   };
 };
+
+
+export const requestActivationService = async (
+  data: ActivationRequestPayload
+) => {
+  const site = await getSiteByIdRepo(data.site_id);
+
+  if (!site) throw new Error("Site not found");
+
+  if (site.machine_fingerprint) {
+    throw new Error("Site already activated");
+  }
+
+  await createActivationRequestRepo(
+    data.site_id,
+    data.machine_fingerprint
+  );
+
+  // TODO: send email
+  console.log("📧 Activation request email sent");
+
+  return {
+    message: "Activation request submitted"
+  };
+};
+
+
+export const getPendingRequestsService = async () => {
+  return await getPendingRequestsRepo();
+};
+
+export const approveActivationService = async (requestId: string) => {
+  const request = await getActivationRequestByIdRepo(requestId);
+
+  if (!request) throw new Error("Request not found");
+
+  const deviceSecret = crypto.randomBytes(32).toString("hex");
+
+  await activateSiteRepo(
+    request.site_id,
+    request.machine_fingerprint,
+    deviceSecret
+  );
+
+  await updateActivationRequestStatusRepo(requestId, "approved");
+
+  // TODO: send email
+  console.log("📧 Activation success email sent");
+
+  return {
+    message: "Site activated",
+    device_secret: deviceSecret
+  };
+};
+
+
+export const rejectActivationService = async (requestId: string) => {
+  const request = await getActivationRequestByIdRepo(requestId);
+
+  if (!request) throw new Error("Request not found");
+
+  await updateActivationRequestStatusRepo(requestId, "rejected");
+
+  // TODO: send email
+  console.log("📧 Rejection email sent");
+
+  return {
+    message: "Activation request rejected"
+  };
+};
+
 
 export const activateSiteService = async (data: ActivateSitePayload) => {
   const site = await getSiteByIdRepo(data.site_id);
@@ -96,4 +174,29 @@ export const activateSiteService = async (data: ActivateSitePayload) => {
     message: "Site activated",
     device_secret: deviceSecret
   };
+};
+
+export const suspendSiteService = async (siteId: string) => {
+  const site = await getSiteByIdRepo(siteId);
+
+  if (!site) throw new Error("Site not found");
+
+  await updateSiteStatusRepo(siteId, "suspended");
+
+  console.log("📧 Suspension email sent");
+
+  return { message: "Site suspended" };
+};
+
+export const deleteSiteService = async (siteId: string) => {
+  const site = await getSiteByIdRepo(siteId);
+
+  if (!site) throw new Error("Site not found");
+
+  await updateSiteStatusRepo(siteId, "scheduled_for_deletion");
+
+  // 📧 email
+  console.log("📧 Deletion scheduled email sent");
+
+  return { message: "Site scheduled for deletion (1 hour)" };
 };

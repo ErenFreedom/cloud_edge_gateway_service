@@ -1,5 +1,5 @@
 export interface SensorPayload {
-  client_id: string; // comes from edge
+  client_id: string; 
   site_id: string;
   sensor_id: number;
   device: string;
