@@ -31,7 +31,7 @@ export const edgeLoginService = async (data: EdgeLoginPayload) => {
     return {
       activation_required: true,
       site_id: site.site_id,
-      organization_id: site.organization_id 
+      organization_id: site.organization_id
     };
   }
 
@@ -66,7 +66,8 @@ export const edgeLoginService = async (data: EdgeLoginPayload) => {
     success: true,
     message: "Login successful",
     site_id: site.site_id,
-    organization_id: site.organization_id
+    organization_id: site.organization_id,
+    device_secret: site.device_secret
   };
 };
 
