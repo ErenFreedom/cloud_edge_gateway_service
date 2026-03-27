@@ -15,7 +15,7 @@ const start = async () => {
 
       if (processed === 0) {
         console.log("No data, sleeping...");
-        await sleep(30000); // 30 sec
+        await sleep(40000); // 30 sec
       }
 
     } catch (err) {
