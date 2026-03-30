@@ -40,9 +40,15 @@ export const edgeLoginService = async (data: EdgeLoginPayload) => {
     throw new Error("Site already activated on another machine");
   }
 
-  // CASE 3: Verify signature
+  // CASE 3: First login after approval (no signature yet)
   if (!data.signature || !data.timestamp) {
-    throw new Error("Missing signature");
+    return {
+      success: true,
+      message: "First login after activation",
+      site_id: site.site_id,
+      organization_id: site.organization_id,
+      device_secret: site.device_secret
+    };
   }
 
   // prevent replay
