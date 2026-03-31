@@ -31,7 +31,7 @@ export const calculateConsumption = (
 
   //  SPIKE
   if (maxLoadKw && intervalSec) {
-    const maxPossible = (maxLoadKw / 60) * (intervalSec / 60);
+    const maxPossible = maxLoadKw * (intervalSec / 3600);
 
     if (delta > maxPossible) {
       return { consumption: 0, event: "SPIKE", valid: false };
