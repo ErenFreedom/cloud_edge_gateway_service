@@ -33,7 +33,23 @@ export const processBatch = async (): Promise<number> => {
     const prevRow = prevMap.get(row.sensor_id);
     const meta = metaMap.get(row.sensor_id);
 
-    if (!prevRow || !meta) continue;
+    if (!meta) continue;
+
+    if (!prevRow) {
+      resultRows.push({
+        organization_id: row.organization_id,
+        site_id: row.site_id,
+        sensor_id: row.sensor_id,
+        timestamp: row.timestamp_value,
+        prev: row.value,
+        curr: row.value,
+        consumption: 0,
+        event: "OK",
+        valid: true,
+        gap: 0
+      });
+      continue;
+    }
 
     const gapMinutes =
       (new Date(row.timestamp_value).getTime() -
