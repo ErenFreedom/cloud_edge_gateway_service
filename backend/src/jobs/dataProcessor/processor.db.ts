@@ -38,7 +38,11 @@ export const getSensorMetaMap = async (sensorIds: string[]) => {
 
   const res = await pool.query(
     `
-    SELECT id, meter_max_value, max_load_kw, logging_interval_seconds
+    SELECT 
+    id,
+    meter_max_value,
+    contract_load AS max_load_kw,
+    polling_interval AS logging_interval_seconds
     FROM sensors
     WHERE id = ANY($1)
     `,
