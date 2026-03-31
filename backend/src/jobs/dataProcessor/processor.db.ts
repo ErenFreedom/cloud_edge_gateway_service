@@ -1,6 +1,7 @@
 import { pool } from "../../config/database";
 
-//  GET CURSOR
+// ---------------- CURSOR ----------------
+
 export const getLastProcessedId = async (): Promise<number> => {
   const res = await pool.query(
     `SELECT last_processed_id FROM processor_state LIMIT 1`
@@ -8,7 +9,6 @@ export const getLastProcessedId = async (): Promise<number> => {
   return res.rows[0]?.last_processed_id || 0;
 };
 
-//  UPDATE CURSOR
 export const updateLastProcessedId = async (id: number): Promise<void> => {
   await pool.query(
     `UPDATE processor_state SET last_processed_id = $1`,
@@ -16,7 +16,9 @@ export const updateLastProcessedId = async (id: number): Promise<void> => {
   );
 };
 
-//  FETCH RAW BATCH (WITH CURSOR)
+// ---------------- RAW FETCH ----------------
+//  FIX: ORDER BY id ASC (NOT sensor_id)
+
 export const getRawBatch = async (lastId: number, limit = 300) => {
   const res = await pool.query(
     `
@@ -32,33 +34,31 @@ export const getRawBatch = async (lastId: number, limit = 300) => {
   return res.rows;
 };
 
-//  FETCH SENSOR METADATA (BATCH)
+// ---------------- SENSOR META ----------------
+
 export const getSensorMetaMap = async (sensorIds: string[]) => {
   if (sensorIds.length === 0) return new Map();
 
   const res = await pool.query(
     `
     SELECT 
-    id,
-    meter_max_value,
-    contract_load AS max_load_kw,
-    polling_interval AS logging_interval_seconds
+      id,
+      meter_max_value,
+      contract_load AS max_load_kw,
+      polling_interval AS logging_interval_seconds
     FROM sensors
     WHERE id = ANY($1)
     `,
     [sensorIds]
   );
 
-  const map = new Map();
-
-  for (const row of res.rows) {
-    map.set(row.id, row);
-  }
-
+  const map = new Map<string, any>();
+  res.rows.forEach(row => map.set(row.id, row));
   return map;
 };
 
-//  FETCH PREVIOUS VALUES (BATCH)
+// ---------------- PREVIOUS VALUES ----------------
+
 export const getPreviousMap = async (sensorIds: string[]) => {
   if (sensorIds.length === 0) return new Map();
 
@@ -75,41 +75,39 @@ export const getPreviousMap = async (sensorIds: string[]) => {
     [sensorIds]
   );
 
-  const map = new Map();
-
-  for (const row of res.rows) {
-    map.set(row.sensor_id, row);
-  }
-
+  const map = new Map<string, any>();
+  res.rows.forEach(row => map.set(row.sensor_id, row));
   return map;
 };
 
-//  BATCH INSERT
+// ---------------- INSERT ----------------
+//  FIX: ON CONFLICT (duplicate protection)
+
 export const insertCalculated = async (rows: any[]) => {
-  if (rows.length === 0) return;
+  if (!rows.length) return;
 
   const values: any[] = [];
   const placeholders: string[] = [];
 
   let idx = 1;
 
-  for (const row of rows) {
+  for (const r of rows) {
     placeholders.push(
       `($${idx++},$${idx++},$${idx++},$${idx++},$${idx++},$${idx++},
         $${idx++},$${idx++},$${idx++},$${idx++})`
     );
 
     values.push(
-      row.organization_id,
-      row.site_id,
-      row.sensor_id,
-      row.timestamp,
-      row.prev,
-      row.curr,
-      row.consumption,
-      row.event,
-      row.valid,
-      row.gap
+      r.organization_id,
+      r.site_id,
+      r.sensor_id,
+      r.timestamp,
+      r.prev,
+      r.curr,
+      r.consumption,
+      r.event,
+      r.valid,
+      r.gap
     );
   }
 
@@ -120,6 +118,7 @@ export const insertCalculated = async (rows: any[]) => {
      previous_kwh, current_kwh, consumption_kwh,
      event_type, is_valid, gap_minutes)
     VALUES ${placeholders.join(",")}
+    ON CONFLICT (sensor_id, timestamp) DO NOTHING
     `,
     values
   );

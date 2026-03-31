@@ -12,79 +12,123 @@ import { calculateConsumption } from "./processor.utils";
 export const processBatch = async (): Promise<number> => {
 
   const lastId = await getLastProcessedId();
-
   const rawRows = await getRawBatch(lastId, 300);
 
-  if (rawRows.length === 0) return 0;
+  if (!rawRows.length) {
+    console.log("No data, sleeping...");
+    return 0;
+  }
 
-  //  extract unique sensors
-  const sensorIds = [
-    ...new Set(rawRows.map(r => r.sensor_id))
-  ];
+  // ---------------- GROUP BY SENSOR ----------------
 
-  //  batch fetch
+  const grouped = new Map<string, any[]>();
+
+  for (const row of rawRows) {
+    if (!grouped.has(row.sensor_id)) {
+      grouped.set(row.sensor_id, []);
+    }
+    grouped.get(row.sensor_id)!.push(row);
+  }
+
+  const sensorIds = [...grouped.keys()];
+
   const metaMap = await getSensorMetaMap(sensorIds);
   const prevMap = await getPreviousMap(sensorIds);
 
   const resultRows: any[] = [];
 
-  for (const row of rawRows) {
+  // ---------------- PROCESS EACH SENSOR ----------------
 
-    const prevRow = prevMap.get(row.sensor_id);
-    const meta = metaMap.get(row.sensor_id);
+  for (const [sensorId, rows] of grouped.entries()) {
 
+    const meta = metaMap.get(sensorId);
     if (!meta) continue;
 
-    if (!prevRow) {
+    //  SAFE SORT (per sensor)
+    rows.sort(
+      (a, b) =>
+        new Date(a.timestamp_value).getTime() -
+        new Date(b.timestamp_value).getTime()
+    );
+
+    const prevRow = prevMap.get(sensorId);
+
+    let lastValue = prevRow?.current_kwh ?? undefined;
+    let lastTimestamp = prevRow?.timestamp ?? undefined;
+
+    for (const row of rows) {
+
+      // ---------------- FIRST ENTRY ----------------
+      if (lastValue === undefined) {
+        lastValue = row.value;
+        lastTimestamp = row.timestamp_value;
+
+        resultRows.push({
+          organization_id: row.organization_id,
+          site_id: row.site_id,
+          sensor_id: sensorId,
+          timestamp: row.timestamp_value,
+          prev: row.value,
+          curr: row.value,
+          consumption: 0,
+          event: "OK",
+          valid: true,
+          gap: 0
+        });
+
+        continue;
+      }
+
+      const gapMinutes =
+        (new Date(row.timestamp_value).getTime() -
+         new Date(lastTimestamp).getTime()) / 60000;
+
+      //  BACKWARD TIME
+      if (gapMinutes < 0) continue;
+
+      //  DUPLICATE VALUE
+      if (row.value === lastValue) continue;
+
+      const calc = calculateConsumption(
+        lastValue,
+        row.value,
+        gapMinutes,
+        meta.max_load_kw,
+        meta.logging_interval_seconds,
+        meta.meter_max_value
+      );
+
       resultRows.push({
         organization_id: row.organization_id,
         site_id: row.site_id,
-        sensor_id: row.sensor_id,
+        sensor_id: sensorId,
         timestamp: row.timestamp_value,
-        prev: row.value,
+        prev: lastValue,
         curr: row.value,
-        consumption: 0,
-        event: "OK",
-        valid: true,
-        gap: 0
+        consumption: calc.consumption,
+        event: calc.event,
+        valid: calc.valid,
+        gap: gapMinutes
       });
-      continue;
+
+      //  UPDATE CHAIN
+      lastValue = row.value;
+      lastTimestamp = row.timestamp_value;
     }
+  }
 
-    const gapMinutes =
-      (new Date(row.timestamp_value).getTime() -
-        new Date(prevRow.timestamp).getTime()) / 60000;
-
-    const calc = calculateConsumption(
-      prevRow.current_kwh,
-      row.value,
-      gapMinutes,
-      meta.max_load_kw,
-      meta.logging_interval_seconds,
-      meta.meter_max_value
-    );
-
-    resultRows.push({
-      organization_id: row.organization_id,
-      site_id: row.site_id,
-      sensor_id: row.sensor_id,
-      timestamp: row.timestamp_value,
-      prev: prevRow.current_kwh,
-      curr: row.value,
-      consumption: calc.consumption,
-      event: calc.event,
-      valid: calc.valid,
-      gap: gapMinutes
-    });
+  if (resultRows.length === 0) {
+    console.log("⚠️ No valid rows after processing");
   }
 
   await insertCalculated(resultRows);
 
-  //  update cursor
+  // ---------------- UPDATE CURSOR ----------------
+
   const newLastId = rawRows[rawRows.length - 1].id;
   await updateLastProcessedId(newLastId);
 
-  console.log(`✅ Processed ${resultRows.length} rows`);
+  console.log(` Processed ${resultRows.length} rows`);
 
   return resultRows.length;
 };
