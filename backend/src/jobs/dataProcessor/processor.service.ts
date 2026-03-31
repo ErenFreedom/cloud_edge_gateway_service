@@ -58,7 +58,6 @@ export const processBatch = async (): Promise<number> => {
 
     for (const row of rows) {
 
-      // ---------------- FIRST ENTRY ----------------
       if (lastValue === undefined) {
         lastValue = row.value;
         lastTimestamp = row.timestamp_value;
@@ -81,13 +80,12 @@ export const processBatch = async (): Promise<number> => {
 
       const gapMinutes =
         (new Date(row.timestamp_value).getTime() -
-         new Date(lastTimestamp).getTime()) / 60000;
+          new Date(lastTimestamp).getTime()) / 60000;
 
-      //  BACKWARD TIME
+      //  backward time → skip
       if (gapMinutes < 0) continue;
 
-      //  DUPLICATE VALUE
-      if (row.value === lastValue) continue;
+      const isDuplicate = row.value === lastValue;
 
       const calc = calculateConsumption(
         lastValue,
@@ -105,13 +103,12 @@ export const processBatch = async (): Promise<number> => {
         timestamp: row.timestamp_value,
         prev: lastValue,
         curr: row.value,
-        consumption: calc.consumption,
-        event: calc.event,
-        valid: calc.valid,
+        consumption: isDuplicate ? 0 : calc.consumption,
+        event: isDuplicate ? "OK" : calc.event,
+        valid: isDuplicate ? true : calc.valid,
         gap: gapMinutes
       });
 
-      //  UPDATE CHAIN
       lastValue = row.value;
       lastTimestamp = row.timestamp_value;
     }
