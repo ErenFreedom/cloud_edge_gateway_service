@@ -11,7 +11,6 @@ export const processMessage = (
 
     const payload = data as SensorPayload;
 
-    //  FIXED validation (important)
     if (
       payload.sensor_id === undefined ||
       payload.timestamp === undefined
@@ -22,23 +21,25 @@ export const processMessage = (
     return {
       topic,
       payload,
+
       organization_id: payload.client_id ?? null,
       site_id: payload.site_id ?? null,
-      sensor_id: payload.sensor_id ?? null, 
+      sensor_id: payload.sensor_id ?? null,
+
       device: payload.device ?? null,
       location: payload.location ?? null,
       value: payload.value ?? null,
+
       quality: payload.quality ?? null,
       quality_good: payload.quality_good ?? null,
+
       timestamp: payload.timestamp ? new Date(payload.timestamp) : null,
+
+      metadata: payload
     };
 
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error("Processing error:", err.message);
-    } else {
-      console.error("Processing error:", err);
-    }
+  } catch (err) {
+    console.error("Processing error:", err);
     return null;
   }
 };

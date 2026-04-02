@@ -81,6 +81,38 @@ export const getOrCreateSensorUUID = async (
   return newUUID;
 };
 
+
+export const upsertSensorMetadata = async (
+  sensorUUID: string,
+  data: any
+) => {
+
+  await pool.query(
+    `
+    UPDATE sensors
+    SET 
+      sensor_name = COALESCE($2, sensor_name),
+      sensor_location = COALESCE($3, sensor_location),
+      api_endpoint = COALESCE($4, api_endpoint),
+      polling_interval = COALESCE($5, polling_interval),
+      upper_bound = COALESCE($6, upper_bound),
+      meter_max_value = COALESCE($7, meter_max_value),
+      max_load_kw = COALESCE($8, max_load_kw)
+    WHERE id = $1
+    `,
+    [
+      sensorUUID,
+      data.sensor_name,
+      data.sensor_location,
+      data.api_endpoint,
+      data.polling_interval,
+      data.upper_bound,
+      data.meter_max_value,
+      data.max_load_kw
+    ]
+  );
+};
+
 /**
  *  Batch Insert with mapping
  */
@@ -118,6 +150,10 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
       row.organization_id,
       row.site_id
     );
+
+    if (row.metadata) {
+      await upsertSensorMetadata(sensorUUID, row.metadata);
+    }
 
     placeholders.push(
       `($${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},

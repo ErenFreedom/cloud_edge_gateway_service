@@ -12,6 +12,8 @@ import orgSiteManagerRoutes from "./modules/orgSiteManager/orgSiteManager.routes
 import { authMiddleware } from './middleware/auth.middleware';
 import { roleMiddleware } from './middleware/role.middleware';
 import edgeAuthRoutes from "./modules/edgeAuth/edgeAuth.routes";
+import clientRoutes from "./modules/client/client.routes";
+
 
 const app = express();
 
@@ -26,7 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/sites', siteRoutes);
 app.use("/api/org-site-managers",orgSiteManagerRoutes);
 app.use("/api/edge", edgeAuthRoutes);
-
+app.use("/api/client", clientRoutes);
 
 app.use(
   '/api/platform',
