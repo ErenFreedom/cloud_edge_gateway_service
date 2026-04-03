@@ -34,9 +34,6 @@ export const getSiteStatus = async (siteId: string): Promise<string | null> => {
 
 /* ---------------- SENSOR CACHE (FIXED) ---------------- */
 
-/**
- * 🔥 FIX: Composite key to avoid collision
- */
 const sensorCache = new Map<string, string>();
 
 export const getOrCreateSensorUUID = async (
@@ -52,42 +49,26 @@ export const getOrCreateSensorUUID = async (
     return sensorCache.get(key)!;
   }
 
-  // 🔍 CHECK EXISTING (FIXED)
-  const existing = await pool.query(
-    `
-    SELECT id 
-    FROM sensors 
-    WHERE external_sensor_id = $1 
-    AND site_id = $2
-    LIMIT 1
-    `,
-    [String(externalId), site_id]
-  );
-
-  if (existing.rows.length > 0) {
-    const uuid = existing.rows[0].id;
-    sensorCache.set(key, uuid);
-    return uuid;
-  }
-
-  // 🆕 CREATE SENSOR
-  const inserted = await pool.query(
+  // 🔥 UPSERT (NO SELECT, NO RACE CONDITION)
+  const result = await pool.query(
     `
     INSERT INTO sensors 
     (organization_id, site_id, sensor_uuid, external_sensor_id)
     VALUES ($1, $2, gen_random_uuid(), $3)
+    ON CONFLICT (external_sensor_id, site_id)
+    DO UPDATE SET external_sensor_id = EXCLUDED.external_sensor_id
     RETURNING id
     `,
     [organization_id, site_id, String(externalId)]
   );
 
-  const newUUID = inserted.rows[0].id;
+  const uuid = result.rows[0].id;
 
-  console.log("✅ Created sensor:", externalId);
+  console.log("✅ Sensor UUID:", externalId, uuid);
 
-  sensorCache.set(key, newUUID);
+  sensorCache.set(key, uuid);
 
-  return newUUID;
+  return uuid;
 };
 
 /* ---------------- METADATA UPSERT ---------------- */
@@ -156,41 +137,54 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
       continue;
     }
 
-    // 🔑 SENSOR UUID
-    const sensorUUID = await getOrCreateSensorUUID(
-      row.sensor_id,
-      row.organization_id,
-      row.site_id
-    );
+    try {
+      // 🔑 ALWAYS GUARANTEED SENSOR EXISTS
+      const sensorUUID = await getOrCreateSensorUUID(
+        row.sensor_id,
+        row.organization_id,
+        row.site_id
+      );
 
-    // 🧠 METADATA UPDATE
-    if (row.metadata) {
-      await upsertSensorMetadata(sensorUUID, row.metadata);
+      console.log("🔑 UUID:", sensorUUID);
+
+      // 🧠 METADATA UPDATE
+      if (row.metadata) {
+        await upsertSensorMetadata(sensorUUID, row.metadata);
+      }
+
+      placeholders.push(
+        `($${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},
+          $${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
+      );
+
+      values.push(
+        row.topic,
+        row.payload,
+        row.organization_id,
+        row.site_id,
+        sensorUUID,
+        row.device,
+        row.location,
+        row.value,
+        row.quality,
+        row.quality_good,
+        row.timestamp
+      );
+
+      insertedCount++;
+
+    } catch (err) {
+      console.error("❌ Sensor processing failed:", err);
     }
-
-    placeholders.push(
-      `($${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},
-        $${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
-    );
-
-    values.push(
-      row.topic,
-      row.payload,
-      row.organization_id,
-      row.site_id,
-      sensorUUID,
-      row.device,
-      row.location,
-      row.value,
-      row.quality,
-      row.quality_good,
-      row.timestamp
-    );
-
-    insertedCount++;
   }
 
   console.log("🧾 Final insert count:", insertedCount);
+
+  // 🚨 CRITICAL FIX (EMPTY BATCH)
+  if (placeholders.length === 0) {
+    console.log("⚠️ Skipping empty batch");
+    return;
+  }
 
   try {
     await pool.query(
@@ -204,6 +198,7 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
     );
 
     console.log(`✅ Inserted batch of ${insertedCount}`);
+
   } catch (err) {
     console.error("❌ Batch insert failed:", err);
   }
