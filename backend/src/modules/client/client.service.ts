@@ -20,7 +20,7 @@ export const generateClientTokenService = async (
 
   const { site_id } = body;
 
-  if (!admin.organization_id) {
+  if (!admin.organizationId) {
     throw new Error("Invalid admin");
   }
 
@@ -34,7 +34,7 @@ export const generateClientTokenService = async (
     AND status = 'active'
     LIMIT 1
     `,
-    [site_id, admin.organization_id]
+    [site_id, admin.organizationId]
   );
 
   if (siteCheck.rows.length === 0) {
@@ -45,7 +45,7 @@ export const generateClientTokenService = async (
   const token = crypto.randomBytes(32).toString("hex");
 
   await upsertClientTokenRepo(
-    admin.organization_id,
+    admin.organizationId,
     site_id,
     token
   );
