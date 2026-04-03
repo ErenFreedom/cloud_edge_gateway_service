@@ -917,9 +917,20 @@ const Dashboard = () => {
               <>
                 <p>Generate API Token for this site</p>
 
-                <Button size="medium" onClick={generateToken}>
-                  Generate Token
-                </Button>
+                <div className="modal-buttons">
+
+                  <Button size="medium" onClick={generateToken}>
+                    Generate Token
+                  </Button>
+
+                  <Button
+                    size="medium"
+                    onClick={() => setExportModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+
+                </div>
               </>
             )}
 
