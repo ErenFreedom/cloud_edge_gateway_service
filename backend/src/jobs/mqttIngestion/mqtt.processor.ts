@@ -11,11 +11,9 @@ export const processMessage = (
 
     const payload = data as SensorPayload;
 
-    if (
-      payload.sensor_id === undefined ||
-      payload.timestamp === undefined
-    ) {
-      throw new Error("Missing required fields");
+    if (!payload.sensor_id || !payload.timestamp) {
+      console.error("❌ Missing required fields:", payload);
+      return null;
     }
 
     return {
@@ -33,9 +31,22 @@ export const processMessage = (
       quality: payload.quality ?? null,
       quality_good: payload.quality_good ?? null,
 
-      timestamp: payload.timestamp ? new Date(payload.timestamp) : null,
+      timestamp: payload.timestamp
+        ? new Date(payload.timestamp)
+        : null,
 
-      metadata: payload
+      metadata: {
+        sensor_name: payload.sensor_name,
+        sensor_location: payload.location,
+
+        // ✅ FIXED (api_url → api_endpoint)
+        api_endpoint: payload.api_url ?? payload.api_endpoint,
+
+        polling_interval: payload.polling_interval,
+        upper_bound: payload.upper_bound,
+        meter_max_value: payload.meter_max_value,
+        max_load_kw: payload.max_load_kw
+      }
     };
 
   } catch (err) {

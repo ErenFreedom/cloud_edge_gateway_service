@@ -11,12 +11,24 @@ export interface SensorPayload {
   quality_good: boolean;
   timestamp: string;
 
- 
+  sensor_name?: string;
+  api_endpoint?: string;
+  polling_interval?: number;
+
+  upper_bound?: number;
+  meter_max_value?: number;
+  max_load_kw?: number;
+
+  // 👇 IMPORTANT (coworker sending this)
+  api_url?: string;
+}
+
+/* ✅ CLEAN METADATA TYPE */
+export interface SensorMetadata {
   sensor_name?: string;
   sensor_location?: string;
   api_endpoint?: string;
   polling_interval?: number;
-
   upper_bound?: number;
   meter_max_value?: number;
   max_load_kw?: number;
@@ -39,5 +51,5 @@ export interface ProcessedRow {
 
   timestamp: Date | null;
 
-  metadata?: SensorPayload;
+  metadata?: SensorMetadata;
 }

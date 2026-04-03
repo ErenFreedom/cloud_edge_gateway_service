@@ -1,6 +1,6 @@
 import { Pool } from "pg";
-import { ProcessedRow } from "./mqtt.types";
-const siteStatusCache = new Map<string, string>();
+import { ProcessedRow, SensorMetadata } from "./mqtt.types";
+
 export const pool = new Pool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT),
@@ -9,6 +9,9 @@ export const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
+/* ---------------- SITE CACHE ---------------- */
+
+const siteStatusCache = new Map<string, string>();
 
 export const getSiteStatus = async (siteId: string): Promise<string | null> => {
   if (siteStatusCache.has(siteId)) {
@@ -29,39 +32,45 @@ export const getSiteStatus = async (siteId: string): Promise<string | null> => {
   return status;
 };
 
+/* ---------------- SENSOR CACHE (FIXED) ---------------- */
 
 /**
- * In-memory cache for fast lookup
+ * 🔥 FIX: Composite key to avoid collision
  */
-const sensorCache = new Map<number, string>();
+const sensorCache = new Map<string, string>();
 
-/**
- * Get or Create Sensor UUID
- */
 export const getOrCreateSensorUUID = async (
   externalId: number,
   organization_id: string,
   site_id: string
 ): Promise<string> => {
 
-  // ✅ Cache hit
-  if (sensorCache.has(externalId)) {
-    return sensorCache.get(externalId)!;
+  const key = `${organization_id}_${site_id}_${externalId}`;
+
+  // ✅ CACHE HIT
+  if (sensorCache.has(key)) {
+    return sensorCache.get(key)!;
   }
 
-  // 🔍 Check if exists
+  // 🔍 CHECK EXISTING (FIXED)
   const existing = await pool.query(
-    `SELECT id FROM sensors WHERE external_sensor_id = $1 LIMIT 1`,
-    [String(externalId)]
+    `
+    SELECT id 
+    FROM sensors 
+    WHERE external_sensor_id = $1 
+    AND site_id = $2
+    LIMIT 1
+    `,
+    [String(externalId), site_id]
   );
 
   if (existing.rows.length > 0) {
     const uuid = existing.rows[0].id;
-    sensorCache.set(externalId, uuid);
+    sensorCache.set(key, uuid);
     return uuid;
   }
 
-  //  CREATE NEW SENSOR
+  // 🆕 CREATE SENSOR
   const inserted = await pool.query(
     `
     INSERT INTO sensors 
@@ -76,15 +85,16 @@ export const getOrCreateSensorUUID = async (
 
   console.log("✅ Created sensor:", externalId);
 
-  sensorCache.set(externalId, newUUID);
+  sensorCache.set(key, newUUID);
 
   return newUUID;
 };
 
+/* ---------------- METADATA UPSERT ---------------- */
 
 export const upsertSensorMetadata = async (
   sensorUUID: string,
-  data: any
+  data: SensorMetadata
 ) => {
 
   await pool.query(
@@ -102,20 +112,19 @@ export const upsertSensorMetadata = async (
     `,
     [
       sensorUUID,
-      data.sensor_name,
-      data.sensor_location,
-      data.api_endpoint,
-      data.polling_interval,
-      data.upper_bound,
-      data.meter_max_value,
-      data.max_load_kw
+      data.sensor_name ?? null,
+      data.sensor_location ?? null,
+      data.api_endpoint ?? null,
+      data.polling_interval ?? null,
+      data.upper_bound ?? null,
+      data.meter_max_value ?? null,
+      data.max_load_kw ?? null
     ]
   );
 };
 
-/**
- *  Batch Insert with mapping
- */
+/* ---------------- BATCH INSERT ---------------- */
+
 export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
   if (rows.length === 0) return;
 
@@ -126,12 +135,15 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
   let insertedCount = 0;
 
   for (const row of rows) {
+
+    console.log("📦 Processing sensor:", row.sensor_id);
+
     if (!row.sensor_id || !row.organization_id || !row.site_id) {
       console.error("❌ Missing required row data");
       continue;
     }
 
-    // CHECK SITE STATUS
+    // 🔍 SITE STATUS CHECK
     const siteStatus = await getSiteStatus(row.site_id);
 
     if (!siteStatus) {
@@ -140,24 +152,25 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
     }
 
     if (siteStatus !== "active") {
-      console.log(`🚫 Data blocked for site ${row.site_id} (status: ${siteStatus})`);
+      console.log(`🚫 BLOCKED sensor ${row.sensor_id}`);
       continue;
     }
 
-    //  SENSOR MAPPING (unchanged)
+    // 🔑 SENSOR UUID
     const sensorUUID = await getOrCreateSensorUUID(
       row.sensor_id,
       row.organization_id,
       row.site_id
     );
 
+    // 🧠 METADATA UPDATE
     if (row.metadata) {
       await upsertSensorMetadata(sensorUUID, row.metadata);
     }
 
     placeholders.push(
       `($${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},
-      $${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
+        $${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++},$${paramIndex++})`
     );
 
     values.push(
@@ -177,6 +190,8 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
     insertedCount++;
   }
 
+  console.log("🧾 Final insert count:", insertedCount);
+
   try {
     await pool.query(
       `
@@ -189,11 +204,7 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
     );
 
     console.log(`✅ Inserted batch of ${insertedCount}`);
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error("❌ Batch insert failed:", err.message);
-    } else {
-      console.error("❌ Batch insert failed:", err);
-    }
+  } catch (err) {
+    console.error("❌ Batch insert failed:", err);
   }
 };
