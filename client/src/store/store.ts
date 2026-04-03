@@ -4,6 +4,7 @@ import platformReducer from "../features/platform/platformSlice";
 import sitesReducer from "../features/sites/sitesSlice";
 import orgManagerReducer from "../features/orgManager/orgManagerSlice";
 import activationReducer from "../features/activation/activationSlice";
+import clientReducer from "../features/client/clientSlice";
 
 export const store = configureStore({
 
@@ -14,6 +15,7 @@ export const store = configureStore({
     sites: sitesReducer,
     orgManager: orgManagerReducer,
     activation: activationReducer,
+    client: clientReducer,
   }
 
 });

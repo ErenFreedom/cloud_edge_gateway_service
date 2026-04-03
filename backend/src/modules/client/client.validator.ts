@@ -16,3 +16,9 @@ export const validateTimeSeries = (body: any) => {
     throw new Error("invalid interval");
   }
 };
+
+export const validateGenerateToken = (body: any) => {
+  if (!body.site_id) {
+    throw new Error("site_id required");
+  }
+};

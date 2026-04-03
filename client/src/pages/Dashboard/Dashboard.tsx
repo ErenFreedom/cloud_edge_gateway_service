@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FaUserCircle, FaEye, FaEdit } from "react-icons/fa";
+import { FaUserCircle, FaEye, FaEdit, FaDownload } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import type { RootState, AppDispatch } from "../../store/store";
 import SiteLocationPicker from "../../components/maps/SiteLocationPicker";
@@ -12,6 +12,11 @@ import {
   resetCredentials,
   createSiteThunk, resetSiteState, verifySiteAdminOtpThunk
 } from "../../features/sites/sitesSlice";
+
+import {
+  generateTokenThunk,
+  fetchTimeSeriesThunk
+} from "../../features/client/clientSlice";
 
 import {
   fetchActivationRequestsThunk,
@@ -56,6 +61,14 @@ const Dashboard = () => {
     }
   });
 
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportSiteId, setExportSiteId] = useState<string | null>(null);
+
+  const [selectedSensors, setSelectedSensors] = useState<string[]>([]);
+  const [interval, setIntervalValue] = useState("10m");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
   const viewSite = (siteId: string) => {
     navigate(`/sites/${siteId}`);
   };
@@ -80,6 +93,12 @@ const Dashboard = () => {
     loading: activationLoading
   } = useSelector((state: RootState) => state.activation);
 
+  const {
+    token,
+    timeSeriesData,
+    loading: clientLoading
+  } = useSelector((state: RootState) => state.client);
+
 
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -91,11 +110,18 @@ const Dashboard = () => {
 
 
 
+
+
   const updateField = (field: string, value: string) => {
     setSiteForm((prev) => ({
       ...prev,
       [field]: value
     }));
+  };
+
+  const openExportModal = (siteId: string) => {
+    setExportSiteId(siteId);
+    setExportModalOpen(true);
   };
 
   const updateAdminField = (field: string, value: string) => {
@@ -126,6 +152,47 @@ const Dashboard = () => {
 
     dispatch(createSiteThunk(siteForm));
 
+  };
+
+  const generateToken = () => {
+    if (!exportSiteId) return;
+
+    dispatch(generateTokenThunk(exportSiteId));
+  };
+
+
+  const fetchData = () => {
+    if (!token) return;
+
+    dispatch(
+      fetchTimeSeriesThunk({
+        token,
+        payload: {
+          sensor_ids: selectedSensors,
+          from,
+          to,
+          interval
+        }
+      })
+    );
+  };
+
+
+
+  const downloadExportJSON = () => {
+    if (!timeSeriesData) return;
+
+    const blob = new Blob(
+      [JSON.stringify(timeSeriesData, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "export_data.json";
+    a.click();
   };
 
 
@@ -406,6 +473,20 @@ const Dashboard = () => {
                 </Button>
 
                 <div className="site-icons">
+
+                  <FaDownload
+                    className={`site-action-icon ${site.status !== "active" ? "disabled" : ""}`}
+                    title={
+                      site.status !== "active"
+                        ? "Activate site to export data"
+                        : "Export Data"
+                    }
+                    onClick={() => {
+                      if (site.status === "active") {
+                        openExportModal(site.id);
+                      }
+                    }}
+                  />
 
                   <FaEye
                     className="site-action-icon"
@@ -814,6 +895,102 @@ const Dashboard = () => {
                 Close
               </Button>
             </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+
+      {exportModalOpen && (
+
+        <div className="credential-modal">
+
+          <div className="modal-content">
+
+            <h2>Export Sensor Data</h2>
+
+            {/* TOKEN SECTION */}
+
+            {!token && (
+              <>
+                <p>Generate API Token for this site</p>
+
+                <Button size="medium" onClick={generateToken}>
+                  Generate Token
+                </Button>
+              </>
+            )}
+
+            {/* AFTER TOKEN */}
+
+            {token && (
+              <>
+                <p><strong>Token:</strong></p>
+
+                <div className="token-box">
+                  {token}
+                </div>
+
+                <hr />
+
+                {/* SENSOR INPUT */}
+
+                <input
+                  placeholder="Sensor IDs (comma separated)"
+                  onChange={(e) =>
+                    setSelectedSensors(
+                      e.target.value.split(",").map(s => s.trim())
+                    )
+                  }
+                />
+
+                {/* DATE RANGE */}
+
+                <input
+                  type="date"
+                  onChange={(e) => setFrom(e.target.value)}
+                />
+
+                <input
+                  type="date"
+                  onChange={(e) => setTo(e.target.value)}
+                />
+
+                {/* INTERVAL */}
+
+                <select
+                  value={interval}
+                  onChange={(e) => setIntervalValue(e.target.value)}
+                >
+                  <option value="10m">10 Minutes</option>
+                  <option value="1h">1 Hour</option>
+                  <option value="1d">1 Day</option>
+                  <option value="1M">1 Month</option>
+                </select>
+
+                {/* ACTIONS */}
+
+                <div className="modal-buttons">
+
+                  <Button size="medium" onClick={fetchData}>
+                    Fetch Data
+                  </Button>
+
+                  <Button size="medium" onClick={downloadExportJSON}>
+                    Download JSON
+                  </Button>
+
+                  <Button size="medium" onClick={() => setExportModalOpen(false)}>
+                    Close
+                  </Button>
+
+                </div>
+              </>
+            )}
+
+            {clientLoading && <p>Loading...</p>}
 
           </div>
 

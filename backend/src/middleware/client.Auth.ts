@@ -1,34 +1,36 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
+import { getClientTokenRepo } from "../modules/client/client.repository";
 
-export const clientAuth = (req: any, res: Response, next: NextFunction) => {
+export const clientAuth = async (
+  req: any,
+  res: Response,
+  next: NextFunction
+) => {
+
   try {
-    const auth = req.headers.authorization;
+    const authHeader = req.headers.authorization;
 
-    if (!auth) {
+    if (!authHeader) {
       return res.status(401).json({ message: "No token provided" });
     }
 
-    const token = auth.split(" ")[1];
+    const token = authHeader.split(" ")[1];
 
     if (!token) {
       return res.status(401).json({ message: "Invalid token format" });
     }
 
-    const decoded: any = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string
-    );
+    const client = await getClientTokenRepo(token);
 
-    if (!decoded.organization_id || !decoded.site_id) {
-      return res.status(403).json({ message: "Invalid token payload" });
+    if (!client) {
+      return res.status(401).json({ message: "Invalid token" });
     }
 
-    req.client = decoded;
+    req.client = client;
 
     next();
 
   } catch (err) {
-    return res.status(401).json({ message: "Unauthorized" });
+    res.status(500).json({ message: "Auth error" });
   }
 };
