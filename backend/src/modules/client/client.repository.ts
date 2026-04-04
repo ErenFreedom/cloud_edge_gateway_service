@@ -91,11 +91,41 @@ export const saveClientConfigRepo = async (
   to: string,
   interval: string
 ) => {
+
+  /* ===== GET EXISTING TOKEN ===== */
+
+  const existing = await pool.query(
+    `
+    SELECT token
+    FROM client_tokens
+    WHERE site_id = $1
+    LIMIT 1
+    `,
+    [siteId]
+  );
+
+  if (existing.rows.length === 0) {
+    throw new Error("Generate token first before saving configuration");
+  }
+
+  const existingToken = existing.rows[0].token;
+
+  /* ===== UPSERT WITH TOKEN ===== */
+
   await pool.query(
     `
     INSERT INTO client_tokens
-    (organization_id, site_id, sensor_ids, from_date, to_date, interval, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, now())
+    (
+      organization_id,
+      site_id,
+      token,
+      sensor_ids,
+      from_date,
+      to_date,
+      interval,
+      updated_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, now())
 
     ON CONFLICT (site_id)
     DO UPDATE SET
@@ -105,10 +135,9 @@ export const saveClientConfigRepo = async (
       interval = EXCLUDED.interval,
       updated_at = now()
     `,
-    [orgId, siteId, sensorIds, from, to, interval]
+    [orgId, siteId, existingToken, sensorIds, from, to, interval]
   );
 };
-
 
 /* ---------------- TIMESERIES ---------------- */
 
