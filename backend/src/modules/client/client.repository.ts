@@ -61,6 +61,55 @@ export const upsertClientTokenRepo = async (
     [orgId, siteId, token, sensorIds, from, to, interval]
   );
 };
+
+
+/* ================= GET CONFIG ================= */
+
+export const getClientConfigRepo = async (orgId: string, siteId: string) => {
+  const res = await pool.query(
+    `
+    SELECT sensor_ids, from_date, to_date, interval
+    FROM client_tokens
+    WHERE organization_id = $1
+    AND site_id = $2
+    AND is_active = true
+    LIMIT 1
+    `,
+    [orgId, siteId]
+  );
+
+  return res.rows[0] || null;
+};
+
+/* ================= SAVE CONFIG ================= */
+
+export const saveClientConfigRepo = async (
+  orgId: string,
+  siteId: string,
+  sensorIds: string[],
+  from: string,
+  to: string,
+  interval: string
+) => {
+  await pool.query(
+    `
+    INSERT INTO client_tokens
+    (organization_id, site_id, sensor_ids, from_date, to_date, interval, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, now())
+
+    ON CONFLICT (site_id)
+    DO UPDATE SET
+      sensor_ids = EXCLUDED.sensor_ids,
+      from_date = EXCLUDED.from_date,
+      to_date = EXCLUDED.to_date,
+      interval = EXCLUDED.interval,
+      updated_at = now()
+    `,
+    [orgId, siteId, sensorIds, from, to, interval]
+  );
+};
+
+
 /* ---------------- TIMESERIES ---------------- */
 
 export const getTimeSeriesRepo = async (

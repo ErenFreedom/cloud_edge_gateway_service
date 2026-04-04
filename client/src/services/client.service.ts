@@ -10,13 +10,13 @@ export interface GenerateTokenPayload {
   interval: "10m" | "1h" | "1d" | "1M";
 }
 
-export interface TimeSeriesPayload {
+export interface SaveConfigPayload {
+  site_id: string;
   sensor_ids: string[];
   from: string;
   to: string;
   interval: "10m" | "1h" | "1d" | "1M";
 }
-
 
 export interface Sensor {
   id: string;
@@ -27,9 +27,19 @@ export interface Sensor {
   polling_interval: number;
 }
 
+export interface ClientConfig {
+  sensor_ids: string[];
+  from: string;
+  to: string;
+  interval: "10m" | "1h" | "1d" | "1M";
+}
+
 /* ---------------- API CALLS ---------------- */
 
-//  GENERATE TOKEN
+/* ============================= */
+/* GENERATE TOKEN */
+/* ============================= */
+
 export const generateClientToken = async (
   payload: GenerateTokenPayload
 ) => {
@@ -41,8 +51,11 @@ export const generateClientToken = async (
   return response.data;
 };
 
-export const fetchSensors = async (site_id: string) => {
+/* ============================= */
+/* FETCH SENSORS */
+/* ============================= */
 
+export const fetchSensors = async (site_id: string) => {
   const response = await apiClient.get(
     `/client/sensors?site_id=${site_id}`
   );
@@ -50,13 +63,39 @@ export const fetchSensors = async (site_id: string) => {
   return response.data;
 };
 
+/* ============================= */
+/* FETCH CONFIG */
+/* ============================= */
 
-//  TIMESERIES EXPORT
+export const fetchConfig = async (site_id: string) => {
+  const response = await apiClient.get(
+    `/client/config?site_id=${site_id}`
+  );
+
+  return response.data;
+};
+
+/* ============================= */
+/* SAVE CONFIG */
+/* ============================= */
+
+export const saveConfig = async (payload: SaveConfigPayload) => {
+  const response = await apiClient.post(
+    "/client/save-config",
+    payload
+  );
+
+  return response.data;
+};
+
+/* ============================= */
+/* TIMESERIES EXPORT (TOKEN BASED) */
+/* ============================= */
+
 export const fetchTimeSeries = async (token: string) => {
-
   const response = await apiClient.post(
     "/client/timeseries",
-    {}, // 🔥 EMPTY BODY
+    {}, // 🔥 EMPTY BODY (CONFIG COMES FROM DB)
     {
       headers: {
         Authorization: `Bearer ${token}`

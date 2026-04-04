@@ -15,10 +15,12 @@ import {
 
 import {
   generateTokenThunk,
-  fetchTimeSeriesThunk,
   fetchSensorsThunk,
+  fetchConfigThunk,
+  saveConfigThunk,
   toggleSensor
 } from "../../features/client/clientSlice";
+
 
 import {
   fetchActivationRequestsThunk,
@@ -66,8 +68,7 @@ const Dashboard = () => {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportSiteId, setExportSiteId] = useState<string | null>(null);
 
-  const [minDate, setMinDate] = useState<string | null>(null);
-  const [maxDate, setMaxDate] = useState<string | null>(null);
+
 
   const [interval, setIntervalValue] = useState<
     "10m" | "1h" | "1d" | "1M"
@@ -103,12 +104,11 @@ const Dashboard = () => {
 
   const {
     token,
-    timeSeriesData,
     loading: clientLoading,
     sensors,
-    selectedSensors
+    selectedSensors,
+    config
   } = useSelector((state: RootState) => state.client);
-
 
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -117,6 +117,8 @@ const Dashboard = () => {
   const [password, setPassword] = useState("");
 
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [minDate, setMinDate] = useState<string | null>(null);
+  const [maxDate, setMaxDate] = useState<string | null>(null);
 
 
 
@@ -189,38 +191,8 @@ const Dashboard = () => {
   };
 
 
-  const fetchData = () => {
 
-    // TOKEN CHECK (still needed)
-    if (!token) {
-      alert("Token not generated");
-      return;
-    }
 
-    // OPTIONAL UX CHECKS (keep these for sanity)
-    if (!timeSeriesData && selectedSensors.length === 0) {
-      alert("Please generate token with sensors first");
-      return;
-    }
-
-    dispatch(fetchTimeSeriesThunk(token));
-  };
-
-  const downloadExportJSON = () => {
-    if (!timeSeriesData) return;
-
-    const blob = new Blob(
-      [JSON.stringify(timeSeriesData, null, 2)],
-      { type: "application/json" }
-    );
-
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "export_data.json";
-    a.click();
-  };
 
 
   useEffect(() => {
@@ -259,48 +231,30 @@ const Dashboard = () => {
 
 
   useEffect(() => {
+    if (config) {
+
+      if (config.from) setFrom(config.from.split("T")[0]);
+      if (config.to) setTo(config.to.split("T")[0]);
+      if (config.interval) setIntervalValue(config.interval);
+
+      if (config.min_date) {
+        setMinDate(config.min_date.split("T")[0]);
+      }
+
+      if (config.max_date) {
+        setMaxDate(config.max_date.split("T")[0]);
+      }
+    }
+  }, [config]);
+
+
+  useEffect(() => {
     if (exportSiteId) {
       dispatch(fetchSensorsThunk(exportSiteId));
+      dispatch(fetchConfigThunk(exportSiteId));
     }
   }, [exportSiteId]);
 
-  useEffect(() => {
-    if (!maxDate) return;
-
-    const now = new Date(maxDate);
-
-    let newFrom = new Date(now);
-
-    switch (interval) {
-      case "10m":
-        newFrom = new Date(now.getTime() - 10 * 60 * 1000);
-        break;
-
-      case "1h":
-        newFrom = new Date(now.getTime() - 60 * 60 * 1000);
-        break;
-
-      case "1d":
-        newFrom = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        break;
-
-      case "1M":
-        newFrom.setMonth(now.getMonth() - 1);
-        break;
-    }
-
-    setFrom(newFrom.toISOString().split("T")[0]);
-    setTo(now.toISOString().split("T")[0]);
-
-  }, [interval, maxDate]);
-
-
-  useEffect(() => {
-    if (timeSeriesData) {
-      setMinDate(timeSeriesData.min_date?.split("T")[0]);
-      setMaxDate(timeSeriesData.max_date?.split("T")[0]);
-    }
-  }, [timeSeriesData]);
 
   useEffect(() => {
     if (createModalOpen) {
@@ -309,6 +263,32 @@ const Dashboard = () => {
       }, 300);
     }
   }, [createModalOpen]);
+
+
+  const saveConfig = () => {
+
+    if (!exportSiteId) return;
+
+    if (selectedSensors.length === 0) {
+      alert("Select sensors");
+      return;
+    }
+
+    if (!from || !to) {
+      alert("Select date range");
+      return;
+    }
+
+    dispatch(
+      saveConfigThunk({
+        site_id: exportSiteId,
+        sensor_ids: selectedSensors,
+        from,
+        to,
+        interval
+      })
+    );
+  };
 
 
   const logout = () => {
@@ -1072,10 +1052,6 @@ const Dashboard = () => {
 
                 </div>
 
-                <div className="modal-divider" />
-
-                {/* ================= DATE RANGE ================= */}
-
                 <div className="section-title">Date Range</div>
 
                 {minDate && maxDate && (
@@ -1104,6 +1080,9 @@ const Dashboard = () => {
 
                 <div className="modal-divider" />
 
+
+                <div className="modal-divider" />
+
                 {/* ================= INTERVAL ================= */}
 
                 <div className="section-title">Interval</div>
@@ -1128,20 +1107,8 @@ const Dashboard = () => {
 
                 <div className="modal-buttons">
 
-                  <Button
-                    size="medium"
-                    disabled={!token}
-                    onClick={fetchData}
-                  >
-                    Fetch Data
-                  </Button>
-
-                  <Button
-                    size="medium"
-                    disabled={!timeSeriesData}
-                    onClick={downloadExportJSON}
-                  >
-                    Download JSON
+                  <Button size="medium" onClick={saveConfig}>
+                    Save Configuration
                   </Button>
 
                   <Button

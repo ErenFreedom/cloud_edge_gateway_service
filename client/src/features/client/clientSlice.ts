@@ -3,7 +3,8 @@ import {
   generateClientToken,
   fetchTimeSeries,
   fetchSensors,
-  
+  fetchConfig,
+  saveConfig
 } from "../../services/client.service";
 
 
@@ -20,6 +21,7 @@ interface ClientState {
   selectedSensors: string[];
 
   timeSeriesData: any;
+  config: any;
 }
 
 const initialState: ClientState = {
@@ -32,7 +34,8 @@ const initialState: ClientState = {
   sensors: [],
   selectedSensors: [],
 
-  timeSeriesData: null
+  timeSeriesData: null,
+  config: null
 };
 
 
@@ -57,6 +60,44 @@ export const generateTokenThunk = createAsyncThunk(
     } catch (err: any) {
       return thunkAPI.rejectWithValue(
         err.response?.data?.message || "Token generation failed"
+      );
+    }
+  }
+);
+
+
+/* ============================= */
+/* FETCH CONFIG */
+/* ============================= */
+
+export const fetchConfigThunk = createAsyncThunk(
+  "client/fetchConfig",
+  async (site_id: string, thunkAPI) => {
+    try {
+      const res = await fetchConfig(site_id);
+      return res;
+    } catch (err: any) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Fetch config failed"
+      );
+    }
+  }
+);
+
+
+/* ============================= */
+/* SAVE CONFIG */
+/* ============================= */
+
+export const saveConfigThunk = createAsyncThunk(
+  "client/saveConfig",
+  async (payload: any, thunkAPI) => {
+    try {
+      const res = await saveConfig(payload);
+      return res;
+    } catch (err: any) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Save config failed"
       );
     }
   }
@@ -124,6 +165,9 @@ const clientSlice = createSlice({
 
     clearSelectedSensors: (state) => {
       state.selectedSensors = [];
+    },
+    setSelectedSensors: (state, action) => {
+      state.selectedSensors = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -154,6 +198,55 @@ const clientSlice = createSlice({
         state.loading = false;
         state.error = action.payload as string;
       })
+
+      /* ============================= */
+      /* FETCH CONFIG */
+      /* ============================= */
+
+      .addCase(fetchConfigThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+
+      .addCase(fetchConfigThunk.fulfilled, (state, action) => {
+        state.loading = false;
+
+        state.config = action.payload.config;
+
+        // 🔥 preload selected sensors
+        if (action.payload.config?.sensor_ids) {
+          state.selectedSensors = action.payload.config.sensor_ids;
+        }
+      })
+
+      .addCase(fetchConfigThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+
+      /* ============================= */
+      /* SAVE CONFIG */
+      /* ============================= */
+
+      .addCase(saveConfigThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+
+      .addCase(saveConfigThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.success = true;
+
+        state.config = action.payload.config;
+      })
+
+      .addCase(saveConfigThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+
 
 
       /* ============================= */
@@ -194,7 +287,8 @@ const clientSlice = createSlice({
       .addCase(fetchSensorsThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
-      });
+      })
+
 
   }
 });
@@ -205,7 +299,8 @@ export const {
   resetClientState,
   clearClientToken,
   toggleSensor,
-  clearSelectedSensors
+  clearSelectedSensors,
+  setSelectedSensors
 } = clientSlice.actions;
 
 export default clientSlice.reducer;

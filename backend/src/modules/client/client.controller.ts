@@ -2,7 +2,9 @@ import { Response } from "express";
 import {
   getTimeSeriesService,
   generateClientTokenService,
-  getSensorsService
+  getSensorsService,
+  getClientConfigService,
+  saveClientConfigService
 } from "./client.service";
 import { validateTimeSeries, validateGenerateToken } from "./client.validator";
 
@@ -27,6 +29,41 @@ export const generateClientToken = async (req: any, res: Response) => {
   }
 };
 
+
+export const getClientConfig = async (req: any, res: Response) => {
+  try {
+    const { site_id } = req.query;
+
+    if (!site_id) {
+      throw new Error("site_id required");
+    }
+
+    const data = await getClientConfigService(
+      req.user,
+      site_id
+    );
+
+    res.json(data);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+
+export const saveClientConfig = async (req: any, res: Response) => {
+  try {
+
+    const data = await saveClientConfigService(
+      req.user,
+      req.body
+    );
+
+    res.json(data);
+
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
 
 /* ============================= */
 /* TIMESERIES (CLIENT TOKEN BASED) */

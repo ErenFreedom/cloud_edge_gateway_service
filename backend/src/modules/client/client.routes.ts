@@ -3,7 +3,9 @@ import express from "express";
 import {
   getTimeSeries,
   generateClientToken,
-  getSensors
+  getSensors,
+  getClientConfig,
+  saveClientConfig
 } from "./client.controller";
 
 import { clientAuth } from "../../middleware/client.Auth";
@@ -20,8 +22,20 @@ router.post(
 
 router.get(
   "/sensors",
-  authMiddleware,   // ✅ admin JWT
+  authMiddleware,   //  admin JWT
   getSensors
+);
+
+router.get(
+  "/config",
+  authMiddleware,
+  getClientConfig
+);
+
+router.post(
+  "/save-config",
+  authMiddleware,
+  saveClientConfig
 );
 
 router.post(
