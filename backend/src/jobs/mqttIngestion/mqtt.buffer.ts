@@ -1,20 +1,33 @@
 import { ProcessedRow } from "./mqtt.types";
 import { insertBatch } from "./mqtt.db";
 
-const BUFFER_SIZE = 200;
-const FLUSH_INTERVAL = 1000;
+/* ============================= */
+/* CONFIG */
+/* ============================= */
+
+const BUFFER_SIZE = 1000;         // max memory safety
+const FLUSH_INTERVAL = 5000;      // 5 sec safety flush
+const ONE_HOUR = 60 * 60 * 1000;
+
+/* ============================= */
 
 let buffer: ProcessedRow[] = [];
+let lastHourFlush = Date.now();
+
+/* ============================= */
 
 export const addToBuffer = (data: ProcessedRow): void => {
   buffer.push(data);
 
+  // 🚨 Safety flush (avoid memory explosion)
   if (buffer.length >= BUFFER_SIZE) {
-    void flush();
+    void flush("BUFFER_LIMIT");
   }
 };
 
-export const flush = async (): Promise<void> => {
+/* ============================= */
+
+export const flush = async (reason: string = "INTERVAL"): Promise<void> => {
   if (buffer.length === 0) return;
 
   const batch = [...buffer];
@@ -22,16 +35,31 @@ export const flush = async (): Promise<void> => {
 
   try {
     await insertBatch(batch);
-    console.log(`Inserted batch of ${batch.length}`);
-  } catch (err: unknown) {
-    if (err instanceof Error) {
-      console.error("Batch insert failed:", err.message);
-    } else {
-      console.error("Batch insert failed:", err);
-    }
+    console.log(`✅ Flushed ${batch.length} rows [${reason}]`);
+  } catch (err) {
+    console.error("❌ Batch insert failed:", err);
   }
 };
 
+/* ============================= */
+/* PERIODIC CHECK */
+/* ============================= */
+
 setInterval(() => {
-  void flush();
+
+  const now = Date.now();
+
+  // 🟢 HOURLY FLUSH (PRIMARY GOAL)
+  if (now - lastHourFlush >= ONE_HOUR) {
+    console.log("🕐 Hourly flush triggered");
+    lastHourFlush = now;
+    void flush("HOURLY");
+    return;
+  }
+
+  // 🟡 Safety flush (every 5 sec)
+  if (buffer.length > 0) {
+    void flush("SAFETY");
+  }
+
 }, FLUSH_INTERVAL);
