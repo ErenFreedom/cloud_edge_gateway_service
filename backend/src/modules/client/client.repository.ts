@@ -79,7 +79,10 @@ export const getTimeSeriesRepo = async (
     SELECT 
       cd.sensor_id,
       ${bucket} AS bucket,
-      MAX(cd.current_kwh) - MIN(cd.previous_kwh) AS consumption
+      COALESCE(
+  MAX(cd.current_kwh) - MIN(cd.previous_kwh),
+  0
+) AS consumption
     FROM calculated_data cd
     JOIN sensors s ON s.id = cd.sensor_id
     JOIN sites st ON st.id = s.site_id   -- 🔥 IMPORTANT JOIN

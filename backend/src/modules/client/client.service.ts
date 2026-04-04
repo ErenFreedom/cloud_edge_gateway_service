@@ -85,10 +85,6 @@ export const getSensorsService = async (
   };
 };
 
-/* =========================================================
-   GET SENSORS FOR CLIENT (TOKEN BASED)
-========================================================= */
-
 export const getTimeSeriesService = async (client: any) => {
 
   /* ============================= */
@@ -116,16 +112,33 @@ export const getTimeSeriesService = async (client: any) => {
   }
 
   const sensorIds = config.sensor_ids;
-  const from = config.from_date;
-  const to = config.to_date;
-  const interval = config.interval;
+  const interval = config.interval;   // ✅ FIXED POSITION
+
+  let from = dayjs(config.from_date);
+  let to = dayjs(); // default now
 
   if (!sensorIds || sensorIds.length === 0) {
     throw new Error("No sensors configured for this token");
   }
 
-  if (!from || !to || !interval) {
+  if (!from || !interval) {
     throw new Error("Invalid token configuration");
+  }
+
+  /* ============================= */
+  /* INTERVAL BASED WINDOW */
+  /* ============================= */
+
+  if (interval === "10m" || interval === "1h") {
+    to = dayjs(); // live till now
+  }
+
+  if (interval === "1d") {
+    to = dayjs().startOf("day"); // exclude today
+  }
+
+  if (interval === "1M") {
+    to = dayjs().startOf("month"); // exclude current month
   }
 
   /* ============================= */
@@ -143,8 +156,8 @@ export const getTimeSeriesService = async (client: any) => {
   if (!minDate || !maxDate) {
     return {
       config: {
-        from,
-        to,
+        from: from.toISOString(),
+        to: to.toISOString(),
         interval,
         sensors: sensorIds.length
       },
@@ -158,27 +171,26 @@ export const getTimeSeriesService = async (client: any) => {
   }
 
   /* ============================= */
-  /* VALIDATION (SAFETY) */
+  /* VALIDATION */
   /* ============================= */
 
-  if (dayjs(from).isBefore(dayjs(minDate))) {
+  if (from.isBefore(dayjs(minDate))) {
     throw new Error(
       `Configured start date is before available data (${dayjs(minDate).format("DD/MM/YYYY")})`
     );
   }
 
-  if (dayjs(to).isAfter(dayjs(maxDate))) {
+  if (to.isAfter(dayjs(maxDate))) {
     throw new Error(
       `Configured end date exceeds available data (${dayjs(maxDate).format("DD/MM/YYYY")})`
     );
   }
 
-  if (dayjs(from).isAfter(dayjs(to))) {
+  if (from.isAfter(to)) {
     throw new Error("Invalid configured date range");
   }
 
-  // ✅ NEW: RANGE LIMIT (VERY IMPORTANT)
-  const diffDays = dayjs(to).diff(dayjs(from), "day");
+  const diffDays = to.diff(from, "day");
 
   if (diffDays > 365) {
     throw new Error("Date range too large (max 1 year)");
@@ -192,8 +204,8 @@ export const getTimeSeriesService = async (client: any) => {
     client.organization_id,
     client.site_id,
     sensorIds,
-    from,
-    to,
+    from.toISOString(),   // ✅ FIXED
+    to.toISOString(),     // ✅ FIXED
     interval
   );
 
@@ -204,8 +216,8 @@ export const getTimeSeriesService = async (client: any) => {
   if (!rows || rows.length === 0) {
     return {
       config: {
-        from,
-        to,
+        from: from.toISOString(),
+        to: to.toISOString(),
         interval,
         sensors: sensorIds.length
       },
@@ -219,7 +231,7 @@ export const getTimeSeriesService = async (client: any) => {
   }
 
   /* ============================= */
-  /* FORMAT RESPONSE */
+  /* FORMAT */
   /* ============================= */
 
   const formatted = rows.map((r: any) => ({
@@ -246,8 +258,8 @@ export const getTimeSeriesService = async (client: any) => {
 
   return {
     config: {
-      from,
-      to,
+      from: from.toISOString(),
+      to: to.toISOString(),
       interval,
       sensors: sensorIds.length
     },
