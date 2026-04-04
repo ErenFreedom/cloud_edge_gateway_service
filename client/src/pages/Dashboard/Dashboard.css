@@ -493,3 +493,81 @@
   justify-content: space-between;
   gap: 10px;
 }
+
+
+.sensor-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  transition: 0.2s;
+}
+
+.sensor-row:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.sensor-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sensor-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sensor-meta {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+
+.token-box {
+  position: relative;
+  padding-right: 80px;
+}
+
+.copy-btn {
+  position: absolute;
+  right: 10px;
+  top: 6px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: white;
+  font-size: 12px;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.date-wrapper {
+  display: flex;
+  gap: 12px;
+}
+
+.date-wrapper input {
+  flex: 1;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 6px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}

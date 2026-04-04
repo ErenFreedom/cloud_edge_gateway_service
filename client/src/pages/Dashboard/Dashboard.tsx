@@ -976,22 +976,27 @@ const Dashboard = () => {
 
 
       {exportModalOpen && (
-
         <div className="credential-modal">
 
           <div className="modal-content">
 
             <h2>Export Sensor Data</h2>
 
-            {/* TOKEN SECTION */}
+            {/* ================= TOKEN SECTION ================= */}
 
             {!token && (
               <>
-                <p>Generate API Token for this site</p>
+                <p className="section-subtext">
+                  Generate API Token for this site
+                </p>
 
                 <div className="modal-buttons">
 
-                  <Button size="medium" onClick={generateToken}>
+                  <Button
+                    size="medium"
+                    disabled={selectedSensors.length === 0}
+                    onClick={generateToken}
+                  >
                     Generate Token
                   </Button>
 
@@ -1006,97 +1011,103 @@ const Dashboard = () => {
               </>
             )}
 
-            {/* AFTER TOKEN */}
+            {/* ================= AFTER TOKEN ================= */}
 
             {token && (
               <>
-                <p><strong>Token:</strong></p>
+
+                {/* TOKEN */}
+
+                <div className="section-title">API Token</div>
 
                 <div className="token-box">
                   {token}
+                  <button
+                    className="copy-btn"
+                    onClick={() => navigator.clipboard.writeText(token)}
+                  >
+                    Copy
+                  </button>
                 </div>
 
-                <hr />
+                <div className="modal-divider" />
 
-                {/* SENSOR INPUT */}
+                {/* ================= SENSOR SELECT ================= */}
 
-                {/* SENSOR SELECTOR */}
+                <div className="section-title">Select Sensors</div>
 
-                <div style={{ marginTop: "10px" }}>
-                  <p><strong>Select Sensors:</strong></p>
+                <div className="sensor-container">
 
-                  <div style={{ maxHeight: "150px", overflowY: "auto" }}>
+                  {sensors.map((sensor: any) => (
 
-                    {sensors.map((sensor: any) => (
+                    <div key={sensor.id} className="sensor-row">
 
-                      <label
-                        key={sensor.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          marginBottom: "6px"
-                        }}
-                      >
+                      <input
+                        type="checkbox"
+                        checked={selectedSensors.includes(sensor.id)}
+                        onChange={() =>
+                          dispatch(toggleSensor(sensor.id))
+                        }
+                      />
 
-                        <input
-                          type="checkbox"
-                          checked={selectedSensors.includes(sensor.id)}
-                          onChange={() =>
-                            dispatch(toggleSensor(sensor.id))
-                          }
-                        />
-
-                        <span>
+                      <div className="sensor-info">
+                        <div className="sensor-name">
                           {sensor.sensor_name || "Unnamed"}
-                          ({sensor.sensor_location || "-"})
-                          [#{sensor.external_sensor_id}]
-                        </span>
+                        </div>
 
-                      </label>
+                        <div className="sensor-meta">
+                          {sensor.sensor_location || "-"} • ID #{sensor.external_sensor_id}
+                        </div>
+                      </div>
 
-                    ))}
+                    </div>
 
-                  </div>
-                </div>
-                {/* DATE RANGE */}
+                  ))}
 
-
-
-                <div style={{ marginTop: "10px" }}>
-                  <p><strong>Date Range:</strong></p>
-
-                  {minDate && maxDate && (
-                    <p style={{ fontSize: "13px", color: "#22c55e" }}>
-                      Data available from {minDate} → {maxDate}
-                    </p>
-                  )}
-
-                  <div style={{ display: "flex", gap: "10px" }}>
-                    <input
-                      type="date"
-                      value={from}
-                      min={minDate || undefined}
-                      max={maxDate || undefined}
-                      onChange={(e) => setFrom(e.target.value)}
-                    />
-
-                    <input
-                      type="date"
-                      value={to}
-                      min={minDate || undefined}
-                      max={maxDate || undefined}
-                      onChange={(e) => setTo(e.target.value)}
-                    />
-                  </div>
                 </div>
 
-                {/* INTERVAL */}
+                <div className="modal-divider" />
+
+                {/* ================= DATE RANGE ================= */}
+
+                <div className="section-title">Date Range</div>
+
+                {minDate && maxDate && (
+                  <p className="date-hint">
+                    Data available from {minDate} → {maxDate}
+                  </p>
+                )}
+
+                <div className="date-wrapper">
+                  <input
+                    type="date"
+                    value={from}
+                    min={minDate || undefined}
+                    max={maxDate || undefined}
+                    onChange={(e) => setFrom(e.target.value)}
+                  />
+
+                  <input
+                    type="date"
+                    value={to}
+                    min={minDate || undefined}
+                    max={maxDate || undefined}
+                    onChange={(e) => setTo(e.target.value)}
+                  />
+                </div>
+
+                <div className="modal-divider" />
+
+                {/* ================= INTERVAL ================= */}
+
+                <div className="section-title">Interval</div>
 
                 <select
                   value={interval}
                   onChange={(e) =>
-                    setIntervalValue(e.target.value as "10m" | "1h" | "1d" | "1M")
+                    setIntervalValue(
+                      e.target.value as "10m" | "1h" | "1d" | "1M"
+                    )
                   }
                 >
                   <option value="10m">10 Minutes</option>
@@ -1105,19 +1116,32 @@ const Dashboard = () => {
                   <option value="1M">1 Month</option>
                 </select>
 
-                {/* ACTIONS */}
+                <div className="modal-divider" />
+
+                {/* ================= ACTIONS ================= */}
 
                 <div className="modal-buttons">
 
-                  <Button size="medium" onClick={fetchData}>
+                  <Button
+                    size="medium"
+                    disabled={!token}
+                    onClick={fetchData}
+                  >
                     Fetch Data
                   </Button>
 
-                  <Button size="medium" onClick={downloadExportJSON}>
+                  <Button
+                    size="medium"
+                    disabled={!timeSeriesData}
+                    onClick={downloadExportJSON}
+                  >
                     Download JSON
                   </Button>
 
-                  <Button size="medium" onClick={() => setExportModalOpen(false)}>
+                  <Button
+                    size="medium"
+                    onClick={() => setExportModalOpen(false)}
+                  >
                     Close
                   </Button>
 
@@ -1125,12 +1149,12 @@ const Dashboard = () => {
               </>
             )}
 
-            {clientLoading && <p>Loading...</p>}
+            {clientLoading && (
+              <p className="loading-text">Loading...</p>
+            )}
 
           </div>
-
         </div>
-
       )}
 
     </div>
