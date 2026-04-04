@@ -992,12 +992,8 @@ const Dashboard = () => {
 
                 <div className="modal-buttons">
 
-                  <Button
-                    size="medium"
-                    disabled={selectedSensors.length === 0}
-                    onClick={generateToken}
-                  >
-                    Generate Token
+                  <Button size="medium" onClick={generateToken}>
+                    {token ? "Regenerate Token" : "Generate Token"}
                   </Button>
 
                   <Button
