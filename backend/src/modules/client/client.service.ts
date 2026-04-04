@@ -123,7 +123,7 @@ export const saveClientConfigService = async (
     throw new Error("Invalid site");
   }
 
-  /* ===== GET RANGE ===== */
+  /* ===== GET DATA RANGE ===== */
 
   const range = await getDataRangeRepo(
     admin.organizationId,
@@ -133,24 +133,36 @@ export const saveClientConfigService = async (
   const minDate = dayjs(range?.min_date);
   const maxDate = dayjs(range?.max_date);
 
-  let fromDate = dayjs(from);
-  let toDate = dayjs(to);
+  /* ===== PARSE INPUT (FIXED) ===== */
+
+  let fromDate = dayjs(from).startOf("day");   // 🔥 FIX
+  let toDate = dayjs(to).endOf("day");         // 🔥 FIX
 
   /* ===== AUTO CORRECT ===== */
 
+  // Clamp FROM to available data
   if (fromDate.isBefore(minDate)) {
     fromDate = minDate;
   }
 
+  // 🔥 CRITICAL FIX (you were missing this)
+  if (toDate.isBefore(minDate)) {
+    toDate = minDate;
+  }
+
+  // Safe window for live intervals
   const safeNow = dayjs().subtract(2, "hour");
 
   if (toDate.isAfter(safeNow)) {
     toDate = safeNow;
   }
 
+  // Clamp TO to max available data
   if (toDate.isAfter(maxDate)) {
     toDate = maxDate;
   }
+
+  /* ===== FINAL VALIDATION ===== */
 
   if (fromDate.isAfter(toDate)) {
     throw new Error("Invalid range");
