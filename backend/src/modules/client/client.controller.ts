@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { getTimeSeriesService, generateClientTokenService } from "./client.service";
+import { getTimeSeriesService, generateClientTokenService, getSensorsService } from "./client.service";
 import { validateTimeSeries, validateGenerateToken } from "./client.validator";
 
 
@@ -11,6 +11,19 @@ export const generateClientToken = async (req: any, res: Response) => {
       req.user, //  super admin JWT
       req.body
     );
+
+    res.json(data);
+
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+
+
+export const getSensors = async (req: any, res: Response) => {
+  try {
+    const data = await getSensorsService(req.client);
 
     res.json(data);
 

@@ -1,8 +1,12 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import {
   generateClientToken,
-  fetchTimeSeries
+  fetchTimeSeries,
+  fetchSensors,
+  
 } from "../../services/client.service";
+
+import type { TimeSeriesPayload } from "../../services/client.service";
 
 /* -------- STATE -------- */
 
@@ -13,6 +17,9 @@ interface ClientState {
 
   token: string | null;
 
+  sensors: any[];
+  selectedSensors: string[];
+
   timeSeriesData: any;
 }
 
@@ -21,11 +28,14 @@ const initialState: ClientState = {
   error: null,
   success: false,
 
-  //  Load token from localStorage (persist after refresh)
   token: localStorage.getItem("client_token"),
+
+  sensors: [],
+  selectedSensors: [],
 
   timeSeriesData: null
 };
+
 
 /* -------- THUNKS -------- */
 
@@ -44,6 +54,21 @@ export const generateTokenThunk = createAsyncThunk(
   }
 );
 
+
+export const fetchSensorsThunk = createAsyncThunk(
+  "client/fetchSensors",
+  async (token: string, thunkAPI) => {
+    try {
+      const res = await fetchSensors(token);
+      return res;
+    } catch (err: any) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Fetch sensors failed"
+      );
+    }
+  }
+);
+
 //  FETCH TIMESERIES
 export const fetchTimeSeriesThunk = createAsyncThunk(
   "client/fetchTimeSeries",
@@ -53,7 +78,7 @@ export const fetchTimeSeriesThunk = createAsyncThunk(
       payload
     }: {
       token: string;
-      payload: any;
+      payload: TimeSeriesPayload;
     },
     thunkAPI
   ) => {
@@ -74,16 +99,32 @@ const clientSlice = createSlice({
   name: "client",
   initialState,
   reducers: {
+
     resetClientState: (state) => {
       state.loading = false;
       state.error = null;
       state.success = false;
     },
 
-    //  OPTIONAL: Clear token manually
     clearClientToken: (state) => {
       state.token = null;
       localStorage.removeItem("client_token");
+    },
+
+
+    toggleSensor: (state, action) => {
+      const id = action.payload;
+
+      if (state.selectedSensors.includes(id)) {
+        state.selectedSensors = state.selectedSensors.filter(s => s !== id);
+      } else {
+        state.selectedSensors.push(id);
+      }
+    },
+
+
+    clearSelectedSensors: (state) => {
+      state.selectedSensors = [];
     }
   },
   extraReducers: (builder) => {
@@ -138,6 +179,22 @@ const clientSlice = createSlice({
       .addCase(fetchTimeSeriesThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+
+      .addCase(fetchSensorsThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+
+      .addCase(fetchSensorsThunk.fulfilled, (state, action) => {
+        state.loading = false;
+
+        state.sensors = action.payload.sensors || [];
+      })
+
+      .addCase(fetchSensorsThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
 
   }
@@ -147,7 +204,9 @@ const clientSlice = createSlice({
 
 export const {
   resetClientState,
-  clearClientToken
+  clearClientToken,
+  toggleSensor,
+  clearSelectedSensors
 } = clientSlice.actions;
 
 export default clientSlice.reducer;

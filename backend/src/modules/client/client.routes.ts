@@ -2,7 +2,8 @@ import express from "express";
 
 import {
   getTimeSeries,
-  generateClientToken
+  generateClientToken,
+  getSensors
 } from "./client.controller";
 
 import { clientAuth } from "../../middleware/client.Auth";
@@ -15,6 +16,13 @@ router.post(
   "/generate-token",
   authMiddleware,       //  admin JWT
   generateClientToken
+);
+
+
+router.get(
+  "/sensors",
+  clientAuth,     
+  getSensors
 );
 
 

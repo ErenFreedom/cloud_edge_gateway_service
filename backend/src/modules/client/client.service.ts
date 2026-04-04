@@ -1,7 +1,9 @@
 import { pool } from "../../config/database";
 import {
   getTimeSeriesRepo,
-  upsertClientTokenRepo
+  upsertClientTokenRepo,
+  getSensorsBySiteRepo,
+  getDataRangeRepo 
 } from "./client.repository";
 
 import dayjs from "dayjs";
@@ -56,8 +58,26 @@ export const generateClientTokenService = async (
   };
 };
 
+
 /* =========================================================
-   TIMESERIES SERVICE
+   GET SENSORS FOR CLIENT (TOKEN BASED)
+========================================================= */
+
+export const getSensorsService = async (client: any) => {
+
+  const sensors = await getSensorsBySiteRepo(
+    client.organization_id,
+    client.site_id
+  );
+
+  return {
+    total: sensors.length,
+    sensors
+  };
+};
+
+/* =========================================================
+   TIMESERIES SERVICE (UPDATED)
 ========================================================= */
 
 export const getTimeSeriesService = async (
@@ -65,18 +85,24 @@ export const getTimeSeriesService = async (
   body: any
 ) => {
 
-  const rows = await getTimeSeriesRepo(
+  const { from, to, interval } = body;
+
+  /* ============================= */
+  /* FETCH DATA RANGE */
+  /* ============================= */
+
+  const range = await getDataRangeRepo(
     client.organization_id,
-    client.site_id,
-    body.sensor_ids,
-    body.from,
-    body.to,
-    body.interval
+    client.site_id
   );
 
-  //  SAFE EMPTY RESPONSE (IMPORTANT)
-  if (!rows || rows.length === 0) {
+  const minDate = range?.min_date;
+  const maxDate = range?.max_date;
+
+  if (!minDate || !maxDate) {
     return {
+      min_date: null,
+      max_date: null,
       total: 0,
       batch_size: BATCH_SIZE,
       total_batches: 0,
@@ -84,7 +110,58 @@ export const getTimeSeriesService = async (
     };
   }
 
-  //  MAP TO FINAL FORMAT
+  /* ============================= */
+  /* VALIDATION */
+  /* ============================= */
+
+  if (dayjs(from).isBefore(dayjs(minDate))) {
+    throw new Error(
+      `Data available only after ${dayjs(minDate).format("DD/MM/YYYY")}`
+    );
+  }
+
+  if (dayjs(to).isAfter(dayjs(maxDate))) {
+    throw new Error(
+      `Data available only till ${dayjs(maxDate).format("DD/MM/YYYY")}`
+    );
+  }
+
+  if (dayjs(from).isAfter(dayjs(to))) {
+    throw new Error("Invalid date range");
+  }
+
+  /* ============================= */
+  /* FETCH DATA */
+  /* ============================= */
+
+  const rows = await getTimeSeriesRepo(
+    client.organization_id,
+    client.site_id,
+    body.sensor_ids,
+    from,
+    to,
+    interval
+  );
+
+  /* ============================= */
+  /* EMPTY RESPONSE */
+  /* ============================= */
+
+  if (!rows || rows.length === 0) {
+    return {
+      min_date: minDate,
+      max_date: maxDate,
+      total: 0,
+      batch_size: BATCH_SIZE,
+      total_batches: 0,
+      batches: []
+    };
+  }
+
+  /* ============================= */
+  /* FORMAT */
+  /* ============================= */
+
   const formatted = rows.map((r: any) => ({
     sensorid: r.sensor_id,
     timeSeries: {
@@ -93,15 +170,24 @@ export const getTimeSeriesService = async (
     }
   }));
 
-  //  CREATE BATCHES
+  /* ============================= */
+  /* BATCHING */
+  /* ============================= */
+
   const batches: any[] = [];
 
   for (let i = 0; i < formatted.length; i += BATCH_SIZE) {
     batches.push(formatted.slice(i, i + BATCH_SIZE));
   }
 
-  //  FINAL RESPONSE
+  /* ============================= */
+  /* FINAL RESPONSE */
+  /* ============================= */
+
   return {
+    min_date: minDate,
+    max_date: maxDate,
+
     total: formatted.length,
     batch_size: BATCH_SIZE,
     total_batches: batches.length,

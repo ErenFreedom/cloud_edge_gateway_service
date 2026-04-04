@@ -13,6 +13,16 @@ export interface TimeSeriesPayload {
   interval: "10m" | "1h" | "1d" | "1M";
 }
 
+
+export interface Sensor {
+  id: string;
+  external_sensor_id: number;
+  sensor_name: string;
+  sensor_location: string;
+  api_endpoint: string;
+  polling_interval: number;
+}
+
 /* ---------------- API CALLS ---------------- */
 
 //  GENERATE TOKEN
@@ -22,6 +32,20 @@ export const generateClientToken = async (
   const response = await apiClient.post(
     "/client/generate-token",
     payload
+  );
+
+  return response.data;
+};
+
+export const fetchSensors = async (token: string) => {
+
+  const response = await apiClient.get(
+    "/client/sensors",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
   );
 
   return response.data;

@@ -80,15 +80,71 @@ export const getTimeSeriesRepo = async (
     AND cd.sensor_id = ANY($3)
     AND cd.timestamp BETWEEN $4 AND $5
     AND cd.is_valid = true
-    ${
-      interval === "1d" || interval === "1M"
-        ? "AND cd.timestamp < CURRENT_DATE"
-        : ""
+    ${interval === "1d" || interval === "1M"
+      ? "AND cd.timestamp < CURRENT_DATE"
+      : ""
     }
     GROUP BY cd.sensor_id, bucket
     ORDER BY bucket ASC
     `,
     [orgId, siteId, sensorIds, from, to]
+  );
+
+  return res.rows;
+};
+
+
+/* ---------------- DATA RANGE (NEW) ---------------- */
+
+export const getDataRangeRepo = async (
+  orgId: string,
+  siteId: string
+) => {
+
+  const res = await pool.query(
+    `
+    SELECT 
+      MIN(cd.timestamp) AS min_date,
+      MAX(cd.timestamp) AS max_date
+    FROM calculated_data cd
+    JOIN sensors s ON s.id = cd.sensor_id
+    JOIN sites st ON st.id = s.site_id
+    WHERE cd.organization_id = $1
+    AND s.site_id = $2
+    AND st.status = 'active'
+    `,
+    [orgId, siteId]
+  );
+
+  return res.rows[0] || null;
+};
+
+
+
+/* ---------------- SENSOR LIST ---------------- */
+
+export const getSensorsBySiteRepo = async (
+  orgId: string,
+  siteId: string
+) => {
+
+  const res = await pool.query(
+    `
+    SELECT 
+      s.id,
+      s.external_sensor_id,
+      s.sensor_name,
+      s.sensor_location,
+      s.api_endpoint,
+      s.polling_interval
+    FROM sensors s
+    JOIN sites st ON st.id = s.site_id
+    WHERE s.organization_id = $1
+    AND s.site_id = $2
+    AND st.status = 'active'   -- 🔥 IMPORTANT
+    ORDER BY s.external_sensor_id ASC
+    `,
+    [orgId, siteId]
   );
 
   return res.rows;

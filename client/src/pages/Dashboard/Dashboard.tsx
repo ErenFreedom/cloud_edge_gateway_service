@@ -15,7 +15,9 @@ import {
 
 import {
   generateTokenThunk,
-  fetchTimeSeriesThunk
+  fetchTimeSeriesThunk,
+  fetchSensorsThunk,
+  toggleSensor
 } from "../../features/client/clientSlice";
 
 import {
@@ -64,10 +66,16 @@ const Dashboard = () => {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportSiteId, setExportSiteId] = useState<string | null>(null);
 
-  const [selectedSensors, setSelectedSensors] = useState<string[]>([]);
-  const [interval, setIntervalValue] = useState("10m");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [minDate, setMinDate] = useState<string | null>(null);
+  const [maxDate, setMaxDate] = useState<string | null>(null);
+
+  const [interval, setIntervalValue] = useState<
+    "10m" | "1h" | "1d" | "1M"
+  >("10m");
+  const today = new Date().toISOString().split("T")[0];
+
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(today);
 
   const viewSite = (siteId: string) => {
     navigate(`/sites/${siteId}`);
@@ -96,7 +104,9 @@ const Dashboard = () => {
   const {
     token,
     timeSeriesData,
-    loading: clientLoading
+    loading: clientLoading,
+    sensors,
+    selectedSensors
   } = useSelector((state: RootState) => state.client);
 
 
@@ -162,8 +172,55 @@ const Dashboard = () => {
 
 
   const fetchData = () => {
-    if (!token) return;
 
+    //  TOKEN CHECK
+    if (!token) {
+      alert("Token not generated");
+      return;
+    }
+
+    //  SENSOR CHECK
+    if (selectedSensors.length === 0) {
+      alert("Select at least one sensor");
+      return;
+    }
+
+    //  DATE CHECK
+    if (!from || !to) {
+      alert("Please select date range");
+      return;
+    }
+
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    //  BASIC VALIDATION
+    if (fromDate > toDate) {
+      alert("From date cannot be greater than To date");
+      return;
+    }
+
+    //  BACKEND RANGE VALIDATION (VERY IMPORTANT)
+    if (minDate && fromDate < new Date(minDate)) {
+      alert(`From date cannot be before ${minDate}`);
+      return;
+    }
+
+    if (maxDate && toDate > new Date(maxDate)) {
+      alert(`To date cannot exceed ${maxDate}`);
+      return;
+    }
+
+    //  OPTIONAL: LIMIT HUGE RANGE (PRODUCTION SAFETY)
+    const diffDays =
+      (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (diffDays > 90) {
+      alert("Please select a smaller date range (max 90 days)");
+      return;
+    }
+
+    //  FINAL API CALL
     dispatch(
       fetchTimeSeriesThunk({
         token,
@@ -176,8 +233,6 @@ const Dashboard = () => {
       })
     );
   };
-
-
 
   const downloadExportJSON = () => {
     if (!timeSeriesData) return;
@@ -229,6 +284,51 @@ const Dashboard = () => {
     }
 
   }, [siteCreated, requiresOtp]);
+
+
+  useEffect(() => {
+    if (token) {
+      dispatch(fetchSensorsThunk(token));
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!maxDate) return;
+
+    const now = new Date(maxDate);
+
+    let newFrom = new Date(now);
+
+    switch (interval) {
+      case "10m":
+        newFrom = new Date(now.getTime() - 10 * 60 * 1000);
+        break;
+
+      case "1h":
+        newFrom = new Date(now.getTime() - 60 * 60 * 1000);
+        break;
+
+      case "1d":
+        newFrom = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+
+      case "1M":
+        newFrom.setMonth(now.getMonth() - 1);
+        break;
+    }
+
+    setFrom(newFrom.toISOString().split("T")[0]);
+    setTo(now.toISOString().split("T")[0]);
+
+  }, [interval, maxDate]);
+
+
+  useEffect(() => {
+    if (timeSeriesData) {
+      setMinDate(timeSeriesData.min_date?.split("T")[0]);
+      setMaxDate(timeSeriesData.max_date?.split("T")[0]);
+    }
+  }, [timeSeriesData]);
 
   useEffect(() => {
     if (createModalOpen) {
@@ -948,32 +1048,84 @@ const Dashboard = () => {
 
                 {/* SENSOR INPUT */}
 
-                <input
-                  placeholder="Sensor IDs (comma separated)"
-                  onChange={(e) =>
-                    setSelectedSensors(
-                      e.target.value.split(",").map(s => s.trim())
-                    )
-                  }
-                />
+                {/* SENSOR SELECTOR */}
 
+                <div style={{ marginTop: "10px" }}>
+                  <p><strong>Select Sensors:</strong></p>
+
+                  <div style={{ maxHeight: "150px", overflowY: "auto" }}>
+
+                    {sensors.map((sensor: any) => (
+
+                      <label
+                        key={sensor.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          marginBottom: "6px"
+                        }}
+                      >
+
+                        <input
+                          type="checkbox"
+                          checked={selectedSensors.includes(sensor.id)}
+                          onChange={() =>
+                            dispatch(toggleSensor(sensor.id))
+                          }
+                        />
+
+                        <span>
+                          {sensor.sensor_name || "Unnamed"}
+                          ({sensor.sensor_location || "-"})
+                          [#{sensor.external_sensor_id}]
+                        </span>
+
+                      </label>
+
+                    ))}
+
+                  </div>
+                </div>
                 {/* DATE RANGE */}
 
-                <input
-                  type="date"
-                  onChange={(e) => setFrom(e.target.value)}
-                />
 
-                <input
-                  type="date"
-                  onChange={(e) => setTo(e.target.value)}
-                />
+
+                <div style={{ marginTop: "10px" }}>
+                  <p><strong>Date Range:</strong></p>
+
+                  {minDate && maxDate && (
+                    <p style={{ fontSize: "13px", color: "#22c55e" }}>
+                      Data available from {minDate} → {maxDate}
+                    </p>
+                  )}
+
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    <input
+                      type="date"
+                      value={from}
+                      min={minDate || undefined}
+                      max={maxDate || undefined}
+                      onChange={(e) => setFrom(e.target.value)}
+                    />
+
+                    <input
+                      type="date"
+                      value={to}
+                      min={minDate || undefined}
+                      max={maxDate || undefined}
+                      onChange={(e) => setTo(e.target.value)}
+                    />
+                  </div>
+                </div>
 
                 {/* INTERVAL */}
 
                 <select
                   value={interval}
-                  onChange={(e) => setIntervalValue(e.target.value)}
+                  onChange={(e) =>
+                    setIntervalValue(e.target.value as "10m" | "1h" | "1d" | "1M")
+                  }
                 >
                   <option value="10m">10 Minutes</option>
                   <option value="1h">1 Hour</option>
