@@ -1016,14 +1016,24 @@ const Dashboard = () => {
 
                 <div className="section-title">API Token</div>
 
+                <div className="section-title">API Token</div>
+
                 <div className="token-box">
-                  {token}
-                  <button
-                    className="copy-btn"
-                    onClick={() => navigator.clipboard.writeText(token)}
-                  >
-                    Copy
-                  </button>
+                  {token || "No token generated"}
+                  {token && (
+                    <button
+                      className="copy-btn"
+                      onClick={() => navigator.clipboard.writeText(token)}
+                    >
+                      Copy
+                    </button>
+                  )}
+                </div>
+
+                <div className="modal-buttons" style={{ marginTop: "10px" }}>
+                  <Button size="medium" onClick={generateToken}>
+                    {token ? "Regenerate Token" : "Generate Token"}
+                  </Button>
                 </div>
 
                 <div className="modal-divider" />
