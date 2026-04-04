@@ -21,7 +21,7 @@ router.post(
 
 router.get(
   "/sensors",
-  clientAuth,     
+  authMiddleware,     
   getSensors
 );
 
