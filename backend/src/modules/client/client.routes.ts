@@ -14,21 +14,19 @@ const router = express.Router();
 
 router.post(
   "/generate-token",
-  authMiddleware,       //  admin JWT
+  authMiddleware,
   generateClientToken
 );
 
-
 router.get(
   "/sensors",
-  authMiddleware,     
+  authMiddleware,   // ✅ admin JWT
   getSensors
 );
 
-
 router.post(
   "/timeseries",
-  clientAuth,           //  client token
+  clientAuth,     // uses token
   getTimeSeries
 );
 

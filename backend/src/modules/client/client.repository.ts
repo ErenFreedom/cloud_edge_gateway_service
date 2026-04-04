@@ -39,19 +39,28 @@ export const getClientTokenRepo = async (token: string) => {
 export const upsertClientTokenRepo = async (
   orgId: string,
   siteId: string,
-  token: string
+  token: string,
+  sensorIds: string[],
+  from: string,
+  to: string,
+  interval: string
 ) => {
   await pool.query(
     `
-    INSERT INTO client_tokens (organization_id, site_id, token)
-    VALUES ($1, $2, $3)
+    INSERT INTO client_tokens 
+    (organization_id, site_id, token, sensor_ids, from_date, to_date, interval)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     ON CONFLICT (site_id)
-    DO UPDATE SET token = EXCLUDED.token
+    DO UPDATE SET 
+      token = EXCLUDED.token,
+      sensor_ids = EXCLUDED.sensor_ids,
+      from_date = EXCLUDED.from_date,
+      to_date = EXCLUDED.to_date,
+      interval = EXCLUDED.interval
     `,
-    [orgId, siteId, token]
+    [orgId, siteId, token, sensorIds, from, to, interval]
   );
 };
-
 /* ---------------- TIMESERIES ---------------- */
 
 export const getTimeSeriesRepo = async (

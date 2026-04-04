@@ -4,6 +4,10 @@ import { apiClient } from "../api/apiClient";
 
 export interface GenerateTokenPayload {
   site_id: string;
+  sensor_ids: string[];
+  from: string;
+  to: string;
+  interval: "10m" | "1h" | "1d" | "1M";
 }
 
 export interface TimeSeriesPayload {
@@ -37,29 +41,22 @@ export const generateClientToken = async (
   return response.data;
 };
 
-export const fetchSensors = async (token: string) => {
+export const fetchSensors = async (site_id: string) => {
 
   const response = await apiClient.get(
-    "/client/sensors",
-    {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    }
+    `/client/sensors?site_id=${site_id}`
   );
 
   return response.data;
 };
 
+
 //  TIMESERIES EXPORT
-export const fetchTimeSeries = async (
-  token: string,
-  payload: TimeSeriesPayload
-) => {
+export const fetchTimeSeries = async (token: string) => {
 
   const response = await apiClient.post(
     "/client/timeseries",
-    payload,
+    {}, // 🔥 EMPTY BODY
     {
       headers: {
         Authorization: `Bearer ${token}`

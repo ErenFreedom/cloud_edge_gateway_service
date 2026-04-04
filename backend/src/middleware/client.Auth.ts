@@ -26,7 +26,12 @@ export const clientAuth = async (
       return res.status(401).json({ message: "Invalid token" });
     }
 
-    req.client = client;
+    // ✅ IMPORTANT CHANGE
+    req.client = {
+      organization_id: client.organization_id,
+      site_id: client.site_id,
+      token: token   // 🔥 ADD THIS
+    };
 
     next();
 

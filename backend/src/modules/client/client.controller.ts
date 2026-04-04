@@ -1,16 +1,43 @@
 import { Response } from "express";
-import { getTimeSeriesService, generateClientTokenService, getSensorsService } from "./client.service";
+import {
+  getTimeSeriesService,
+  generateClientTokenService,
+  getSensorsService
+} from "./client.service";
 import { validateTimeSeries, validateGenerateToken } from "./client.validator";
 
+
+/* ============================= */
+/* GENERATE TOKEN */
+/* ============================= */
 
 export const generateClientToken = async (req: any, res: Response) => {
   try {
     validateGenerateToken(req.body);
 
     const data = await generateClientTokenService(
-      req.user, //  super admin JWT
+      req.user, // super admin JWT
       req.body
     );
+
+    res.json(data);
+
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+
+/* ============================= */
+/* TIMESERIES (CLIENT TOKEN BASED) */
+/* ============================= */
+
+export const getTimeSeries = async (req: any, res: Response) => {
+  try {
+
+    
+
+    const data = await getTimeSeriesService(req.client);
 
     res.json(data);
 
@@ -23,22 +50,16 @@ export const generateClientToken = async (req: any, res: Response) => {
 
 export const getSensors = async (req: any, res: Response) => {
   try {
-    const data = await getSensorsService(req.client);
 
-    res.json(data);
+    const { site_id } = req.query;
 
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
-};
+    if (!site_id) {
+      throw new Error("site_id required");
+    }
 
-export const getTimeSeries = async (req: any, res: Response) => {
-  try {
-    validateTimeSeries(req.body);
-
-    const data = await getTimeSeriesService(
-      req.client,
-      req.body
+    const data = await getSensorsService(
+      req.user,     // ✅ FIXED
+      site_id       // ✅ FIXED
     );
 
     res.json(data);

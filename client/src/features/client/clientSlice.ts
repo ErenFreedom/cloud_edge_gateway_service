@@ -6,7 +6,6 @@ import {
   
 } from "../../services/client.service";
 
-import type { TimeSeriesPayload } from "../../services/client.service";
 
 /* -------- STATE -------- */
 
@@ -42,9 +41,18 @@ const initialState: ClientState = {
 //  GENERATE TOKEN
 export const generateTokenThunk = createAsyncThunk(
   "client/generateToken",
-  async (site_id: string, thunkAPI) => {
+  async (
+    payload: {
+      site_id: string;
+      sensor_ids: string[];
+      from: string;
+      to: string;
+      interval: "10m" | "1h" | "1d" | "1M";
+    },
+    thunkAPI
+  ) => {
     try {
-      const res = await generateClientToken({ site_id });
+      const res = await generateClientToken(payload);
       return res;
     } catch (err: any) {
       return thunkAPI.rejectWithValue(
@@ -57,9 +65,9 @@ export const generateTokenThunk = createAsyncThunk(
 
 export const fetchSensorsThunk = createAsyncThunk(
   "client/fetchSensors",
-  async (token: string, thunkAPI) => {
+  async (site_id: string, thunkAPI) => {
     try {
-      const res = await fetchSensors(token);
+      const res = await fetchSensors(site_id);
       return res;
     } catch (err: any) {
       return thunkAPI.rejectWithValue(
@@ -72,18 +80,9 @@ export const fetchSensorsThunk = createAsyncThunk(
 //  FETCH TIMESERIES
 export const fetchTimeSeriesThunk = createAsyncThunk(
   "client/fetchTimeSeries",
-  async (
-    {
-      token,
-      payload
-    }: {
-      token: string;
-      payload: TimeSeriesPayload;
-    },
-    thunkAPI
-  ) => {
+  async (token: string, thunkAPI) => {
     try {
-      const res = await fetchTimeSeries(token, payload);
+      const res = await fetchTimeSeries(token);
       return res;
     } catch (err: any) {
       return thunkAPI.rejectWithValue(

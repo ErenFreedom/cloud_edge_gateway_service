@@ -167,71 +167,43 @@ const Dashboard = () => {
   const generateToken = () => {
     if (!exportSiteId) return;
 
-    dispatch(generateTokenThunk(exportSiteId));
+    if (selectedSensors.length === 0) {
+      alert("Select sensors first");
+      return;
+    }
+
+    if (!from || !to) {
+      alert("Select date range");
+      return;
+    }
+
+    dispatch(
+      generateTokenThunk({
+        site_id: exportSiteId,
+        sensor_ids: selectedSensors,
+        from,
+        to,
+        interval
+      })
+    );
   };
 
 
   const fetchData = () => {
 
-    //  TOKEN CHECK
+    // TOKEN CHECK (still needed)
     if (!token) {
       alert("Token not generated");
       return;
     }
 
-    //  SENSOR CHECK
-    if (selectedSensors.length === 0) {
-      alert("Select at least one sensor");
+    // OPTIONAL UX CHECKS (keep these for sanity)
+    if (!timeSeriesData && selectedSensors.length === 0) {
+      alert("Please generate token with sensors first");
       return;
     }
 
-    //  DATE CHECK
-    if (!from || !to) {
-      alert("Please select date range");
-      return;
-    }
-
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-
-    //  BASIC VALIDATION
-    if (fromDate > toDate) {
-      alert("From date cannot be greater than To date");
-      return;
-    }
-
-    //  BACKEND RANGE VALIDATION (VERY IMPORTANT)
-    if (minDate && fromDate < new Date(minDate)) {
-      alert(`From date cannot be before ${minDate}`);
-      return;
-    }
-
-    if (maxDate && toDate > new Date(maxDate)) {
-      alert(`To date cannot exceed ${maxDate}`);
-      return;
-    }
-
-    //  OPTIONAL: LIMIT HUGE RANGE (PRODUCTION SAFETY)
-    const diffDays =
-      (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24);
-
-    if (diffDays > 90) {
-      alert("Please select a smaller date range (max 90 days)");
-      return;
-    }
-
-    //  FINAL API CALL
-    dispatch(
-      fetchTimeSeriesThunk({
-        token,
-        payload: {
-          sensor_ids: selectedSensors,
-          from,
-          to,
-          interval
-        }
-      })
-    );
+    dispatch(fetchTimeSeriesThunk(token));
   };
 
   const downloadExportJSON = () => {
@@ -287,10 +259,10 @@ const Dashboard = () => {
 
 
   useEffect(() => {
-    if (token) {
-      dispatch(fetchSensorsThunk(token));
+    if (exportSiteId) {
+      dispatch(fetchSensorsThunk(exportSiteId));
     }
-  }, [token]);
+  }, [exportSiteId]);
 
   useEffect(() => {
     if (!maxDate) return;

@@ -3,7 +3,7 @@ import {
   getTimeSeriesRepo,
   upsertClientTokenRepo,
   getSensorsBySiteRepo,
-  getDataRangeRepo 
+  getDataRangeRepo
 } from "./client.repository";
 
 import dayjs from "dayjs";
@@ -20,17 +20,20 @@ export const generateClientTokenService = async (
   body: any
 ) => {
 
-  const { site_id } = body;
+  const { site_id, sensor_ids, from, to, interval } = body;
 
   if (!admin.organizationId) {
     throw new Error("Invalid admin");
   }
 
-  //  VALIDATE SITE (ORG + ACTIVE)
+  if (!sensor_ids || sensor_ids.length === 0) {
+    throw new Error("Select sensors");
+  }
+
+  // VALIDATE SITE
   const siteCheck = await pool.query(
     `
-    SELECT id
-    FROM sites
+    SELECT id FROM sites
     WHERE id = $1
     AND organization_id = $2
     AND status = 'active'
@@ -43,13 +46,16 @@ export const generateClientTokenService = async (
     throw new Error("Site not active or invalid");
   }
 
-  //  GENERATE TOKEN
   const token = crypto.randomBytes(32).toString("hex");
 
   await upsertClientTokenRepo(
     admin.organizationId,
     site_id,
-    token
+    token,
+    sensor_ids,
+    from,
+    to,
+    interval
   );
 
   return {
@@ -59,15 +65,18 @@ export const generateClientTokenService = async (
 };
 
 
-/* =========================================================
-   GET SENSORS FOR CLIENT (TOKEN BASED)
-========================================================= */
+export const getSensorsService = async (
+  admin: any,
+  siteId: string
+) => {
 
-export const getSensorsService = async (client: any) => {
+  if (!admin.organizationId) {
+    throw new Error("Invalid admin");
+  }
 
   const sensors = await getSensorsBySiteRepo(
-    client.organization_id,
-    client.site_id
+    admin.organizationId,
+    siteId
   );
 
   return {
@@ -77,15 +86,47 @@ export const getSensorsService = async (client: any) => {
 };
 
 /* =========================================================
-   TIMESERIES SERVICE (UPDATED)
+   GET SENSORS FOR CLIENT (TOKEN BASED)
 ========================================================= */
 
-export const getTimeSeriesService = async (
-  client: any,
-  body: any
-) => {
+export const getTimeSeriesService = async (client: any) => {
 
-  const { from, to, interval } = body;
+  /* ============================= */
+  /* FETCH CONFIG FROM TOKEN TABLE */
+  /* ============================= */
+
+  const configRes = await pool.query(
+    `
+    SELECT sensor_ids, from_date, to_date, interval
+    FROM client_tokens
+    WHERE token = $1
+    LIMIT 1
+    `,
+    [client.token]
+  );
+
+  const config = configRes.rows[0];
+
+  /* ============================= */
+  /* CONFIG VALIDATION */
+  /* ============================= */
+
+  if (!config) {
+    throw new Error("No configuration found for this token");
+  }
+
+  const sensorIds = config.sensor_ids;
+  const from = config.from_date;
+  const to = config.to_date;
+  const interval = config.interval;
+
+  if (!sensorIds || sensorIds.length === 0) {
+    throw new Error("No sensors configured for this token");
+  }
+
+  if (!from || !to || !interval) {
+    throw new Error("Invalid token configuration");
+  }
 
   /* ============================= */
   /* FETCH DATA RANGE */
@@ -101,6 +142,12 @@ export const getTimeSeriesService = async (
 
   if (!minDate || !maxDate) {
     return {
+      config: {
+        from,
+        to,
+        interval,
+        sensors: sensorIds.length
+      },
       min_date: null,
       max_date: null,
       total: 0,
@@ -111,33 +158,40 @@ export const getTimeSeriesService = async (
   }
 
   /* ============================= */
-  /* VALIDATION */
+  /* VALIDATION (SAFETY) */
   /* ============================= */
 
   if (dayjs(from).isBefore(dayjs(minDate))) {
     throw new Error(
-      `Data available only after ${dayjs(minDate).format("DD/MM/YYYY")}`
+      `Configured start date is before available data (${dayjs(minDate).format("DD/MM/YYYY")})`
     );
   }
 
   if (dayjs(to).isAfter(dayjs(maxDate))) {
     throw new Error(
-      `Data available only till ${dayjs(maxDate).format("DD/MM/YYYY")}`
+      `Configured end date exceeds available data (${dayjs(maxDate).format("DD/MM/YYYY")})`
     );
   }
 
   if (dayjs(from).isAfter(dayjs(to))) {
-    throw new Error("Invalid date range");
+    throw new Error("Invalid configured date range");
+  }
+
+  // ✅ NEW: RANGE LIMIT (VERY IMPORTANT)
+  const diffDays = dayjs(to).diff(dayjs(from), "day");
+
+  if (diffDays > 365) {
+    throw new Error("Date range too large (max 1 year)");
   }
 
   /* ============================= */
-  /* FETCH DATA */
+  /* FETCH TIMESERIES */
   /* ============================= */
 
   const rows = await getTimeSeriesRepo(
     client.organization_id,
     client.site_id,
-    body.sensor_ids,
+    sensorIds,
     from,
     to,
     interval
@@ -149,6 +203,12 @@ export const getTimeSeriesService = async (
 
   if (!rows || rows.length === 0) {
     return {
+      config: {
+        from,
+        to,
+        interval,
+        sensors: sensorIds.length
+      },
       min_date: minDate,
       max_date: maxDate,
       total: 0,
@@ -159,7 +219,7 @@ export const getTimeSeriesService = async (
   }
 
   /* ============================= */
-  /* FORMAT */
+  /* FORMAT RESPONSE */
   /* ============================= */
 
   const formatted = rows.map((r: any) => ({
@@ -185,9 +245,14 @@ export const getTimeSeriesService = async (
   /* ============================= */
 
   return {
+    config: {
+      from,
+      to,
+      interval,
+      sensors: sensorIds.length
+    },
     min_date: minDate,
     max_date: maxDate,
-
     total: formatted.length,
     batch_size: BATCH_SIZE,
     total_batches: batches.length,
