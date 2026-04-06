@@ -327,6 +327,18 @@ export const getTimeSeriesService = async (client: any) => {
     interval
   );
 
+  const sensorsMeta = await getSensorsBySiteRepo(
+    client.organization_id,
+    client.site_id
+  );
+
+  //  Convert to map for fast lookup
+  const sensorMetaMap: any = {};
+
+  for (const s of sensorsMeta) {
+    sensorMetaMap[s.id] = s;
+  }
+
   /* ============================= */
   /* EMPTY CASE */
   /* ============================= */
@@ -365,10 +377,20 @@ export const getTimeSeriesService = async (client: any) => {
     });
   }
 
-  const formatted = Object.keys(grouped).map(sensorId => ({
-    sensorId,
-    data: grouped[sensorId]
-  }));
+  const formatted = Object.keys(grouped).map(sensorId => {
+
+    const meta = sensorMetaMap[sensorId];
+
+    return {
+      sensorId,
+      external_sensor_id: meta?.external_sensor_id || null,
+      sensor_name: meta?.sensor_name || null,
+      sensor_location: meta?.sensor_location || null,
+      api_endpoint: meta?.api_endpoint || null,
+      polling_interval: meta?.polling_interval || null,
+      data: grouped[sensorId]
+    };
+  });
 
   /* ============================= */
   /* BATCHING */
