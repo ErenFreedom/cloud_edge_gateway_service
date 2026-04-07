@@ -6,13 +6,15 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "start:mqtt": "node dist/jobs/mqttIngestion/index.js"
+    "start:mqtt": "node dist/jobs/mqttIngestion/index.js",
+    "bq:load": "ts-node --project tsconfig.scripts.json scripts/bq.load.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@google-cloud/bigquery": "^8.1.1",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",

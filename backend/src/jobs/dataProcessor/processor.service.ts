@@ -6,7 +6,7 @@ import {
   getLastProcessedId,
   updateLastProcessedId
 } from "./processor.db";
-
+import { insertCalculatedToBigQuery } from "../bqWriter/bq.calculated.service";
 import { calculateConsumption } from "./processor.utils";
 
 export const processBatch = async (): Promise<number> => {
@@ -119,6 +119,9 @@ export const processBatch = async (): Promise<number> => {
   }
 
   await insertCalculated(resultRows);
+  insertCalculatedToBigQuery(resultRows).catch((err) => {
+    console.error(" BQ CALC async error:", err);
+  });
 
   // ---------------- UPDATE CURSOR ----------------
 
