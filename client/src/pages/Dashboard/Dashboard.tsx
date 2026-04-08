@@ -71,7 +71,7 @@ const Dashboard = () => {
 
 
   const [interval, setIntervalValue] = useState<
-    "10m" | "1h" | "1d" | "1M"
+    "10m" | "1h" | "1d" | "1w" | "1M" | "3M" | "6M" | "1Y"
   >("10m");
   const today = new Date().toISOString().split("T")[0];
 
@@ -1091,14 +1091,31 @@ const Dashboard = () => {
                   value={interval}
                   onChange={(e) =>
                     setIntervalValue(
-                      e.target.value as "10m" | "1h" | "1d" | "1M"
+                      e.target.value as
+                      | "10m"
+                      | "1h"
+                      | "1d"
+                      | "1w"
+                      | "1M"
+                      | "3M"
+                      | "6M"
+                      | "1Y"
                     )
                   }
                 >
-                  <option value="10m">10 Minutes</option>
-                  <option value="1h">1 Hour</option>
-                  <option value="1d">1 Day</option>
-                  <option value="1M">1 Month</option>
+                  <optgroup label="Short Range (Fast)">
+                    <option value="10m">10 Minutes</option>
+                    <option value="1h">1 Hour</option>
+                    <option value="1d">1 Day</option>
+                    <option value="1w">1 Week</option>
+                  </optgroup>
+
+                  <optgroup label="Long Range (Analytics)">
+                    <option value="1M">1 Month</option>
+                    <option value="3M">3 Months</option>
+                    <option value="6M">6 Months</option>
+                    <option value="1Y">1 Year</option>
+                  </optgroup>
                 </select>
 
                 <div className="modal-divider" />

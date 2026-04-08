@@ -1,20 +1,42 @@
 import { pool } from "../../config/database";
+import { bigquery } from "../../jobs/bqWriter/bq.client";
 
+const DATASET = "cloud_edge_gateway_master_data";
+const TABLE = "iot_calculated";
 /* ---------------- BUCKET ---------------- */
 
 const getBucketQuery = (interval: string) => {
   switch (interval) {
+
     case "10m":
       return `
         DATE_TRUNC('minute', cd.timestamp) - 
         INTERVAL '1 minute' * (EXTRACT(minute FROM cd.timestamp)::int % 10)
       `;
+
     case "1h":
       return `DATE_TRUNC('hour', cd.timestamp)`;
+
     case "1d":
       return `DATE_TRUNC('day', cd.timestamp)`;
+
+    case "1w":
+      return `DATE_TRUNC('week', cd.timestamp)`;
+
     case "1M":
       return `DATE_TRUNC('month', cd.timestamp)`;
+
+
+
+    case "3M":
+      return `DATE_TRUNC('quarter', cd.timestamp)`;
+
+    case "6M":
+      return `DATE_TRUNC('quarter', cd.timestamp)`;
+
+    case "1Y":
+      return `DATE_TRUNC('year', cd.timestamp)`;
+
     default:
       throw new Error("Invalid interval");
   }
@@ -238,4 +260,74 @@ export const getSensorsBySiteRepo = async (
   );
 
   return res.rows;
+};
+
+
+/* ============================= */
+/* BUCKET LOGIC */
+/* ============================= */
+
+const getBQBucket = (interval: string) => {
+  switch (interval) {
+    case "1M":
+      return "TIMESTAMP_TRUNC(timestamp, MONTH)";
+    case "3M":
+      return "TIMESTAMP_TRUNC(timestamp, QUARTER)";
+    case "6M":
+      return "TIMESTAMP_TRUNC(timestamp, QUARTER)";
+    case "1Y":
+      return "TIMESTAMP_TRUNC(timestamp, YEAR)";
+    default:
+      throw new Error("Invalid BQ interval");
+  }
+};
+
+/* ============================= */
+/* MAIN QUERY */
+/* ============================= */
+
+export const getTimeSeriesBigQueryRepo = async (
+  orgId: string,
+  siteId: string,
+  sensorIds: string[],
+  from: string,
+  to: string,
+  interval: string
+) => {
+
+  const bucket = getBQBucket(interval);
+
+  const query = `
+    SELECT
+      sensor_id,
+      ${bucket} AS bucket,
+      COALESCE(
+        MAX(current_kwh) - MIN(previous_kwh),
+        0
+      ) AS consumption
+    FROM \`${process.env.BQ_PROJECT_ID}.${DATASET}.${TABLE}\`
+    WHERE organization_id = @orgId
+      AND site_id = @siteId
+      AND sensor_id IN UNNEST(@sensorIds)
+      AND timestamp BETWEEN @from AND @to
+      AND is_valid = true
+    GROUP BY sensor_id, bucket
+    ORDER BY bucket ASC
+  `;
+
+  const options = {
+    query,
+    location: "asia-south1",
+    params: {
+      orgId,
+      siteId,
+      sensorIds,
+      from,
+      to,
+    },
+  };
+
+  const [rows] = await bigquery.query(options);
+
+  return rows;
 };

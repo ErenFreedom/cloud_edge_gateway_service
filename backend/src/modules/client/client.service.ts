@@ -5,7 +5,8 @@ import {
   getSensorsBySiteRepo,
   getClientConfigRepo,
   saveClientConfigRepo,
-  getDataRangeRepo
+  getDataRangeRepo,
+  getTimeSeriesBigQueryRepo
 } from "./client.repository";
 
 import dayjs from "dayjs";
@@ -293,9 +294,13 @@ export const getTimeSeriesService = async (client: any) => {
     to = now.startOf("day");
   }
 
-  else if (interval === "1M") {
-    // exclude current month
-    to = now.startOf("month");
+  else if (interval === "1w") {
+    to = now.startOf("day");
+  }
+
+  else if (["1M", "3M", "6M", "1Y"].includes(interval)) {
+    // historical queries → BigQuery
+    to = now.startOf("day");
   }
 
   else {
@@ -318,14 +323,34 @@ export const getTimeSeriesService = async (client: any) => {
   /* FETCH TIMESERIES */
   /* ============================= */
 
-  const rows = await getTimeSeriesRepo(
-    client.organization_id,
-    client.site_id,
-    sensorIds,
-    from.toISOString(),
-    to.toISOString(),
-    interval
-  );
+  let rows;
+
+  const BIGQUERY_INTERVALS = ["1M", "3M", "6M", "1Y"];
+
+  if (BIGQUERY_INTERVALS.includes(interval)) {
+    console.log("📊 Using BigQuery");
+
+    rows = await getTimeSeriesBigQueryRepo(
+      client.organization_id,
+      client.site_id,
+      sensorIds,
+      from.toISOString(),
+      to.toISOString(),
+      interval
+    );
+
+  } else {
+    console.log("⚡ Using Cloud SQL");
+
+    rows = await getTimeSeriesRepo(
+      client.organization_id,
+      client.site_id,
+      sensorIds,
+      from.toISOString(),
+      to.toISOString(),
+      interval
+    );
+  }
 
   const sensorsMeta = await getSensorsBySiteRepo(
     client.organization_id,

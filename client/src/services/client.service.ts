@@ -2,12 +2,21 @@ import { apiClient } from "../api/apiClient";
 
 /* ---------------- TYPES ---------------- */
 
+
+
 export interface GenerateTokenPayload {
   site_id: string;
   sensor_ids: string[];
   from: string;
   to: string;
-  interval: "10m" | "1h" | "1d" | "1M";
+  interval: | "10m"
+  | "1h"
+  | "1d"
+  | "1w"
+  | "1M"
+  | "3M"
+  | "6M"
+  | "1Y";
 }
 
 export interface SaveConfigPayload {
@@ -15,7 +24,14 @@ export interface SaveConfigPayload {
   sensor_ids: string[];
   from: string;
   to: string;
-  interval: "10m" | "1h" | "1d" | "1M";
+  interval: | "10m"
+  | "1h"
+  | "1d"
+  | "1w"
+  | "1M"
+  | "3M"
+  | "6M"
+  | "1Y";
 }
 
 export interface Sensor {
@@ -31,7 +47,14 @@ export interface ClientConfig {
   sensor_ids: string[];
   from: string;
   to: string;
-  interval: "10m" | "1h" | "1d" | "1M";
+  interval: | "10m"
+  | "1h"
+  | "1d"
+  | "1w"
+  | "1M"
+  | "3M"
+  | "6M"
+  | "1Y";
 }
 
 /* ---------------- API CALLS ---------------- */

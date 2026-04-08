@@ -11,7 +11,7 @@ export const validateTimeSeries = (body: any) => {
     throw new Error("interval required");
   }
 
-  const allowed = ["10m", "1h", "1d", "1M"];
+  const allowed = ["10m", "1h", "1d", "1w", "1M", "3M", "6M", "1Y"];
   if (!allowed.includes(body.interval)) {
     throw new Error("invalid interval");
   }
