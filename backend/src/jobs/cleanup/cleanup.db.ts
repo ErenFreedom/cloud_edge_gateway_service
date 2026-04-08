@@ -10,7 +10,7 @@ export const deleteOldRawData = async () => {
     WHERE timestamp_value < NOW() - INTERVAL '7 days'
   `);
 
-  console.log(` RAW deleted: ${res.rowCount}`);
+  console.log(`RAW deleted: ${res.rowCount}`);
 };
 
 /* ============================= */
@@ -24,4 +24,22 @@ export const deleteOldCalculatedData = async () => {
   `);
 
   console.log(`CALC deleted: ${res.rowCount}`);
+};
+
+/* ============================= */
+/* CLEANUP STATE */
+/* ============================= */
+
+export const getLastCleanupRun = async (): Promise<Date | null> => {
+  const res = await pool.query(
+    `SELECT last_run FROM cleanup_state LIMIT 1`
+  );
+  return res.rows[0]?.last_run || null;
+};
+
+export const updateCleanupRun = async () => {
+  await pool.query(`
+    UPDATE cleanup_state
+    SET last_run = NOW()
+  `);
 };
