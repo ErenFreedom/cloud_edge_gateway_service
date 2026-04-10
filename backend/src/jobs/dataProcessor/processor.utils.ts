@@ -9,14 +9,16 @@ export const calculateConsumption = (
   meterMax?: number
 ): { consumption: number; event: EventType; valid: boolean } => {
 
-  //  COMM LOSS
+  // ---------------- COMM LOSS ----------------
   if (intervalSec && gapMinutes > (2 * intervalSec) / 60) {
     return { consumption: 0, event: "COMM_LOSS", valid: false };
   }
 
-  //  RESET / ROLLOVER
+  // ---------------- RESET / ROLLOVER ----------------
   if (curr < prev) {
-    if (meterMax && (prev - curr) < 0.1 * meterMax) {
+
+    // TRUE rollover (only when drop is VERY large)
+    if (meterMax && (prev - curr) > 0.9 * meterMax) {
       return {
         consumption: (meterMax - prev) + curr,
         event: "ROLLOVER",
@@ -24,12 +26,13 @@ export const calculateConsumption = (
       };
     }
 
+    // small drop → RESET (ignore)
     return { consumption: 0, event: "RESET", valid: false };
   }
 
   const delta = curr - prev;
 
-  //  SPIKE
+  // ---------------- SPIKE DETECTION ----------------
   if (maxLoadKw && intervalSec) {
     const maxPossible = maxLoadKw * (intervalSec / 3600);
 
@@ -38,5 +41,6 @@ export const calculateConsumption = (
     }
   }
 
+  // ---------------- NORMAL ----------------
   return { consumption: delta, event: "OK", valid: true };
 };

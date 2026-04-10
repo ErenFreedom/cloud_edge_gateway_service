@@ -20,7 +20,6 @@ export const processBatch = async (): Promise<number> => {
   }
 
   // ---------------- GROUP BY SENSOR ----------------
-
   const grouped = new Map<string, any[]>();
 
   for (const row of rawRows) {
@@ -38,13 +37,12 @@ export const processBatch = async (): Promise<number> => {
   const resultRows: any[] = [];
 
   // ---------------- PROCESS EACH SENSOR ----------------
-
   for (const [sensorId, rows] of grouped.entries()) {
 
     const meta = metaMap.get(sensorId);
     if (!meta) continue;
 
-    //  SAFE SORT (per sensor)
+    // sort per sensor
     rows.sort(
       (a, b) =>
         new Date(a.timestamp_value).getTime() -
@@ -58,8 +56,27 @@ export const processBatch = async (): Promise<number> => {
 
     for (const row of rows) {
 
+      let currValue = row.value;
+
+      // ---------------- ZERO HANDLING ----------------
+      let isZero = false;
+
+      if (currValue === 0) {
+        isZero = true;
+
+        if (lastValue !== undefined) {
+          // carry forward last value
+          currValue = lastValue;
+        } else {
+          // first value is zero → skip
+          continue;
+        }
+      }
+
+      // ---------------- FIRST VALUE ----------------
       if (lastValue === undefined) {
-        lastValue = row.value;
+
+        lastValue = currValue;
         lastTimestamp = row.timestamp_value;
 
         resultRows.push({
@@ -67,11 +84,11 @@ export const processBatch = async (): Promise<number> => {
           site_id: row.site_id,
           sensor_id: sensorId,
           timestamp: row.timestamp_value,
-          prev: row.value,
-          curr: row.value,
+          prev: currValue,
+          curr: currValue,
           consumption: 0,
-          event: "OK",
-          valid: true,
+          event: isZero ? "RESET" : "OK",
+          valid: !isZero,
           gap: 0
         });
 
@@ -82,19 +99,18 @@ export const processBatch = async (): Promise<number> => {
         (new Date(row.timestamp_value).getTime() -
           new Date(lastTimestamp).getTime()) / 60000;
 
-      //  backward time → skip
       if (gapMinutes < 0) continue;
-
-      const isDuplicate = row.value === lastValue;
 
       const calc = calculateConsumption(
         lastValue,
-        row.value,
+        currValue,
         gapMinutes,
         meta.max_load_kw,
         meta.logging_interval_seconds,
-        meta.meter_max_value
+        meta.meter_max_value || meta.upper_bound
       );
+
+      const isDuplicate = currValue === lastValue;
 
       resultRows.push({
         organization_id: row.organization_id,
@@ -102,14 +118,19 @@ export const processBatch = async (): Promise<number> => {
         sensor_id: sensorId,
         timestamp: row.timestamp_value,
         prev: lastValue,
-        curr: row.value,
+        curr: currValue,
         consumption: isDuplicate ? 0 : calc.consumption,
-        event: isDuplicate ? "OK" : calc.event,
-        valid: isDuplicate ? true : calc.valid,
+        event: isZero
+          ? "RESET"
+          : (isDuplicate ? "OK" : calc.event),
+        valid: isZero
+          ? false
+          : (isDuplicate ? true : calc.valid),
         gap: gapMinutes
       });
 
-      lastValue = row.value;
+      // ---------------- UPDATE STATE ----------------
+      lastValue = currValue;
       lastTimestamp = row.timestamp_value;
     }
   }
@@ -119,16 +140,16 @@ export const processBatch = async (): Promise<number> => {
   }
 
   await insertCalculated(resultRows);
+
   insertCalculatedToBigQuery(resultRows).catch((err) => {
-    console.error(" BQ CALC async error:", err);
+    console.error("BQ CALC async error:", err);
   });
 
   // ---------------- UPDATE CURSOR ----------------
-
   const newLastId = rawRows[rawRows.length - 1].id;
   await updateLastProcessedId(newLastId);
 
-  console.log(` Processed ${resultRows.length} rows`);
+  console.log(`Processed ${resultRows.length} rows`);
 
   return resultRows.length;
 };
