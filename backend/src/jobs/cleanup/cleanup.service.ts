@@ -15,26 +15,25 @@ export const runCleanupIfNeeded = async () => {
     const now = new Date();
 
     if (lastRun) {
-      const diffHours =
-        (now.getTime() - new Date(lastRun).getTime()) / (1000 * 60 * 60);
+      const lastRunDay = new Date(lastRun).toDateString();
+      const today = now.toDateString();
 
-      // Skip if ran in last 24 hours
-      if (diffHours < 24) {
-        console.log("🟡 Cleanup skipped (already ran recently)");
+      if (lastRunDay === today) {
+        console.log("Cleanup skipped (already ran today)");
         return;
       }
     }
 
-    console.log("🧹 Cleanup started");
+    console.log("Cleanup started");
 
     await deleteOldRawData();
     await deleteOldCalculatedData();
 
     await updateCleanupRun();
 
-    console.log("✅ Cleanup completed");
+    console.log("Cleanup completed");
 
   } catch (err) {
-    console.error("❌ Cleanup failed:", err);
+    console.error("Cleanup failed:", err);
   }
 };

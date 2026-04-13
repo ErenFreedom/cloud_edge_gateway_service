@@ -7,7 +7,7 @@ import { pool } from "../../config/database";
 export const deleteOldRawData = async () => {
   const res = await pool.query(`
     DELETE FROM raw_data
-    WHERE timestamp_value < NOW() - INTERVAL '7 days'
+    WHERE timestamp_value < DATE_TRUNC('day', NOW()) - INTERVAL '7 days'
   `);
 
   console.log(`RAW deleted: ${res.rowCount}`);
@@ -20,7 +20,7 @@ export const deleteOldRawData = async () => {
 export const deleteOldCalculatedData = async () => {
   const res = await pool.query(`
     DELETE FROM calculated_data
-    WHERE timestamp < NOW() - INTERVAL '7 days'
+    WHERE timestamp < DATE_TRUNC('day', NOW()) - INTERVAL '7 days'
   `);
 
   console.log(`CALC deleted: ${res.rowCount}`);
