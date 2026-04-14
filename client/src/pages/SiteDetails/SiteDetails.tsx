@@ -201,7 +201,7 @@ const SiteDetails = () => {
 
                         {isEditMode ? (
                             <input
-                                className="site-title-input"
+                                className="site-title-input big-title"
                                 value={formData.site_name || ""}
                                 onChange={(e) =>
                                     updateField("site_name", e.target.value)

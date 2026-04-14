@@ -125,6 +125,19 @@ export const createSiteService = async (
     );
 
 
+    const siteUuid = crypto.randomUUID();
+
+    const rawSecret = crypto.randomBytes(32).toString("hex");
+
+    const secretHash = await bcrypt.hash(rawSecret, 10);
+
+    await updateSiteCredentialsRepo(
+      site.id,
+      siteUuid,
+      secretHash
+    );
+
+
 
 
     const passwordHash = await bcrypt.hash(
@@ -301,6 +314,9 @@ export const verifySiteAdminOtpService = async (
   const siteId = record.site_id;
   const userId = record.user_id;
 
+  /* ============================= */
+  /* MARK USER VERIFIED */
+  /* ============================= */
 
   await pool.query(
     `
@@ -313,24 +329,9 @@ export const verifySiteAdminOtpService = async (
     [userId]
   );
 
-
-  const siteUuid = crypto.randomUUID();
-
-  const rawSecret = crypto
-    .randomBytes(32)
-    .toString("hex");
-
-  const secretHash = await bcrypt.hash(
-    rawSecret,
-    10
-  );
-
-  await updateSiteCredentialsRepo(
-    siteId,
-    siteUuid,
-    secretHash
-  );
-
+  /* ============================= */
+  /* REMOVE PENDING FLAG */
+  /* ============================= */
 
   await pool.query(
     `
@@ -342,7 +343,24 @@ export const verifySiteAdminOtpService = async (
     [siteId]
   );
 
-  /* SEND CREDENTIALS EMAIL */
+  /* ============================= */
+  /* FETCH EXISTING SITE UUID */
+  /* ============================= */
+
+  const siteData = await pool.query(
+    `
+    SELECT site_uuid
+    FROM sites
+    WHERE id = $1
+    `,
+    [siteId]
+  );
+
+  const siteUuid = siteData.rows[0]?.site_uuid;
+
+  /* ============================= */
+  /* GET USER EMAIL */
+  /* ============================= */
 
   const userEmail = (
     await pool.query(
@@ -351,16 +369,21 @@ export const verifySiteAdminOtpService = async (
     )
   ).rows[0].email;
 
+  /* ============================= */
+  /* SEND EMAIL */
+  /* ============================= */
+
   await sendEmail(
     userEmail,
-    "Site Credentials Generated",
+    "Site Email Verified",
     `
       <h2>Email Verified Successfully</h2>
 
-      <p>Your site credentials have been generated.</p>
+      <p>Your site has been successfully verified.</p>
 
-      <p><strong>Site UUID:</strong> ${siteUuid}</p>
-      <p><strong>Site Secret:</strong> ${rawSecret}</p>
+      <p><strong>Site UUID:</strong> ${siteUuid || "Not available"}</p>
+
+      <p><strong>Site Secret:</strong> Already shared during site creation</p>
 
       <p>Note: Site will become active only after connector installation.</p>
     `
@@ -368,11 +391,10 @@ export const verifySiteAdminOtpService = async (
 
   return {
     message:
-      "Email verified successfully. Site credentials generated. Awaiting activation."
+      "Email verified successfully. Site is now ready for activation."
   };
 
 };
-
 
 
 
@@ -776,7 +798,7 @@ export const editSiteService = async (
 
     return {
       message: "Site updated successfully",
-      site: updatedSite   
+      site: updatedSite
     };
 
   } catch (error) {

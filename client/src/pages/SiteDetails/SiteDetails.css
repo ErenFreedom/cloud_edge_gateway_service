@@ -283,3 +283,13 @@ gap:12px;
   overflow: hidden;
   border: 1px solid #333;
 }
+
+.big-title {
+  font-size: 32px;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  width: 100%;
+}
