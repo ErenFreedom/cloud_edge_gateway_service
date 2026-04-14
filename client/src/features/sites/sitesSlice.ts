@@ -1,5 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
+
+
 import {
   getSites,
   createSite,
@@ -9,69 +11,73 @@ import {
   updateSite,
   requestEmailChange,
   verifyEmailChange,
-  editSiteUser
+  editSiteUser,
 } from "../../services/sites.service";
 
 import type {
-  CreateSitePayload
+ SiteInfo,
+ // SiteUser,
+  SiteDetails,
+  CreateSitePayload,
+  UpdateSitePayload
 } from "../../services/sites.service";
 
 
-interface Site {
+// interface Site {
 
-  id: string;
-  site_name: string;
+//   id: string;
+//   site_name: string;
 
-  phone: string | null;
+//   phone: string | null;
 
-  address_line1: string;
-  address_line2: string | null;
+//   address_line1: string;
+//   address_line2: string | null;
 
-  state: string;
-  country: string;
+//   state: string;
+//   country: string;
 
-  gst_number: string | null;
-
-
-  latitude: number | null
-  longitude: number | null
-
-  site_uuid: string | null;
-  machine_fingerprint: string | null;
-
-  status: string;
-  created_at: string;
-  activated_at: string | null;
-}
+//   gst_number: string | null;
 
 
+//   latitude: number | null
+//   longitude: number | null
 
-interface SiteUser {
-  id: string;
-  full_name: string;
-  email: string;
-  phone?: string | null;
+//   site_uuid: string | null;
+//   machine_fingerprint: string | null;
 
-  role: "site_admin" | "site_viewer";
-
-  status?: string;
-  birthdate?: string | null;
-  gender?: string | null;
-
-  email_verified?: boolean;
-  created_at?: string;
-}
+//   status: string;
+//   created_at: string;
+//   activated_at: string | null;
+// }
 
 
-interface SiteDetails {
-  site: Site;
-  site_admin: SiteUser | null;
-  viewers: SiteUser[];
-}
+
+// interface SiteUser {
+//   id: string;
+//   full_name: string;
+//   email: string;
+//   phone?: string | null;
+
+//   role: "site_admin" | "site_viewer";
+
+//   status?: string;
+//   birthdate?: string | null;
+//   gender?: string | null;
+
+//   email_verified?: boolean;
+//   created_at?: string;
+// }
+
+
+// interface SiteDetails {
+//   site: Site;
+//   site_admin: SiteUser | null;
+//   viewers: SiteUser[];
+// }
 
 interface SitesState {
 
-  sites: Site[];
+  sites: SiteInfo[];
 
   loading: boolean;
   error: string | null;
@@ -250,7 +256,7 @@ export const fetchSiteDetailsThunk = createAsyncThunk(
 export const updateSiteThunk = createAsyncThunk(
   "sites/updateSite",
   async (
-    payload: { siteId: string; data: any },
+    payload: { siteId: string; data: UpdateSitePayload },
     thunkAPI
   ) => {
 
@@ -525,10 +531,14 @@ const sitesSlice = createSlice({
 
       })
 
-      .addCase(updateSiteThunk.fulfilled, (state) => {
+      .addCase(updateSiteThunk.fulfilled, (state, action) => {
 
         state.loading = false;
         state.siteUpdated = true;
+
+        if (state.selectedSite) {
+          state.selectedSite.site = action.payload.site;
+        }
 
       })
 

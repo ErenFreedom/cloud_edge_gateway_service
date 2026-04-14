@@ -335,21 +335,44 @@ export const updateSiteInfoRepo = async (
   const { rows } = await client.query(
     `
     UPDATE sites
-SET
-  site_name = COALESCE($1, site_name),
-  phone = COALESCE($2, phone),
-  address_line1 = COALESCE($3, address_line1),
-  address_line2 = COALESCE($4, address_line2),
-  state = COALESCE($5, state),
-  country = COALESCE($6, country),
-  gst_number = COALESCE($7, gst_number),
+    SET
+      site_name     = COALESCE($1, site_name),
+      phone         = COALESCE($2, phone),
 
+      address_line1 = COALESCE($3, address_line1),
+      address_line2 = COALESCE($4, address_line2),
 
-  latitude = COALESCE($8, latitude),
-  longitude = COALESCE($9, longitude)
+      state         = COALESCE($5, state),
+      country       = COALESCE($6, country),
 
-WHERE id = $10
-RETURNING *
+      gst_number    = COALESCE($7, gst_number),
+
+      latitude      = COALESCE($8, latitude),
+      longitude     = COALESCE($9, longitude)
+
+    WHERE id = $10
+
+    RETURNING
+      id,
+      site_name,
+      phone,
+      address_line1,
+      address_line2,
+      state,
+      country,
+      gst_number,
+
+      latitude,
+      longitude,
+
+      site_uuid,
+      '******' AS site_secret,
+      '******' AS device_secret,
+
+      machine_fingerprint,
+      status,
+      created_at,
+      activated_at
     `,
     [
       data.site_name,
@@ -359,18 +382,14 @@ RETURNING *
       data.state,
       data.country,
       data.gst_number,
-
-
       data.latitude,
       data.longitude,
-
       siteId
     ]
-  )
+  );
 
-  return rows[0]
-
-}
+  return rows[0];
+};
 
 export const removeViewerRepo = async (
   client: PoolClient,
@@ -552,31 +571,33 @@ export const getSiteDetailsRepo = async (
 
   const siteResult = await client.query(
     `
-    SELECT
-  id,
-  site_name,
-  phone,
-  address_line1,
-  address_line2,
-  state,
-  country,
-  gst_number,
+  SELECT
+    id,
+    site_name,
+    phone,
+    address_line1,
+    address_line2,
+    state,
+    country,
+    gst_number,
 
-  latitude,
-  longitude,
+    latitude,
+    longitude,
 
-  site_uuid,
-  machine_fingerprint,
-  status,
-  created_at,
-  activated_at
+    site_uuid,
+    '******' AS site_secret,
+    '******' AS device_secret,
 
-    FROM sites
-    WHERE id = $1
-    `,
+    machine_fingerprint,
+    status,
+    created_at,
+    activated_at
+
+  FROM sites
+  WHERE id = $1
+  `,
     [siteId]
   );
-
   if (!siteResult.rows.length) {
     return null;
   }

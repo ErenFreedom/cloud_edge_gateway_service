@@ -67,12 +67,15 @@ export interface SiteInfo {
 
   gst_number: string | null
 
-  /* NEW */
-
   latitude: number | null
   longitude: number | null
 
   site_uuid: string | null
+
+  /* 🔥 ADD THESE */
+  site_secret: string | null
+  device_secret: string | null
+
   machine_fingerprint: string | null
 
   status: string
@@ -131,6 +134,19 @@ export const regenerateSiteCredentials = async (
 
 };
 
+export interface UpdateSitePayload {
+  site_name?: string;
+  phone?: string;
+  address_line1?: string;
+  address_line2?: string;
+  state?: string;
+  country?: string;
+  gst_number?: string;
+
+  latitude?: number;
+  longitude?: number;
+}
+
 
 export const verifySiteAdminOtp = async (
   otpId: string,
@@ -164,19 +180,7 @@ export const getSiteDetails = async (
 
 export const updateSite = async (
   siteId: string,
-  payload: {
-    site_name?: string;
-    phone?: string;
-    address_line1?: string;
-    address_line2?: string;
-    state?: string;
-    country?: string;
-    gst_number?: string;
-
-
-    latitude?: number;
-    longitude?: number;
-  }
+  payload: UpdateSitePayload
 ) => {
 
   const response = await apiClient.put(
@@ -185,7 +189,6 @@ export const updateSite = async (
   );
 
   return response.data;
-
 };
 
 

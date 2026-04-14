@@ -607,72 +607,88 @@ export const editSiteService = async (
   payload: EditSitePayload
 ) => {
 
-  const client = await pool.connect()
+  const client = await pool.connect();
 
   try {
 
-    await client.query("BEGIN")
+    await client.query("BEGIN");
+
+    /* ============================= */
+    /* SUPER ADMIN VALIDATION */
+    /* ============================= */
 
     const superAdmin = await client.query(
-      `SELECT organization_id,role
-       FROM users
-       WHERE id=$1`,
+      `
+      SELECT organization_id, role
+      FROM users
+      WHERE id = $1
+      `,
       [superAdminId]
-    )
+    );
 
-    if (!superAdmin.rows.length)
-      throw new Error("Super admin not found")
+    if (!superAdmin.rows.length) {
+      throw new Error("Super admin not found");
+    }
 
-    const role = superAdmin.rows[0].role
+    const role = superAdmin.rows[0].role;
 
-    if (role !== "super_admin" && role !== "org_site_manager")
-      throw new Error("Unauthorized")
+    if (role !== "super_admin" && role !== "org_site_manager") {
+      throw new Error("Unauthorized");
+    }
 
-    const organizationId =
-      superAdmin.rows[0].organization_id
+    const organizationId = superAdmin.rows[0].organization_id;
 
+
+    /* ============================= */
+    /* SITE VALIDATION */
+    /* ============================= */
 
     const siteCheck = await client.query(
       `
-SELECT *
-FROM sites
-WHERE id=$1 AND organization_id=$2
-`,
+      SELECT *
+      FROM sites
+      WHERE id = $1 AND organization_id = $2
+      `,
       [siteId, organizationId]
-    )
+    );
 
-    if (!siteCheck.rows.length)
-      throw new Error("Site not found")
-
-
-
-    if (role === "org_site_manager") {
-
-      const hasAccess =
-        await verifyManagerSiteAccessRepo(
-          client,
-          superAdminId,
-          siteId
-        )
-
-      if (!hasAccess)
-        throw new Error("Access denied for this site")
-
+    if (!siteCheck.rows.length) {
+      throw new Error("Site not found");
     }
 
 
+    /* ============================= */
+    /* MANAGER ACCESS CHECK */
+    /* ============================= */
+
+    if (role === "org_site_manager") {
+
+      const hasAccess = await verifyManagerSiteAccessRepo(
+        client,
+        superAdminId,
+        siteId
+      );
+
+      if (!hasAccess) {
+        throw new Error("Access denied for this site");
+      }
+    }
 
 
-    /* -------- UPDATE SITE INFO -------- */
+    /* ============================= */
+    /* UPDATE SITE INFO */
+    /* ============================= */
 
     const updatedSite = await updateSiteInfoRepo(
       client,
       siteId,
       payload
-    )
+    );
 
 
-    /* -------- ADD VIEWERS -------- */
+    /* ============================= */
+    /* ADD VIEWERS */
+    /* ============================= */
 
     if (payload.add_viewers?.length) {
 
@@ -681,29 +697,33 @@ WHERE id=$1 AND organization_id=$2
         const user = await findUserByEmailRepo(
           client,
           email
-        )
+        );
 
-        if (!user)
+        if (!user) {
           throw new Error(
             `User with email ${email} not found`
-          )
+          );
+        }
 
-        if (user.role === "site_admin")
-          throw new Error("Admin cannot be added as viewer")
+        if (user.role === "site_admin") {
+          throw new Error(
+            "Admin cannot be added as viewer"
+          );
+        }
 
         await assignUserToSiteRepo(
           client,
           siteId,
           user.id,
           "site_viewer"
-        )
-
+        );
       }
-
     }
 
 
-    /* -------- REMOVE VIEWERS -------- */
+    /* ============================= */
+    /* REMOVE VIEWERS */
+    /* ============================= */
 
     if (payload.remove_viewers?.length) {
 
@@ -712,66 +732,63 @@ WHERE id=$1 AND organization_id=$2
         const user = await findUserByEmailRepo(
           client,
           email
-        )
+        );
 
-        if (!user)
-          continue
+        if (!user) continue;
 
         await removeViewerRepo(
           client,
           siteId,
           user.id
-        )
-
+        );
       }
-
     }
 
 
-    /* -------- CHANGE ADMIN -------- */
+    /* ============================= */
+    /* CHANGE ADMIN */
+    /* ============================= */
 
     if (payload.new_admin_email) {
 
       const user = await findUserByEmailRepo(
         client,
         payload.new_admin_email
-      )
+      );
 
-      if (!user)
-        throw new Error(
-          "New admin user not found"
-        )
+      if (!user) {
+        throw new Error("New admin user not found");
+      }
 
       await replaceSiteAdminRepo(
         client,
         siteId,
         user.id
-      )
-
+      );
     }
 
 
-    await client.query("COMMIT")
+    /* ============================= */
+    /* COMMIT */
+    /* ============================= */
+
+    await client.query("COMMIT");
 
     return {
-      message: "Site updated successfully"
-    }
+      message: "Site updated successfully",
+      site: updatedSite   
+    };
 
+  } catch (error) {
+
+    await client.query("ROLLBACK");
+    throw error;
+
+  } finally {
+
+    client.release();
   }
-  catch (error) {
-
-    await client.query("ROLLBACK")
-    throw error
-
-  }
-  finally {
-
-    client.release()
-
-  }
-
-}
-
+};
 
 export const editSiteUserService = async (
   superAdminId: string,
