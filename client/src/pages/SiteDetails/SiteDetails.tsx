@@ -18,10 +18,10 @@ import Button from "../../components/ui/Button";
 
 import "./SiteDetails.css";
 
-const mask = (value?: string | null) => {
-    if (!value) return "Not yet activated";
-    return "**************";
-};
+// const mask = (value?: string | null) => {
+//     if (!value) return "Not yet activated";
+//     return "**************";
+// };
 
 const SiteDetails = () => {
 
@@ -151,9 +151,21 @@ const SiteDetails = () => {
 
         if (!siteId) return;
 
+        const payload = {
+            site_name: formData.site_name,
+            phone: formData.phone,
+            address_line1: formData.address_line1,
+            address_line2: formData.address_line2,
+            state: formData.state,
+            country: formData.country,
+            gst_number: formData.gst_number,
+            latitude: formData.latitude,
+            longitude: formData.longitude
+        };
+
         dispatch(updateSiteThunk({
             siteId,
-            data: formData
+            data: payload
         }));
 
     };
@@ -186,7 +198,19 @@ const SiteDetails = () => {
             <div className="site-container">
                 <div className="site-header">
                     <h1 className="site-title">
-                        {site.site_name}
+
+                        {isEditMode ? (
+                            <input
+                                className="site-title-input"
+                                value={formData.site_name || ""}
+                                onChange={(e) =>
+                                    updateField("site_name", e.target.value)
+                                }
+                            />
+                        ) : (
+                            site.site_name
+                        )}
+
                     </h1>
                 </div>
 
@@ -231,9 +255,17 @@ const SiteDetails = () => {
                         <div>
                             <label>Address</label>
 
-                            <p>
-                                {formData.address_line1 || site.address_line1}
-                            </p>
+                            {isEditMode ? (
+                                <input
+                                    value={formData.address_line1 || ""}
+                                    onChange={(e) =>
+                                        updateField("address_line1", e.target.value)
+                                    }
+                                />
+                            ) : (
+                                <p>{site.address_line1 || "-"}</p>
+                            )}
+
                         </div>
 
                         <div>
@@ -245,12 +277,22 @@ const SiteDetails = () => {
 
                         <div>
                             <label>Site UUID</label>
-                            <p>{mask(site.site_uuid)}</p>
+                            <p>{site.site_uuid || "-"}</p>
+                        </div>
+
+                        <div>
+                            <label>Site Secret</label>
+                            <p>{site.site_secret || "******"}</p>
+                        </div>
+
+                        <div>
+                            <label>Device Secret</label>
+                            <p>{site.device_secret || "******"}</p>
                         </div>
 
                         <div>
                             <label>Machine Fingerprint</label>
-                            <p>{mask(site.machine_fingerprint)}</p>
+                            <p>{site.machine_fingerprint || "-"}</p>
                         </div>
 
                         <div>
