@@ -1219,7 +1219,22 @@ const Dashboard = () => {
                         {/* API PREVIEW */}
                         {grihaMapping[sensor.id]?.enabled && (
                           <div className="api-box">
-                            /api/griha/sensor/{sensor.id}?month=MM&year=YYYY
+
+                            <span>
+                              /api/griha/sensor/{sensor.id}?month=04&year=2026
+                            </span>
+
+                            <button
+                              className="copy-btn"
+                              onClick={() =>
+                                navigator.clipboard.writeText(
+                                  `/api/griha/sensor/${sensor.id}?month=04&year=2026`
+                                )
+                              }
+                            >
+                              Copy
+                            </button>
+
                           </div>
                         )}
 

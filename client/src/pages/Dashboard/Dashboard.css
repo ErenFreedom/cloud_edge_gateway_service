@@ -497,11 +497,16 @@
 
 .sensor-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 8px;
-  border-radius: 6px;
-  transition: 0.2s;
+  margin-bottom: 16px;
+}
+
+.sensor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
 }
 
 .sensor-row:hover {
@@ -593,10 +598,27 @@ button:disabled {
 }
 
 .api-box {
-  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-top: 8px;
+  padding: 8px;
+
   font-size: 12px;
   color: #22c55e;
+
   background: #020617;
-  padding: 6px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+}
+
+.copy-btn {
+  background: #1d4ed8;
+  border: none;
+  padding: 4px 8px;
+  color: white;
+  font-size: 11px;
   border-radius: 4px;
+  cursor: pointer;
 }
