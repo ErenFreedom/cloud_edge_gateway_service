@@ -1154,95 +1154,102 @@ const Dashboard = () => {
                 <div className="section-title">Configure GRIHA Sensors</div>
 
                 <div className="sensor-container">
-                  {sensors.map((sensor: any) => (
 
-                    <div key={sensor.id} className="sensor-row">
+                  {sensors.map((sensor: any) => {
 
-                      <input
-                        type="checkbox"
-                        checked={grihaMapping[sensor.id]?.enabled || false}
-                        onChange={(e) => {
-                          setGrihaMapping((prev: any) => ({
-                            ...prev,
-                            [sensor.id]: {
-                              ...prev[sensor.id],
-                              enabled: e.target.checked
-                            }
-                          }));
-                        }}
-                      />
+                    const enabled = grihaMapping[sensor.id]?.enabled;
 
-                      <div className="sensor-info">
+                    const month = new Date().getMonth() + 1;
+                    const year = new Date().getFullYear();
 
-                        <div className="sensor-name">
-                          {sensor.sensor_name}
-                        </div>
+                    const apiUrl = `/api/griha/sensor/${sensor.id}?month=${month}&year=${year}`;
 
-                        {/* TYPE */}
-                        <select
-                          value={grihaMapping[sensor.id]?.type || ""}
-                          onChange={(e) =>
+                    return (
+                      <div key={sensor.id} className="sensor-row">
+
+                        <input
+                          type="checkbox"
+                          checked={enabled || false}
+                          onChange={(e) => {
                             setGrihaMapping((prev: any) => ({
                               ...prev,
                               [sensor.id]: {
                                 ...prev[sensor.id],
-                                type: e.target.value
+                                enabled: e.target.checked
                               }
-                            }))
-                          }
-                        >
-                          <option value="">Type</option>
-                          <option value="utility">Utility</option>
-                          <option value="hvac">HVAC</option>
-                          <option value="water">Water</option>
-                          <option value="stp">STP</option>
-                        </select>
+                            }));
+                          }}
+                        />
 
-                        {/* UNIT */}
-                        <select
-                          value={grihaMapping[sensor.id]?.unit || ""}
-                          onChange={(e) =>
-                            setGrihaMapping((prev: any) => ({
-                              ...prev,
-                              [sensor.id]: {
-                                ...prev[sensor.id],
-                                unit: e.target.value
-                              }
-                            }))
-                          }
-                        >
-                          <option value="">Unit</option>
-                          <option value="kWh">kWh</option>
-                          <option value="kL">kL</option>
-                        </select>
+                        <div className="sensor-content">
 
-                        {/* API PREVIEW */}
-                        {grihaMapping[sensor.id]?.enabled && (
-                          <div className="api-box">
+                          <div className="sensor-name">
+                            {sensor.sensor_name}
+                          </div>
 
-                            <span>
-                              /api/griha/sensor/{sensor.id}?month=04&year=2026
-                            </span>
+                          <div className="sensor-controls">
 
-                            <button
-                              className="copy-btn"
-                              onClick={() =>
-                                navigator.clipboard.writeText(
-                                  `/api/griha/sensor/${sensor.id}?month=04&year=2026`
-                                )
+                            <select
+                              value={grihaMapping[sensor.id]?.type || ""}
+                              onChange={(e) =>
+                                setGrihaMapping((prev: any) => ({
+                                  ...prev,
+                                  [sensor.id]: {
+                                    ...prev[sensor.id],
+                                    type: e.target.value
+                                  }
+                                }))
                               }
                             >
-                              Copy
-                            </button>
+                              <option value="">Type</option>
+                              <option value="utility">Utility</option>
+                              <option value="hvac">HVAC</option>
+                              <option value="water">Water</option>
+                              <option value="stp">STP</option>
+                            </select>
+
+                            <select
+                              value={grihaMapping[sensor.id]?.unit || ""}
+                              onChange={(e) =>
+                                setGrihaMapping((prev: any) => ({
+                                  ...prev,
+                                  [sensor.id]: {
+                                    ...prev[sensor.id],
+                                    unit: e.target.value
+                                  }
+                                }))
+                              }
+                            >
+                              <option value="">Unit</option>
+                              <option value="kWh">kWh</option>
+                              <option value="kL">kL</option>
+                            </select>
 
                           </div>
-                        )}
+
+                          {enabled && (
+                            <div className="api-box">
+
+                              <span className="api-text">
+                                {apiUrl}
+                              </span>
+
+                              <button
+                                className="copy-btn"
+                                onClick={() => navigator.clipboard.writeText(apiUrl)}
+                              >
+                                Copy
+                              </button>
+
+                            </div>
+                          )}
+
+                        </div>
 
                       </div>
+                    );
+                  })}
 
-                    </div>
-
-                  ))}
                 </div>
 
                 <div className="modal-buttons">
