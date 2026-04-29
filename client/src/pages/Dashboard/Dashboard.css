@@ -379,7 +379,8 @@
 }
 
 .modal-content {
-  width: 520px;
+  width: 900px;          
+  max-width: 95vw;       
   max-height: 90vh;
 
   overflow-y: auto;
