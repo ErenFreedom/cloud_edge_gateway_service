@@ -4,16 +4,17 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 
+import { authMiddleware } from './middleware/auth.middleware';
+import { roleMiddleware } from './middleware/role.middleware';
+
 import organizationRoutes from './modules/organization/organization.routes';
 import authRoutes from './modules/auth/auth.routes';
 import siteRoutes from './modules/site/site.routes';
 import platformRoutes from './modules/platform/platform.routes';
 import orgSiteManagerRoutes from "./modules/orgSiteManager/orgSiteManager.routes"
-import { authMiddleware } from './middleware/auth.middleware';
-import { roleMiddleware } from './middleware/role.middleware';
 import edgeAuthRoutes from "./modules/edgeAuth/edgeAuth.routes";
 import clientRoutes from "./modules/client/client.routes";
-
+import grihaRoutes from "./modules/griha/griha.routes";
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/sites', siteRoutes);
 app.use("/api/org-site-managers",orgSiteManagerRoutes);
 app.use("/api/edge", edgeAuthRoutes);
 app.use("/api/client", clientRoutes);
+app.use("/api/griha", grihaRoutes);
 
 app.use(
   '/api/platform',

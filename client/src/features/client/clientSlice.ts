@@ -221,7 +221,7 @@ const clientSlice = createSlice({
 
         state.config = action.payload.config;
 
-        // 🔥 preload selected sensors
+        // preload selected sensors
         if (action.payload.config?.sensor_ids) {
           state.selectedSensors = action.payload.config.sensor_ids;
         }

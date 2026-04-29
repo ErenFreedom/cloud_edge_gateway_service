@@ -14,6 +14,12 @@ import {
 } from "../../features/sites/sitesSlice";
 
 import {
+  fetchGrihaSensorsThunk,
+  fetchGrihaConfigThunk,
+  saveGrihaConfigThunk
+} from "../../features/griha/grihaSlice";
+
+import {
   generateTokenThunk,
   fetchSensorsThunk,
   fetchConfigThunk,
@@ -67,6 +73,10 @@ const Dashboard = () => {
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportSiteId, setExportSiteId] = useState<string | null>(null);
+
+  const [exportMode, setExportMode] = useState<"client" | "griha">("client");
+
+  const [grihaMapping, setGrihaMapping] = useState<any>({});
 
 
 
@@ -249,11 +259,16 @@ const Dashboard = () => {
 
 
   useEffect(() => {
-    if (exportSiteId) {
+    if (!exportSiteId) return;
+
+    if (exportMode === "client") {
       dispatch(fetchSensorsThunk(exportSiteId));
       dispatch(fetchConfigThunk(exportSiteId));
+    } else {
+      dispatch(fetchGrihaSensorsThunk(exportSiteId));
+      dispatch(fetchGrihaConfigThunk(exportSiteId));
     }
-  }, [exportSiteId]);
+  }, [exportSiteId, exportMode]);
 
 
   useEffect(() => {
@@ -318,6 +333,29 @@ const Dashboard = () => {
     setSelectedSiteId(siteId);
     setModalOpen(true);
 
+  };
+
+  const saveGriha = () => {
+
+    if (!exportSiteId) return;
+
+    const finalMapping: any = {};
+
+    Object.keys(grihaMapping).forEach((sensorId) => {
+      if (grihaMapping[sensorId]?.enabled) {
+        finalMapping[sensorId] = {
+          type: grihaMapping[sensorId].type,
+          unit: grihaMapping[sensorId].unit
+        };
+      }
+    });
+
+    dispatch(
+      saveGrihaConfigThunk({
+        site_id: exportSiteId,
+        mapping: finalMapping
+      })
+    );
   };
 
 
@@ -956,182 +994,249 @@ const Dashboard = () => {
 
 
       {exportModalOpen && (
+
         <div className="credential-modal">
 
           <div className="modal-content">
 
             <h2>Export Sensor Data</h2>
 
-            {/* ================= TOKEN SECTION ================= */}
+            {/* ================= TABS ================= */}
+            <div className="export-tabs">
+              <button
+                className={exportMode === "client" ? "active" : ""}
+                onClick={() => setExportMode("client")}
+              >
+                Standard Export
+              </button>
 
-            {!token && (
+              <button
+                className={exportMode === "griha" ? "active" : ""}
+                onClick={() => setExportMode("griha")}
+              >
+                GRIHA Export
+              </button>
+            </div>
+
+            {/* ================= CLIENT MODE ================= */}
+            {exportMode === "client" && (
               <>
-                <p className="section-subtext">
-                  Generate API Token for this site
-                </p>
+                {/* TOKEN SECTION */}
+                {!token && (
+                  <>
+                    <p className="section-subtext">
+                      Generate API Token for this site
+                    </p>
 
-                <div className="modal-buttons">
+                    <div className="modal-buttons">
+                      <Button size="medium" onClick={generateToken}>
+                        Generate Token
+                      </Button>
 
-                  <Button size="medium" onClick={generateToken}>
-                    {token ? "Regenerate Token" : "Generate Token"}
-                  </Button>
+                      <Button size="medium" onClick={() => setExportModalOpen(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                )}
 
-                  <Button
-                    size="medium"
-                    onClick={() => setExportModalOpen(false)}
-                  >
-                    Cancel
-                  </Button>
+                {/* AFTER TOKEN */}
+                {token && (
+                  <>
+                    <div className="section-title">API Token</div>
 
-                </div>
+                    <div className="token-box">
+                      {token}
+                      <button
+                        className="copy-btn"
+                        onClick={() => navigator.clipboard.writeText(token)}
+                      >
+                        Copy
+                      </button>
+                    </div>
+
+                    <div className="modal-buttons" style={{ marginTop: "10px" }}>
+                      <Button size="medium" onClick={generateToken}>
+                        Regenerate Token
+                      </Button>
+                    </div>
+
+                    <div className="modal-divider" />
+
+                    {/* SENSOR SELECT */}
+                    <div className="section-title">Select Sensors</div>
+
+                    <div className="sensor-container">
+                      {sensors.map((sensor: any) => (
+                        <div key={sensor.id} className="sensor-row">
+
+                          <input
+                            type="checkbox"
+                            checked={selectedSensors.includes(sensor.id)}
+                            onChange={() => dispatch(toggleSensor(sensor.id))}
+                          />
+
+                          <div className="sensor-info">
+                            <div className="sensor-name">
+                              {sensor.sensor_name || "Unnamed"}
+                            </div>
+
+                            <div className="sensor-meta">
+                              {sensor.sensor_location || "-"} • ID #{sensor.external_sensor_id}
+                            </div>
+                          </div>
+
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* DATE */}
+                    <div className="section-title">Date Range</div>
+                    {minDate && maxDate && (
+                      <p className="date-hint">
+                        Data available from {minDate} → {maxDate}
+                      </p>
+                    )}
+
+                    <div className="date-wrapper">
+                      <input
+                        type="date"
+                        value={from}
+                        onChange={(e) => setFrom(e.target.value)}
+                      />
+
+                      <input
+                        type="date"
+                        value={to}
+                        onChange={(e) => setTo(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="modal-divider" />
+
+                    {/* INTERVAL */}
+                    <div className="section-title">Interval</div>
+
+                    <select
+                      value={interval}
+                      onChange={(e) =>
+                        setIntervalValue(e.target.value as any)
+                      }
+                    >
+                      <option value="10m">10 Minutes</option>
+                      <option value="1h">1 Hour</option>
+                      <option value="1d">1 Day</option>
+                      <option value="1M">1 Month</option>
+                    </select>
+
+                    <div className="modal-divider" />
+
+                    {/* ACTIONS */}
+                    <div className="modal-buttons">
+
+                      <Button size="medium" onClick={saveConfig}>
+                        Save Configuration
+                      </Button>
+
+                      <Button size="medium" onClick={() => setExportModalOpen(false)}>
+                        Close
+                      </Button>
+
+                    </div>
+                  </>
+                )}
               </>
             )}
 
-            {/* ================= AFTER TOKEN ================= */}
-
-            {token && (
+            {/* ================= GRIHA MODE ================= */}
+            {exportMode === "griha" && (
               <>
-
-                {/* TOKEN */}
-
-                <div className="section-title">API Token</div>
-
-                <div className="section-title">API Token</div>
-
-                <div className="token-box">
-                  {token || "No token generated"}
-                  {token && (
-                    <button
-                      className="copy-btn"
-                      onClick={() => navigator.clipboard.writeText(token)}
-                    >
-                      Copy
-                    </button>
-                  )}
-                </div>
-
-                <div className="modal-buttons" style={{ marginTop: "10px" }}>
-                  <Button size="medium" onClick={generateToken}>
-                    {token ? "Regenerate Token" : "Generate Token"}
-                  </Button>
-                </div>
-
-                <div className="modal-divider" />
-
-                {/* ================= SENSOR SELECT ================= */}
-
-                <div className="section-title">Select Sensors</div>
+                <div className="section-title">Configure GRIHA Sensors</div>
 
                 <div className="sensor-container">
-
                   {sensors.map((sensor: any) => (
 
                     <div key={sensor.id} className="sensor-row">
 
                       <input
                         type="checkbox"
-                        checked={selectedSensors.includes(sensor.id)}
-                        onChange={() =>
-                          dispatch(toggleSensor(sensor.id))
-                        }
+                        checked={grihaMapping[sensor.id]?.enabled || false}
+                        onChange={(e) => {
+                          setGrihaMapping((prev: any) => ({
+                            ...prev,
+                            [sensor.id]: {
+                              ...prev[sensor.id],
+                              enabled: e.target.checked
+                            }
+                          }));
+                        }}
                       />
 
                       <div className="sensor-info">
+
                         <div className="sensor-name">
-                          {sensor.sensor_name || "Unnamed"}
+                          {sensor.sensor_name}
                         </div>
 
-                        <div className="sensor-meta">
-                          {sensor.sensor_location || "-"} • ID #{sensor.external_sensor_id}
-                        </div>
+                        {/* TYPE */}
+                        <select
+                          value={grihaMapping[sensor.id]?.type || ""}
+                          onChange={(e) =>
+                            setGrihaMapping((prev: any) => ({
+                              ...prev,
+                              [sensor.id]: {
+                                ...prev[sensor.id],
+                                type: e.target.value
+                              }
+                            }))
+                          }
+                        >
+                          <option value="">Type</option>
+                          <option value="utility">Utility</option>
+                          <option value="hvac">HVAC</option>
+                          <option value="water">Water</option>
+                          <option value="stp">STP</option>
+                        </select>
+
+                        {/* UNIT */}
+                        <select
+                          value={grihaMapping[sensor.id]?.unit || ""}
+                          onChange={(e) =>
+                            setGrihaMapping((prev: any) => ({
+                              ...prev,
+                              [sensor.id]: {
+                                ...prev[sensor.id],
+                                unit: e.target.value
+                              }
+                            }))
+                          }
+                        >
+                          <option value="">Unit</option>
+                          <option value="kWh">kWh</option>
+                          <option value="kL">kL</option>
+                        </select>
+
+                        {/* API PREVIEW */}
+                        {grihaMapping[sensor.id]?.enabled && (
+                          <div className="api-box">
+                            /api/griha/sensor/{sensor.id}?month=MM&year=YYYY
+                          </div>
+                        )}
+
                       </div>
 
                     </div>
 
                   ))}
-
                 </div>
-
-                <div className="section-title">Date Range</div>
-
-                {minDate && maxDate && (
-                  <p className="date-hint">
-                    Data available from {minDate} → {maxDate}
-                  </p>
-                )}
-
-                <div className="date-wrapper">
-                  <input
-                    type="date"
-                    value={from}
-                    min={minDate || undefined}
-                    max={maxDate || undefined}
-                    onChange={(e) => setFrom(e.target.value)}
-                  />
-
-                  <input
-                    type="date"
-                    value={to}
-                    min={minDate || undefined}
-                    max={maxDate || undefined}
-                    onChange={(e) => setTo(e.target.value)}
-                  />
-                </div>
-
-                <div className="modal-divider" />
-
-
-                <div className="modal-divider" />
-
-                {/* ================= INTERVAL ================= */}
-
-                <div className="section-title">Interval</div>
-
-                <select
-                  value={interval}
-                  onChange={(e) =>
-                    setIntervalValue(
-                      e.target.value as
-                      | "10m"
-                      | "1h"
-                      | "1d"
-                      | "1w"
-                      | "1M"
-                      | "3M"
-                      | "6M"
-                      | "1Y"
-                    )
-                  }
-                >
-                  <optgroup label="Short Range (Fast)">
-                    <option value="10m">10 Minutes</option>
-                    <option value="1h">1 Hour</option>
-                    <option value="1d">1 Day</option>
-                    <option value="1w">1 Week</option>
-                  </optgroup>
-
-                  <optgroup label="Long Range (Analytics)">
-                    <option value="1M">1 Month</option>
-                    <option value="3M">3 Months</option>
-                    <option value="6M">6 Months</option>
-                    <option value="1Y">1 Year</option>
-                  </optgroup>
-                </select>
-
-                <div className="modal-divider" />
-
-                {/* ================= ACTIONS ================= */}
 
                 <div className="modal-buttons">
 
-                  <Button size="medium" onClick={saveConfig}>
-                    Save Configuration
+                  <Button size="medium" onClick={saveGriha}>
+                    Save GRIHA Config
                   </Button>
 
-                  <Button
-                    size="medium"
-                    onClick={() => setExportModalOpen(false)}
-                  >
+                  <Button size="medium" onClick={() => setExportModalOpen(false)}>
                     Close
                   </Button>
 
