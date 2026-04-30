@@ -1187,7 +1187,9 @@ const Dashboard = () => {
                     const month = new Date().getMonth() + 1;
                     const year = new Date().getFullYear();
 
-                    const apiUrl = `/api/griha/sensor/${sensor.id}?month=${month}&year=${year}`;
+                    const BASE_URL = "https://34.14.145.160";
+
+                    const apiUrl = `${BASE_URL}/api/griha/sensor/${sensor.id}?month=${month}&year=${year}`;
 
                     return (
                       <div key={sensor.id} className="sensor-row">

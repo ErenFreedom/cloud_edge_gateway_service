@@ -635,16 +635,22 @@ button:disabled {
 }
 
 .api-text {
+  flex: 1;
   overflow-x: auto;
+  margin-right: 10px;
 }
 
 .copy-btn {
   background: #1d4ed8;
   border: none;
-  padding: 4px 8px;
+  padding: 6px 10px;
   color: white;
-  font-size: 11px;
-  border-radius: 4px;
+  font-size: 12px;
+  border-radius: 6px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
+.copy-btn:hover {
+  background: #2563eb;
+}
