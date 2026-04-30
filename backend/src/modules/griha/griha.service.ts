@@ -23,7 +23,7 @@ export const getSensorsService = async (
   siteId: string
 ) => {
   return await getSensorsRepo(
-    user.organization_id,
+    user.organizationId,
     siteId
   );
 };
@@ -40,7 +40,7 @@ export const saveGrihaConfigService = async (
   validateSaveGrihaConfig(body);
 
   await saveGrihaConfigRepo(
-    user.organization_id,
+    user.organizationId,
     body.site_id,
     body.mapping
   );
@@ -57,7 +57,7 @@ export const getGrihaConfigService = async (
   siteId: string
 ) => {
   return await getGrihaConfigRepo(
-    user.organization_id,
+    user.organizationId,
     siteId
   );
 };

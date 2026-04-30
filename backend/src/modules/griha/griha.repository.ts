@@ -12,20 +12,22 @@ export const getSensorsRepo = async (
   const res = await pool.query(
     `
     SELECT 
-      id,
-      sensor_name,
-      griha_type,
-      unit
-    FROM sensors
-    WHERE organization_id = $1
-    AND site_id = $2
+      s.id,
+      s.sensor_name,
+      s.griha_type,
+      s.unit
+    FROM sensors s
+    JOIN sites st ON st.id = s.site_id
+    WHERE s.organization_id = $1
+    AND s.site_id = $2
+    AND st.status = 'active'
+    ORDER BY s.sensor_name ASC
     `,
     [orgId, siteId]
   );
 
   return res.rows;
 };
-
 /* ========================= */
 /* SAVE CONFIG */
 /* ========================= */
@@ -40,8 +42,10 @@ export const saveGrihaConfigRepo = async (
     `
     INSERT INTO griha_config (organization_id, site_id, mapping)
     VALUES ($1, $2, $3)
-    ON CONFLICT (site_id)
-    DO UPDATE SET mapping = $3
+    ON CONFLICT (organization_id, site_id)
+    DO UPDATE SET 
+       mapping = EXCLUDED.mapping,
+       updated_at = now()
     `,
     [orgId, siteId, JSON.stringify(mapping)]
   );
