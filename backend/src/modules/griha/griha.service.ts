@@ -5,8 +5,11 @@ import {
   saveGrihaConfigRepo,
   getGrihaConfigRepo,
   getSensorMetaRepo,
-  getMonthlyCalculatedValueRepo
 } from "./griha.repository";
+
+
+import { getMonthlyConsumptionFromBQ } from "./griha.bigquery.repository";
+
 
 import {
   validateSaveGrihaConfig,
@@ -103,7 +106,7 @@ export const getGrihaSensorExportService = async (
     .toISOString();
 
 
-  const value = await getMonthlyCalculatedValueRepo(
+  const value = await getMonthlyConsumptionFromBQ(
     sensorId,
     from,
     to
