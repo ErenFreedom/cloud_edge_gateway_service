@@ -271,16 +271,20 @@ const Dashboard = () => {
       const initialMapping: any = {};
 
       sensors.forEach((sensor: any) => {
+
+        const saved = grihaState.config?.[sensor.id];
+
         initialMapping[sensor.id] = {
-          enabled: false,
-          type: "",
-          unit: ""
+          enabled: !!saved,
+          type: saved?.type || "",
+          unit: saved?.unit || ""
         };
+
       });
 
       setGrihaMapping(initialMapping);
     }
-  }, [sensors, exportMode]);
+  }, [sensors, exportMode, grihaState.config]);
 
 
   useEffect(() => {
