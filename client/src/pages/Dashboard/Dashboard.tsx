@@ -112,13 +112,20 @@ const Dashboard = () => {
     loading: activationLoading
   } = useSelector((state: RootState) => state.activation);
 
+  const clientState = useSelector((state: RootState) => state.client);
+  const grihaState = useSelector((state: RootState) => state.griha);
+
   const {
     token,
     loading: clientLoading,
-    sensors,
     selectedSensors,
     config
-  } = useSelector((state: RootState) => state.client);
+  } = clientState;
+
+  const sensors =
+    exportMode === "griha"
+      ? grihaState.sensors
+      : clientState.sensors;
 
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -256,6 +263,24 @@ const Dashboard = () => {
       }
     }
   }, [config]);
+
+
+  useEffect(() => {
+    if (exportMode === "griha" && sensors.length > 0) {
+
+      const initialMapping: any = {};
+
+      sensors.forEach((sensor: any) => {
+        initialMapping[sensor.id] = {
+          enabled: false,
+          type: "",
+          unit: ""
+        };
+      });
+
+      setGrihaMapping(initialMapping);
+    }
+  }, [sensors, exportMode]);
 
 
   useEffect(() => {

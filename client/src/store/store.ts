@@ -5,6 +5,7 @@ import sitesReducer from "../features/sites/sitesSlice";
 import orgManagerReducer from "../features/orgManager/orgManagerSlice";
 import activationReducer from "../features/activation/activationSlice";
 import clientReducer from "../features/client/clientSlice";
+import grihaReducer from "../features/griha/grihaSlice";
 
 export const store = configureStore({
 
@@ -16,6 +17,7 @@ export const store = configureStore({
     orgManager: orgManagerReducer,
     activation: activationReducer,
     client: clientReducer,
+    griha: grihaReducer,
   }
 
 });
