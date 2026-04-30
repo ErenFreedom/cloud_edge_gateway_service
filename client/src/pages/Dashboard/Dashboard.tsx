@@ -1252,22 +1252,20 @@ const Dashboard = () => {
 
                           </div>
 
-                          {enabled && (
-                            <div className="api-box">
+                          <div className="api-box">
 
-                              <span className="api-text">
-                                {apiUrl}
-                              </span>
+                            <span className="api-text">
+                              {apiUrl}
+                            </span>
 
-                              <button
-                                className="copy-btn"
-                                onClick={() => navigator.clipboard.writeText(apiUrl)}
-                              >
-                                Copy
-                              </button>
+                            <button
+                              className="copy-btn"
+                              onClick={() => navigator.clipboard.writeText(apiUrl)}
+                            >
+                              Copy
+                            </button>
 
-                            </div>
-                          )}
+                          </div>
 
                         </div>
 
