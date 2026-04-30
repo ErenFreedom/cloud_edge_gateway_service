@@ -1261,7 +1261,7 @@ const Dashboard = () => {
                             </span>
 
                             <button
-                              className="copy-btn"
+                              className="copy-api-btn"
                               onClick={() => navigator.clipboard.writeText(apiUrl)}
                             >
                               Copy

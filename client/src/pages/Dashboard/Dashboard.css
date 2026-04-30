@@ -654,3 +654,18 @@ button:disabled {
 .copy-btn:hover {
   background: #2563eb;
 }
+
+.copy-api-btn {
+  background: #1d4ed8;
+  border: none;
+  padding: 6px 10px;
+  color: white;
+  font-size: 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.copy-api-btn:hover {
+  background: #2563eb;
+}
