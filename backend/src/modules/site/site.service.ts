@@ -845,7 +845,7 @@ export const editSiteUserService = async (
       throw new Error("User not found")
 
 
-    /* ✅ MANAGER SITE ACCESS CHECK (FIXED) */
+    /*MANAGER SITE ACCESS CHECK (FIXED) */
 
     if (role === "org_site_manager") {
 
@@ -1073,7 +1073,7 @@ export const requestEmailChangeService = async (
       throw new Error("Old email mismatch")
 
 
-    /* ✅ MANAGER ACCESS CHECK */
+    /* MANAGER ACCESS CHECK */
 
     if (admin.rows[0].role === "org_site_manager") {
 
