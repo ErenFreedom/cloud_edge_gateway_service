@@ -14,7 +14,8 @@ import { getMonthlyConsumptionFromBQ } from "./griha.bigquery.repository";
 import {
   validateSaveGrihaConfig,
   validateClientAccess,
-  validateMonthYear
+  validateMonthYear,
+  validateGrihaType
 } from "./griha.validator";
 
 /* ========================= */
@@ -41,6 +42,12 @@ export const saveGrihaConfigService = async (
 ) => {
 
   validateSaveGrihaConfig(body);
+
+  Object.values(body.mapping).forEach((m: any) => {
+    if (m?.type) {
+      validateGrihaType(m.type);
+    }
+  });
 
   await saveGrihaConfigRepo(
     user.organizationId,
@@ -114,14 +121,21 @@ export const getGrihaSensorExportService = async (
 
   /* -------- RESPONSE -------- */
 
+  const config = await getGrihaConfigRepo(
+    client.organization_id,
+    client.site_id
+  );
+
+  const mapping = config?.[sensorId];
+
   return {
-    project_code: client.site_id, // later will replace with site.project_code
-    type: sensor.griha_type || "other",
+    project_code: client.site_id,
+    type: mapping?.type || "other",
 
     month,
     year,
 
-    unit: sensor.unit || "kWh",
+    unit: mapping?.unit || sensor.unit || "kWh",
 
     total_consumption: value,
 

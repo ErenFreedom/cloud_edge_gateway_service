@@ -1,14 +1,26 @@
+//Old Validators
+// const ALLOWED_TYPES = [
+//   "utility",
+//   "hvac",
+//   "ups",
+//   "lighting",
+//   "water",
+//   "stp",
+//   "irrigation",
+//   "other"
+// ];
 
 const ALLOWED_TYPES = [
-  "utility",
-  "hvac",
-  "ups",
-  "lighting",
-  "water",
-  "stp",
-  "irrigation",
+  "municipal_water",
+  "borewell_water",
+  "utility_grid",
+  "genset_energy",
+  "renewable_energy",
+  "stp_treated_water",
+  "rainwater",
   "other"
 ];
+
 
 /* ------------------------- */
 /* TYPE VALIDATION */

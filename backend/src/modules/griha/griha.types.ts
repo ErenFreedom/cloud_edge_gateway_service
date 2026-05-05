@@ -1,12 +1,25 @@
+//Old Types
+// export type GrihaType =
+//   | "utility"
+//   | "hvac"
+//   | "ups"
+//   | "lighting"
+//   | "water"
+//   | "stp"
+//   | "irrigation"
+//   | "other";
+
+//New Types
 export type GrihaType =
-  | "utility"
-  | "hvac"
-  | "ups"
-  | "lighting"
-  | "water"
-  | "stp"
-  | "irrigation"
+  | "municipal_water"
+  | "borewell_water"
+  | "utility_grid"
+  | "genset_energy"
+  | "renewable_energy"
+  | "stp_treated_water"
+  | "rainwater"
   | "other";
+
 
 /* ------------------------- */
 /* OLD  */
