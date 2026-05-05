@@ -1236,26 +1236,13 @@ const Dashboard = () => {
                                 }))
                               }
                             >
-                              <select
-                                value={grihaMapping[sensor.id]?.type || ""}
-                                onChange={(e) =>
-                                  setGrihaMapping((prev: any) => ({
-                                    ...prev,
-                                    [sensor.id]: {
-                                      ...prev[sensor.id],
-                                      type: e.target.value
-                                    }
-                                  }))
-                                }
-                              >
-                                <option value="">Type</option>
+                              <option value="">Type</option>
 
-                                {types.map((t: any) => (
-                                  <option key={t.value} value={t.value}>
-                                    {t.label}
-                                  </option>
-                                ))}
-                              </select>
+                              {types.map((t: any) => (
+                                <option key={t.value} value={t.value}>
+                                  {t.label}
+                                </option>
+                              ))}
                             </select>
 
                             <select
