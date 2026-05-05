@@ -81,3 +81,17 @@ export const getSensorExport = async (req: any, res: any) => {
     res.status(400).json({ message: e.message });
   }
 };
+
+
+export const getGrihaTypes = async (req: any, res: any) => {
+  res.json([
+    { value: "municipal_water", label: "Municipal Water Supply" },
+    { value: "borewell_water", label: "Borewell Water Supply" },
+    { value: "utility_grid", label: "Utility Grid (Electricity)" },
+
+    { value: "genset", label: "Genset Energy" },
+    { value: "renewable", label: "Renewable Energy" },
+    { value: "stp_treated", label: "Treated STP Water" },
+    { value: "rainwater", label: "Captured Rainwater" }
+  ]);
+};

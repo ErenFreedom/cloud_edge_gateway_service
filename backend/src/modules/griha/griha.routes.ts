@@ -4,7 +4,8 @@ import {
   getSensors,
   saveConfig,
   getConfig,
-  getSensorExport
+  getSensorExport,
+  getGrihaTypes,
 } from "./griha.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -32,6 +33,11 @@ router.post(
   "/save-config",
   authMiddleware,
   saveConfig
+);
+
+router.get("/types", 
+  authMiddleware,
+  getGrihaTypes
 );
 
 /* ========================= */

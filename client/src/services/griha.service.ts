@@ -11,7 +11,13 @@ export interface GrihaSensor {
 
 export interface GrihaConfigPayload {
   site_id: string;
-  mapping: Record<string, string>; 
+  mapping: Record<
+    string,
+    {
+      type: string;
+      unit: string;
+    }
+  >;
 }
 
 export interface GrihaExportResponse {
@@ -24,6 +30,12 @@ export interface GrihaExportResponse {
   from: string;
   to: string;
 }
+
+export interface GrihaTypeOption {
+  value: string;
+  label: string;
+}
+
 
 /* ========================= */
 /* ADMIN APIs */
@@ -50,6 +62,11 @@ export const saveGrihaConfig = async (
     `/griha/save-config`,
     payload
   );
+  return res.data;
+};
+
+export const fetchGrihaTypes = async (): Promise<GrihaTypeOption[]> => {
+  const res = await apiClient.get("/griha/types");
   return res.data;
 };
 

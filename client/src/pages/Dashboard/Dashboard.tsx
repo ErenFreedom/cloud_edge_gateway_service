@@ -16,7 +16,8 @@ import {
 import {
   fetchGrihaSensorsThunk,
   fetchGrihaConfigThunk,
-  saveGrihaConfigThunk
+  saveGrihaConfigThunk,
+  fetchGrihaTypesThunk
 } from "../../features/griha/grihaSlice";
 
 import {
@@ -114,6 +115,7 @@ const Dashboard = () => {
 
   const clientState = useSelector((state: RootState) => state.client);
   const grihaState = useSelector((state: RootState) => state.griha);
+  const { types } = grihaState;
 
   const {
     token,
@@ -296,6 +298,8 @@ const Dashboard = () => {
     } else {
       dispatch(fetchGrihaSensorsThunk(exportSiteId));
       dispatch(fetchGrihaConfigThunk(exportSiteId));
+
+      dispatch(fetchGrihaTypesThunk());
     }
   }, [exportSiteId, exportMode]);
 
@@ -789,7 +793,7 @@ const Dashboard = () => {
 
 
 
-            
+
 
             <div className="map-section">
 
@@ -1232,11 +1236,26 @@ const Dashboard = () => {
                                 }))
                               }
                             >
-                              <option value="">Type</option>
-                              <option value="utility">Utility</option>
-                              <option value="hvac">HVAC</option>
-                              <option value="water">Water</option>
-                              <option value="stp">STP</option>
+                              <select
+                                value={grihaMapping[sensor.id]?.type || ""}
+                                onChange={(e) =>
+                                  setGrihaMapping((prev: any) => ({
+                                    ...prev,
+                                    [sensor.id]: {
+                                      ...prev[sensor.id],
+                                      type: e.target.value
+                                    }
+                                  }))
+                                }
+                              >
+                                <option value="">Type</option>
+
+                                {types.map((t: any) => (
+                                  <option key={t.value} value={t.value}>
+                                    {t.label}
+                                  </option>
+                                ))}
+                              </select>
                             </select>
 
                             <select

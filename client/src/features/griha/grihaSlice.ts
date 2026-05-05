@@ -3,8 +3,11 @@ import {
   fetchGrihaSensors,
   fetchGrihaConfig,
   saveGrihaConfig,
-  fetchGrihaExport
+  fetchGrihaExport,
+  fetchGrihaTypes
 } from "../../services/griha.service";
+
+import type { GrihaTypeOption } from "../../services/griha.service";
 
 /* ========================= */
 /* STATE */
@@ -22,6 +25,8 @@ interface GrihaState {
 
   exportData: any;
 
+  types: GrihaTypeOption[];
+
   token: string | null;
 }
 
@@ -35,6 +40,7 @@ const initialState: GrihaState = {
 
   config: null,
   exportData: null,
+  types: [],
 
   token: localStorage.getItem("client_token")
 };
@@ -64,6 +70,20 @@ export const fetchGrihaConfigThunk = createAsyncThunk(
     } catch (err: any) {
       return thunkAPI.rejectWithValue(
         err.response?.data?.message || "Failed to fetch config"
+      );
+    }
+  }
+);
+
+
+export const fetchGrihaTypesThunk = createAsyncThunk(
+  "griha/fetchTypes",
+  async (_, thunkAPI) => {
+    try {
+      return await fetchGrihaTypes();
+    } catch (err: any) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Failed to fetch types"
       );
     }
   }
@@ -175,6 +195,19 @@ const grihaSlice = createSlice({
         }
       })
       .addCase(fetchGrihaConfigThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      /* FETCH TYPES */
+      .addCase(fetchGrihaTypesThunk.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(fetchGrihaTypesThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.types = action.payload;
+      })
+      .addCase(fetchGrihaTypesThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
