@@ -13,7 +13,7 @@ module.exports = {
       script: "dist/jobs/dataProcessor/index.js"
     },
     {
-      name: "cleanup-job", // 
+      name: "cleanup-job", 
       script: "dist/jobs/cleanup/index.js"
     }
   ]
