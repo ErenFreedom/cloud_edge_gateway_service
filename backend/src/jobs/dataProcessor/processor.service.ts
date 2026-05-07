@@ -55,7 +55,7 @@ export const processBatch = async (): Promise<number> => {
   // ---------------- PROCESS EACH SENSOR ----------------
   for (const [sensorId, rows] of grouped.entries()) {
 
-    const uuid = sensorId; 
+    const uuid = sensorId;
 
     const meta = metaMap.get(sensorId);
     if (!meta) continue;
@@ -99,8 +99,8 @@ export const processBatch = async (): Promise<number> => {
           organization_id: row.organization_id,
           site_id: row.site_id,
 
-          uuid: uuid,                    
-          external_id: sensorId,         
+          uuid: uuid,
+          external_id: sensorId,
 
           timestamp: row.timestamp_value,
 
@@ -137,8 +137,8 @@ export const processBatch = async (): Promise<number> => {
         organization_id: row.organization_id,
         site_id: row.site_id,
 
-        uuid: uuid,                  
-        external_id: sensorId,         
+        uuid: uuid,
+        external_id: sensorId,
 
         timestamp: row.timestamp_value,
 
@@ -167,9 +167,14 @@ export const processBatch = async (): Promise<number> => {
     console.log("⚠️ No valid rows after processing");
   }
 
-  await insertCalculated(resultRows);
+  const safeRows = resultRows.map(r => ({
+    ...r,
+    sensor_id: r.uuid   
+  }));
 
-  insertCalculatedToBigQuery(resultRows).catch((err) => {
+  await insertCalculated(safeRows);
+
+  insertCalculatedToBigQuery(safeRows).catch((err) => {
     console.error("❌ BQ CALC async error:", err);
   });
 
