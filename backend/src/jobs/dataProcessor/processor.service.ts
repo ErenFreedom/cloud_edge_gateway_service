@@ -6,8 +6,24 @@ import {
   getLastProcessedId,
   updateLastProcessedId
 } from "./processor.db";
+
 import { insertCalculatedToBigQuery } from "../bqWriter/bq.calculated.service";
 import { calculateConsumption } from "./processor.utils";
+import { getOrCreateSensorUUID } from "../mqttIngestion/mqtt.db";
+
+/* ========================= */
+/* 🔧 SAFE NUMBER (BQ FIX) */
+/* ========================= */
+
+const safeNumber = (val: number) => {
+  if (!isFinite(val)) return 0;
+  if (Math.abs(val) < 1e-10) return 0;
+  return val;
+};
+
+/* ========================= */
+/* 🚀 MAIN PROCESSOR */
+/* ========================= */
 
 export const processBatch = async (): Promise<number> => {
 
@@ -39,6 +55,8 @@ export const processBatch = async (): Promise<number> => {
   // ---------------- PROCESS EACH SENSOR ----------------
   for (const [sensorId, rows] of grouped.entries()) {
 
+    const uuid = sensorId; 
+
     const meta = metaMap.get(sensorId);
     if (!meta) continue;
 
@@ -65,10 +83,8 @@ export const processBatch = async (): Promise<number> => {
         isZero = true;
 
         if (lastValue !== undefined) {
-          // carry forward last value
           currValue = lastValue;
         } else {
-          // first value is zero → skip
           continue;
         }
       }
@@ -82,11 +98,16 @@ export const processBatch = async (): Promise<number> => {
         resultRows.push({
           organization_id: row.organization_id,
           site_id: row.site_id,
-          sensor_id: sensorId,
+
+          uuid: uuid,                    
+          external_id: sensorId,         
+
           timestamp: row.timestamp_value,
-          prev: currValue,
-          curr: currValue,
+
+          prev: safeNumber(currValue),
+          curr: safeNumber(currValue),
           consumption: 0,
+
           event: isZero ? "RESET" : "OK",
           valid: !isZero,
           gap: 0
@@ -115,17 +136,24 @@ export const processBatch = async (): Promise<number> => {
       resultRows.push({
         organization_id: row.organization_id,
         site_id: row.site_id,
-        sensor_id: sensorId,
+
+        uuid: uuid,                  
+        external_id: sensorId,         
+
         timestamp: row.timestamp_value,
-        prev: lastValue,
-        curr: currValue,
-        consumption: isDuplicate ? 0 : calc.consumption,
+
+        prev: safeNumber(lastValue),
+        curr: safeNumber(currValue),
+        consumption: safeNumber(isDuplicate ? 0 : calc.consumption),
+
         event: isZero
           ? "RESET"
           : (isDuplicate ? "OK" : calc.event),
+
         valid: isZero
           ? false
           : (isDuplicate ? true : calc.valid),
+
         gap: gapMinutes
       });
 
@@ -142,14 +170,14 @@ export const processBatch = async (): Promise<number> => {
   await insertCalculated(resultRows);
 
   insertCalculatedToBigQuery(resultRows).catch((err) => {
-    console.error("BQ CALC async error:", err);
+    console.error("❌ BQ CALC async error:", err);
   });
 
   // ---------------- UPDATE CURSOR ----------------
   const newLastId = rawRows[rawRows.length - 1].id;
   await updateLastProcessedId(newLastId);
 
-  console.log(`Processed ${resultRows.length} rows`);
+  console.log(`✅ Processed ${resultRows.length} rows`);
 
   return resultRows.length;
 };
