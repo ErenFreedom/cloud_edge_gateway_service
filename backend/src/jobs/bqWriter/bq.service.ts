@@ -19,22 +19,29 @@ export const insertRawToBigQuery = async (
     organization_id: row.organization_id ?? null,
     site_id: row.site_id ?? null,
 
-    sensor_id:
-      row.uuid && isUUID(row.uuid)
-        ? row.uuid
-        : null,
+    sensor_id: row.uuid ?? null,
 
     external_id:
-      row.external_id !== null && row.external_id !== undefined
+      row.external_id !== undefined && row.external_id !== null
         ? String(row.external_id)
         : null,
 
     topic: row.topic,
-    payload: JSON.stringify(row.payload),
+
+    // 💥 CRITICAL FIX
+    payload:
+      typeof row.payload === "string"
+        ? row.payload
+        : JSON.stringify(row.payload),
 
     device: row.device ?? null,
     location: row.location ?? null,
-    value: row.value ?? null,
+
+    // 🔥 DO NOT sanitize aggressively
+    value:
+      typeof row.value === "number" && isFinite(row.value)
+        ? row.value
+        : null,
 
     quality: row.quality ?? null,
     quality_good: row.quality_good ?? null,
@@ -49,9 +56,9 @@ export const insertRawToBigQuery = async (
       .table(RAW_TABLE)
       .insert(formatted);
 
-    console.log(`BQ RAW inserted ${formatted.length}`);
+    console.log(`✅ BQ RAW inserted ${formatted.length}`);
 
   } catch (err: any) {
-    console.error("BQ RAW insert failed:", err?.errors || err);
+    console.error("❌ BQ RAW insert failed:", err?.errors || err);
   }
 };
