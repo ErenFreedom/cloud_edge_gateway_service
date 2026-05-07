@@ -49,7 +49,7 @@ export const insertRawToBigQuery = async (
     timestamp_value: row.timestamp ?? null,
     created_at: new Date(),
   }));
-
+//test
   try {
     await bigquery
       .dataset(DATASET)
