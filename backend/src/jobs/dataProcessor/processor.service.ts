@@ -138,7 +138,7 @@ export const processBatch = async (): Promise<number> => {
         site_id: row.site_id,
 
         uuid: uuid,
-        external_id: sensorId,
+        external_id: null,
 
         timestamp: row.timestamp_value,
 
