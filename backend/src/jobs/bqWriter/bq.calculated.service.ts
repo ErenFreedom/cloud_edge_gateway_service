@@ -7,6 +7,16 @@ const CALC_TABLE = "iot_calculated_fixed";
 const isUUID = (val: string) =>
   /^[0-9a-f-]{36}$/i.test(val);
 
+/* ========================= */
+/* 🔧 ROUNDING FIX (CRITICAL) */
+/* ========================= */
+const round = (val: number | null | undefined, decimals = 6): number => {
+  if (val === null || val === undefined) return 0;
+  if (!isFinite(val)) return 0;
+
+  return Number(val.toFixed(decimals));
+};
+
 export const insertCalculatedToBigQuery = async (
   rows: any[]
 ) => {
@@ -30,13 +40,14 @@ export const insertCalculatedToBigQuery = async (
 
     timestamp: r.timestamp ?? null,
 
-    previous_kwh: r.prev ?? 0,
-    current_kwh: r.curr ?? 0,
-    consumption_kwh: r.consumption ?? 0,
+    /* 🔥 FIXED NUMBERS (IMPORTANT) */
+    previous_kwh: round(r.prev),
+    current_kwh: round(r.curr),
+    consumption_kwh: round(r.consumption),
 
     event_type: r.event ?? "unknown",
     is_valid: r.valid ?? false,
-    gap_minutes: r.gap ?? 0,
+    gap_minutes: round(r.gap),
 
     created_at: new Date(),
     processed_at: new Date(),
@@ -48,9 +59,9 @@ export const insertCalculatedToBigQuery = async (
       .table(CALC_TABLE)
       .insert(formatted);
 
-    console.log(`BQ CALCULATED inserted ${formatted.length}`);
+    console.log(`✅ BQ CALCULATED inserted ${formatted.length}`);
 
   } catch (err: any) {
-    console.error("BQ CALC insert failed:", err?.errors || err);
+    console.error("❌ BQ CALC insert failed:", err?.errors || err);
   }
 };
