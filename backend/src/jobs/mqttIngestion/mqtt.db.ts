@@ -44,12 +44,12 @@ export const getOrCreateSensorUUID = async (
 
   const key = `${organization_id}_${site_id}_${externalId}`;
 
-  // ✅ CACHE HIT
+  //CACHE HIT
   if (sensorCache.has(key)) {
     return sensorCache.get(key)!;
   }
 
-  // 🔥 UPSERT (NO SELECT, NO RACE CONDITION)
+  //UPSERT (NO SELECT, NO RACE CONDITION)
   const result = await pool.query(
     `
     INSERT INTO sensors 
@@ -64,7 +64,7 @@ export const getOrCreateSensorUUID = async (
 
   const uuid = result.rows[0].id;
 
-  console.log("✅ Sensor UUID:", externalId, uuid);
+  console.log("Sensor UUID:", externalId, uuid);
 
   sensorCache.set(key, uuid);
 
@@ -117,14 +117,14 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
 
   for (const row of rows) {
 
-    console.log("📦 Processing sensor:", row.sensor_id);
+    console.log("Processing sensor:", row.sensor_id);
 
     if (!row.sensor_id || !row.organization_id || !row.site_id) {
       console.error("❌ Missing required row data");
       continue;
     }
 
-    // 🔍 SITE STATUS CHECK
+    // SITE STATUS CHECK
     const siteStatus = await getSiteStatus(row.site_id);
 
     if (!siteStatus) {
@@ -138,16 +138,21 @@ export const insertBatch = async (rows: ProcessedRow[]): Promise<void> => {
     }
 
     try {
-      // 🔑 ALWAYS GUARANTEED SENSOR EXISTS
+      // ALWAYS GUARANTEED SENSOR EXISTS
       const sensorUUID = await getOrCreateSensorUUID(
         row.sensor_id,
         row.organization_id,
         row.site_id
       );
+      row.uuid = sensorUUID;
+      row.external_id =
+        row.sensor_id !== null && row.sensor_id !== undefined
+          ? String(row.sensor_id)
+          : null;
 
-      console.log("🔑 UUID:", sensorUUID);
+      console.log("UUID:", sensorUUID);
 
-      // 🧠 METADATA UPDATE
+      // METADATA UPDATE
       if (row.metadata) {
         await upsertSensorMetadata(sensorUUID, row.metadata);
       }

@@ -2,11 +2,10 @@ import { bigquery } from "./bq.client";
 import { BigQueryCalculatedRow } from "./bq.calculated.types";
 
 const DATASET = "cloud_edge_gateway_master_data";
-const CALC_TABLE = "iot_calculated";
+const CALC_TABLE = "iot_calculated_fixed";
 
-/* ============================= */
-/* CALCULATED INSERT */
-/* ============================= */
+const isUUID = (val: string) =>
+  /^[0-9a-f-]{36}$/i.test(val);
 
 export const insertCalculatedToBigQuery = async (
   rows: any[]
@@ -15,21 +14,29 @@ export const insertCalculatedToBigQuery = async (
   if (!rows.length) return;
 
   const formatted: BigQueryCalculatedRow[] = rows.map((r) => ({
-    organization_id: r.organization_id,
-    site_id: r.site_id,
 
-    // (UUID string)
-    sensor_id: r.sensor_id ? String(r.sensor_id) : null,
+    organization_id: r.organization_id ?? null,
+    site_id: r.site_id ?? null,
 
-    timestamp: r.timestamp,
+    sensor_id:
+      r.uuid && isUUID(r.uuid)
+        ? r.uuid
+        : null,
 
-    previous_kwh: r.prev,
-    current_kwh: r.curr,
-    consumption_kwh: r.consumption,
+    external_id:
+      r.external_id !== null && r.external_id !== undefined
+        ? String(r.external_id)
+        : null,
 
-    event_type: r.event,
-    is_valid: r.valid,
-    gap_minutes: r.gap,
+    timestamp: r.timestamp ?? null,
+
+    previous_kwh: r.prev ?? 0,
+    current_kwh: r.curr ?? 0,
+    consumption_kwh: r.consumption ?? 0,
+
+    event_type: r.event ?? "unknown",
+    is_valid: r.valid ?? false,
+    gap_minutes: r.gap ?? 0,
 
     created_at: new Date(),
     processed_at: new Date(),
@@ -41,9 +48,9 @@ export const insertCalculatedToBigQuery = async (
       .table(CALC_TABLE)
       .insert(formatted);
 
-    console.log(`📊 BQ CALCULATED inserted ${formatted.length}`);
+    console.log(`BQ CALCULATED inserted ${formatted.length}`);
 
   } catch (err: any) {
-    console.error("❌ BQ CALC insert failed:", err?.errors || err);
+    console.error("BQ CALC insert failed:", err?.errors || err);
   }
 };

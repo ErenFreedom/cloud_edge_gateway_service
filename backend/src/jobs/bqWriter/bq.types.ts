@@ -1,7 +1,9 @@
 export interface BigQueryRawRow {
   organization_id: string | null;
   site_id: string | null;
-  sensor_id: string | null; 
+
+  sensor_id: string | null;     
+  external_id: string | null;   
 
   topic: string;
   payload: string;

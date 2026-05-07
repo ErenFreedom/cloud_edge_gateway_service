@@ -40,7 +40,11 @@ export interface ProcessedRow {
 
   organization_id: string | null;
   site_id: string | null;
+
   sensor_id: number | null;
+
+  uuid?: string | null;       
+  external_id?: string | null; 
 
   device: string | null;
   location: string | null;

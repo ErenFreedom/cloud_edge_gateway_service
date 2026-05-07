@@ -1,7 +1,9 @@
 export interface BigQueryCalculatedRow {
   organization_id: string | null;
   site_id: string | null;
-  sensor_id: string | null;
+
+  sensor_id: string | null;     
+  external_id: string | null;
 
   timestamp: Date | null;
 
