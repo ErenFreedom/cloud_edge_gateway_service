@@ -54,15 +54,17 @@ router.get(
 
 
 router.get(
+  "/hotfix/dg-cumulative",
+  clientAuth,
+  getGrihaDGCumulative
+);
+
+router.get(
   "/hotfix/:type",
   clientAuth,
   getGrihaHotfix
 );
 
-router.get(
-  "/hotfix/dg-cumulative",
-  clientAuth,
-  getGrihaDGCumulative
-);
+
 
 export default router;
