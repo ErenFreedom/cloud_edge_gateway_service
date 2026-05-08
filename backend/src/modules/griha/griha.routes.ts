@@ -6,6 +6,8 @@ import {
   getConfig,
   getSensorExport,
   getGrihaTypes,
+  getGrihaHotfix,
+  getGrihaDGCumulative
 } from "./griha.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -48,6 +50,19 @@ router.get(
   "/sensor/:sensorId",
   clientAuth,
   getSensorExport
+);
+
+
+router.get(
+  "/hotfix/:type",
+  clientAuth,
+  getGrihaHotfix
+);
+
+router.get(
+  "/hotfix/dg-cumulative",
+  clientAuth,
+  getGrihaDGCumulative
 );
 
 export default router;

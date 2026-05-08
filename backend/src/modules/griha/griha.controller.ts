@@ -2,7 +2,9 @@ import {
   getSensorsService,
   saveGrihaConfigService,
   getGrihaConfigService,
-  getGrihaSensorExportService
+  getGrihaSensorExportService,
+  getGrihaHotfixService,
+  getGrihaDGCumulativeService
 } from "./griha.service";
 
 /* ========================= */
@@ -94,4 +96,47 @@ export const getGrihaTypes = async (req: any, res: any) => {
     { value: "stp_treated", label: "Treated STP Water" },
     { value: "rainwater", label: "Captured Rainwater" }
   ]);
+};
+
+
+export const getGrihaHotfix = async (req: any, res: any) => {
+  try {
+
+    const { type } = req.params;
+    const { month, year } = req.query;
+
+    const data = await getGrihaHotfixService(
+      req.client,
+      type,
+      Number(month),
+      Number(year)
+    );
+
+    res.json(data);
+
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
+};
+
+/* ========================= */
+/* HOTFIX DG CUMULATIVE */
+/* ========================= */
+
+export const getGrihaDGCumulative = async (req: any, res: any) => {
+  try {
+
+    const { month, year } = req.query;
+
+    const data = await getGrihaDGCumulativeService(
+      req.client,
+      Number(month),
+      Number(year)
+    );
+
+    res.json(data);
+
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
 };

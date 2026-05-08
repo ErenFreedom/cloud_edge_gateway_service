@@ -4,34 +4,23 @@ const bigquery = new BigQuery();
 
 export const getMonthlyConsumptionFromBQ = async (
   sensorId: string,
-  from: string,
-  to: string
+  month: number,
+  year: number
 ) => {
 
   const query = `
-    SELECT 
-      SUM(consumption_kwh) AS total_consumption
-    FROM \`project-b5045c0e-60ef-4535-bc3.cloud_edge_gateway_master_data.iot_calculated\`
+    SELECT total_consumption
+    FROM \`project-b5045c0e-60ef-4535-bc3.cloud_edge_gateway_master_data.griha_final_clean\`
     WHERE sensor_id = @sensorId
-      AND timestamp >= @from
-      AND timestamp < @to
+      AND month = @month
+      AND year = @year
+    LIMIT 1
   `;
 
-  const options = {
+  const [rows] = await bigquery.query({
     query,
-    params: {
-      sensorId,
-      from,
-      to
-    }
-  };
+    params: { sensorId, month, year }
+  });
 
-  const [rows] = await bigquery.query(options);
-
-  
-  const value = rows[0]?.total_consumption;
-
-  return value !== null && value !== undefined
-    ? Number(value)
-    : null;
+  return rows[0]?.total_consumption ?? null;
 };
