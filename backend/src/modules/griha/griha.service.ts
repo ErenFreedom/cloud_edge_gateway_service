@@ -220,6 +220,14 @@ export const getGrihaDGCumulativeService = async (
     total += val || 0;
   }
 
+  const from = dayjs(`${year}-${String(month).padStart(2, "0")}-01`)
+    .startOf("month")
+    .toISOString();
+
+  const to = dayjs(from)
+    .add(1, "month")
+    .toISOString();
+
   return {
     project_code: client.site_id,
     type: "genset_energy",
@@ -227,7 +235,7 @@ export const getGrihaDGCumulativeService = async (
     year,
     unit: "kWh",
     total_consumption: total,
-    from: `${year}-${month}-01`,
-    to: `${year}-${month}-end`
+    from,
+    to
   };
 };
