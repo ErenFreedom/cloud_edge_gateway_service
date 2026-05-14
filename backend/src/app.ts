@@ -15,6 +15,8 @@ import orgSiteManagerRoutes from "./modules/orgSiteManager/orgSiteManager.routes
 import edgeAuthRoutes from "./modules/edgeAuth/edgeAuth.routes";
 import clientRoutes from "./modules/client/client.routes";
 import grihaRoutes from "./modules/griha/griha.routes";
+import complianceRoutes from "./modules/compliance/compliance.routes";
+
 
 const app = express();
 
@@ -31,6 +33,8 @@ app.use("/api/org-site-managers",orgSiteManagerRoutes);
 app.use("/api/edge", edgeAuthRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/griha", grihaRoutes);
+app.use("/api/compliance", complianceRoutes);
+
 
 app.use(
   '/api/platform',
