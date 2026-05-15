@@ -241,3 +241,68 @@ export const upsertReportSensorConfigToBQ = async (
     }
   });
 };
+
+
+
+export const getMonthlyCategoryReportRowFromBQ = async (
+  organizationId: string,
+  siteId: string,
+  reportType: string,
+  category: string,
+  month: number,
+  year: number
+) => {
+
+  const query = `
+    SELECT
+      report_type,
+      category,
+      display_name,
+      unit,
+      sort_order,
+
+      year,
+      month,
+
+      opening_value,
+      closing_value,
+
+      auto_consumption,
+      final_consumption,
+
+      variance,
+
+      calculation_source,
+
+      sample_count,
+
+      has_reliable_snapshot,
+
+      correction_reason
+
+    FROM \`project-b5045c0e-60ef-4535-bc3.cloud_edge_gateway_master_data.report_monthly_export\`
+
+    WHERE organization_id = @organizationId
+      AND site_id = @siteId
+      AND report_type = @reportType
+      AND category = @category
+      AND year = @year
+      AND month = @month
+
+    LIMIT 1
+  `;
+
+  const [rows] = await bigquery.query({
+    query,
+    params: {
+      organizationId,
+      siteId,
+      reportType,
+      category,
+      month,
+      year
+    }
+  });
+
+  return rows[0] || null;
+};

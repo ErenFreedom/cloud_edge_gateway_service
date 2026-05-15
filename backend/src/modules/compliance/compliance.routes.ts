@@ -7,7 +7,8 @@ import {
   getComplianceReportCategories,
   saveComplianceReportCategory,
   getComplianceConfig,
-  saveComplianceConfig
+  saveComplianceConfig,
+  getMonthlyComplianceCategoryReport
 } from "./compliance.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -67,6 +68,13 @@ router.post(
   "/config",
   authMiddleware,
   saveComplianceConfig
+);
+
+
+router.get(
+  "/reports/:reportType/:category",
+  clientAuth,
+  getMonthlyComplianceCategoryReport
 );
 
 export default router;

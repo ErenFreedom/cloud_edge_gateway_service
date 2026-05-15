@@ -5,7 +5,8 @@ import {
   getComplianceReportCategoriesService,
   saveComplianceReportCategoryService,
   getComplianceConfigService,
-  saveComplianceConfigService
+  saveComplianceConfigService,
+  getMonthlyComplianceCategoryService
 } from "./compliance.service";
 
 export const getMonthlyComplianceReport = async (req: any, res: any) => {
@@ -93,4 +94,32 @@ export const saveComplianceConfig = async (req: any, res: any) => {
   } catch (e: any) {
     res.status(400).json({ message: e.message });
   }
+};
+
+export const getMonthlyComplianceCategoryReport =
+  async (req: any, res: any) => {
+
+    try {
+
+      const { reportType, category } = req.params;
+      const { month, year } = req.query;
+
+      const data =
+        await getMonthlyComplianceCategoryService(
+          req.client,
+          reportType,
+          category,
+          Number(month),
+          Number(year)
+        );
+
+      res.json(data);
+
+    } catch (e: any) {
+
+      res.status(400).json({
+        message: e.message
+      });
+
+    }
 };

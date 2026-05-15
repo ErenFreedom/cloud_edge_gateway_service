@@ -57,3 +57,18 @@ export interface ComplianceReportCategory {
 
   active: boolean;
 }
+
+
+export interface ComplianceSingleCategoryResponse {
+  project_code: string;
+
+  report_type: string;
+  category: string;
+
+  month: number;
+  year: number;
+
+  generated_at: string;
+
+  sensor: ComplianceReportRow | null;
+}

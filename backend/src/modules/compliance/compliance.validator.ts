@@ -54,3 +54,14 @@ export const validateClientAccess = (
     throw new Error("Invalid client context");
   }
 };
+
+
+export const validateRequiredString = (
+  value: any,
+  field: string
+) => {
+
+  if (!value || typeof value !== "string") {
+    throw new Error(`${field} required`);
+  }
+};

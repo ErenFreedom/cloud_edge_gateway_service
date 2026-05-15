@@ -5,13 +5,15 @@ import {
   getReportCategoriesFromBQ,
   upsertReportCategoryToBQ,
   getReportSensorConfigFromBQ,
-  upsertReportSensorConfigToBQ
+  upsertReportSensorConfigToBQ,
+  getMonthlyCategoryReportRowFromBQ
 } from "./compliance.bigquery.repository";
 
 import {
   validateClientAccess,
   validateMonthYear,
-  validateReportType
+  validateReportType,
+  validateRequiredString
 } from "./compliance.validator";
 
 import {
@@ -179,5 +181,47 @@ export const saveComplianceConfigService = async (
     report_type,
     site_id,
     total: sensors.length
+  };
+};
+
+
+
+export const getMonthlyComplianceCategoryService = async (
+  client: any,
+  reportType: string,
+  category: string,
+  month: number,
+  year: number
+) => {
+
+  validateClientAccess(client);
+
+  validateRequiredString(reportType, "reportType");
+  validateRequiredString(category, "category");
+
+  validateMonthYear(month, year);
+
+  const row =
+    await getMonthlyCategoryReportRowFromBQ(
+      client.organization_id,
+      client.site_id,
+      reportType,
+      category,
+      month,
+      year
+    );
+
+  return {
+    project_code: client.site_id,
+
+    report_type: reportType,
+    category,
+
+    month,
+    year,
+
+    generated_at: new Date().toISOString(),
+
+    sensor: row
   };
 };
