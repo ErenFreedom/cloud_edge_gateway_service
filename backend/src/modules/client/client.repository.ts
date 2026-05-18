@@ -244,6 +244,8 @@ export const getSensorsBySiteRepo = async (
     `
     SELECT 
       s.id,
+      s.sensor_uuid AS config_sensor_id,
+      s.sensor_uuid,
       s.external_sensor_id,
       s.sensor_name,
       s.sensor_location,
@@ -253,7 +255,7 @@ export const getSensorsBySiteRepo = async (
     JOIN sites st ON st.id = s.site_id
     WHERE s.organization_id = $1
     AND s.site_id = $2
-    AND st.status = 'active'   -- 🔥 IMPORTANT
+    AND st.status = 'active'
     ORDER BY s.external_sensor_id ASC
     `,
     [orgId, siteId]
@@ -261,7 +263,6 @@ export const getSensorsBySiteRepo = async (
 
   return res.rows;
 };
-
 
 /* ============================= */
 /* BUCKET LOGIC */
