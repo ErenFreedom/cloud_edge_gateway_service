@@ -145,6 +145,19 @@ const Dashboard = () => {
       ? grihaState.sensors
       : clientState.sensors;
 
+  const isUuid = (value: any) =>
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+  const getSensorConfigId = (sensor: any) => {
+    if (isUuid(sensor.sensor_id)) return sensor.sensor_id;
+    if (isUuid(sensor.bank_id)) return sensor.bank_id;
+    if (isUuid(sensor.uuid)) return sensor.uuid;
+    if (isUuid(sensor.id)) return sensor.id;
+
+    return String(sensor.id);
+  };
+
   const [profileOpen, setProfileOpen] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -376,11 +389,19 @@ const Dashboard = () => {
     const initialMapping: any = {};
 
     clientState.sensors.forEach((sensor: any) => {
-      const saved = savedConfigs.find(
-        (cfg: any) => cfg.sensor_id === sensor.id
-      );
+      const sensorKey = getSensorConfigId(sensor);
 
-      initialMapping[sensor.id] = {
+      const saved = savedConfigs.find((cfg: any) => {
+        return (
+          String(cfg.sensor_id) === String(sensorKey) ||
+          String(cfg.sensor_id) === String(sensor.sensor_id) ||
+          String(cfg.sensor_id) === String(sensor.bank_id) ||
+          String(cfg.sensor_id) === String(sensor.uuid) ||
+          String(cfg.sensor_id) === String(sensor.id)
+        );
+      });
+
+      initialMapping[sensorKey] = {
         enabled: !!saved,
         report_type: saved?.report_type || "",
         custom_report_type: "",
@@ -395,15 +416,6 @@ const Dashboard = () => {
 
     setComplianceMapping(initialMapping);
   }, [exportMode, clientState.sensors, complianceConfig]);
-
-
-  useEffect(() => {
-    if (createModalOpen) {
-      setTimeout(() => {
-        window.dispatchEvent(new Event("resize"));
-      }, 300);
-    }
-  }, [createModalOpen]);
 
 
   const saveConfig = () => {
@@ -1500,7 +1512,11 @@ const Dashboard = () => {
 
                 <div className="sensor-container">
                   {clientState.sensors.map((sensor: any) => {
-                    const item = complianceMapping[sensor.id] || {};
+
+                    const sensorKey = getSensorConfigId(sensor);
+
+                    const item = complianceMapping[sensorKey] || {};
+
                     const enabled = item.enabled;
 
                     const month = new Date().getMonth() + 1;
@@ -1519,18 +1535,19 @@ const Dashboard = () => {
                         : "";
 
                     return (
-                      <div key={sensor.id} className="sensor-row">
+                      <div key={sensorKey} className="sensor-row">
+
                         <input
                           type="checkbox"
                           checked={enabled || false}
                           onChange={(e) => {
                             setComplianceMapping((prev: any) => ({
                               ...prev,
-                              [sensor.id]: {
-                                ...prev[sensor.id],
+                              [sensorKey]: {
+                                ...prev[sensorKey],
                                 enabled: e.target.checked,
                                 display_name:
-                                  prev[sensor.id]?.display_name ||
+                                  prev[sensorKey]?.display_name ||
                                   sensor.sensor_name ||
                                   "Unnamed Sensor"
                               }
@@ -1539,6 +1556,7 @@ const Dashboard = () => {
                         />
 
                         <div className="sensor-content">
+
                           <div className="sensor-name">
                             {sensor.sensor_name || "Unnamed Sensor"}
                           </div>
@@ -1548,17 +1566,18 @@ const Dashboard = () => {
                           </div>
 
                           <div className="sensor-controls compliance-controls">
+
                             <select
                               value={item.report_type || ""}
                               onChange={(e) =>
                                 setComplianceMapping((prev: any) => ({
                                   ...prev,
-                                  [sensor.id]: {
-                                    ...prev[sensor.id],
+                                  [sensorKey]: {
+                                    ...prev[sensorKey],
                                     report_type: e.target.value,
                                     custom_report_type:
                                       e.target.value === "__custom__"
-                                        ? prev[sensor.id]?.custom_report_type || ""
+                                        ? prev[sensorKey]?.custom_report_type || ""
                                         : ""
                                   }
                                 }))
@@ -1572,7 +1591,9 @@ const Dashboard = () => {
                                 </option>
                               ))}
 
-                              <option value="__custom__">+ Custom Reporting Type</option>
+                              <option value="__custom__">
+                                + Custom Reporting Type
+                              </option>
                             </select>
 
                             {item.report_type === "__custom__" && (
@@ -1582,8 +1603,8 @@ const Dashboard = () => {
                                 onChange={(e) =>
                                   setComplianceMapping((prev: any) => ({
                                     ...prev,
-                                    [sensor.id]: {
-                                      ...prev[sensor.id],
+                                    [sensorKey]: {
+                                      ...prev[sensorKey],
                                       custom_report_type: e.target.value
                                         .toLowerCase()
                                         .trim()
@@ -1600,8 +1621,8 @@ const Dashboard = () => {
                               onChange={(e) =>
                                 setComplianceMapping((prev: any) => ({
                                   ...prev,
-                                  [sensor.id]: {
-                                    ...prev[sensor.id],
+                                  [sensorKey]: {
+                                    ...prev[sensorKey],
                                     category: e.target.value
                                       .toLowerCase()
                                       .trim()
@@ -1616,8 +1637,8 @@ const Dashboard = () => {
                               onChange={(e) =>
                                 setComplianceMapping((prev: any) => ({
                                   ...prev,
-                                  [sensor.id]: {
-                                    ...prev[sensor.id],
+                                  [sensorKey]: {
+                                    ...prev[sensorKey],
                                     unit: e.target.value
                                   }
                                 }))
@@ -1629,28 +1650,34 @@ const Dashboard = () => {
                               <option value="m3">m³</option>
                               <option value="kgCO2e">kgCO₂e</option>
                             </select>
+
                           </div>
 
                           {apiUrl && (
                             <div className="api-box">
+
                               <span className="api-text">
                                 {apiUrl}
                               </span>
 
                               <button
                                 className="copy-api-btn"
-                                onClick={() => navigator.clipboard.writeText(apiUrl)}
+                                onClick={() =>
+                                  navigator.clipboard.writeText(apiUrl)
+                                }
                               >
                                 Copy
                               </button>
+
                             </div>
                           )}
+
                         </div>
+
                       </div>
                     );
                   })}
                 </div>
-
                 <div className="modal-buttons">
                   <Button size="medium" onClick={saveCompliance}>
                     Save Compliance Config
