@@ -6,6 +6,8 @@ import orgManagerReducer from "../features/orgManager/orgManagerSlice";
 import activationReducer from "../features/activation/activationSlice";
 import clientReducer from "../features/client/clientSlice";
 import grihaReducer from "../features/griha/grihaSlice";
+import complianceReducer from "../features/compliance/complianceSlice";
+
 
 export const store = configureStore({
 
@@ -18,6 +20,7 @@ export const store = configureStore({
     activation: activationReducer,
     client: clientReducer,
     griha: grihaReducer,
+    compliance: complianceReducer,
   }
 
 });

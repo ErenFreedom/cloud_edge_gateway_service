@@ -14,6 +14,15 @@ import {
 } from "../../features/sites/sitesSlice";
 
 import {
+  fetchComplianceReportTypesThunk,
+  fetchComplianceSensorsThunk,
+  fetchComplianceConfigThunk,
+  saveComplianceConfigThunk,
+  setSelectedReportType
+} from "../../features/compliance/complianceSlice";
+
+
+import {
   fetchGrihaSensorsThunk,
   fetchGrihaConfigThunk,
   saveGrihaConfigThunk,
@@ -75,9 +84,10 @@ const Dashboard = () => {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportSiteId, setExportSiteId] = useState<string | null>(null);
 
-  const [exportMode, setExportMode] = useState<"client" | "griha">("client");
+  const [exportMode, setExportMode] = useState<"client" | "griha" | "compliance">("client");
 
   const [grihaMapping, setGrihaMapping] = useState<any>({});
+  const [complianceMapping, setComplianceMapping] = useState<any>({});
 
 
 
@@ -124,10 +134,21 @@ const Dashboard = () => {
     config
   } = clientState;
 
+  const complianceState = useSelector((state: RootState) => state.compliance);
+
+  const {
+    reportTypes,
+    selectedReportType,
+    sensors: complianceSensors,
+    config: complianceConfig
+  } = complianceState;
+
   const sensors =
     exportMode === "griha"
       ? grihaState.sensors
-      : clientState.sensors;
+      : exportMode === "compliance"
+        ? complianceSensors
+        : clientState.sensors;
 
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -295,13 +316,58 @@ const Dashboard = () => {
     if (exportMode === "client") {
       dispatch(fetchSensorsThunk(exportSiteId));
       dispatch(fetchConfigThunk(exportSiteId));
-    } else {
+    }
+
+    if (exportMode === "griha") {
       dispatch(fetchGrihaSensorsThunk(exportSiteId));
       dispatch(fetchGrihaConfigThunk(exportSiteId));
-
       dispatch(fetchGrihaTypesThunk());
     }
-  }, [exportSiteId, exportMode]);
+
+    if (exportMode === "compliance") {
+      dispatch(fetchComplianceReportTypesThunk());
+    }
+  }, [exportSiteId, exportMode, dispatch]);
+
+
+  useEffect(() => {
+    if (!exportSiteId) return;
+    if (exportMode !== "compliance") return;
+    if (!selectedReportType) return;
+
+    dispatch(
+      fetchComplianceSensorsThunk({
+        site_id: exportSiteId,
+        report_type: selectedReportType
+      })
+    );
+
+    dispatch(
+      fetchComplianceConfigThunk({
+        site_id: exportSiteId,
+        report_type: selectedReportType
+      })
+    );
+  }, [exportSiteId, exportMode, selectedReportType, dispatch]);
+
+  useEffect(() => {
+    if (exportMode !== "compliance") return;
+    if (complianceSensors.length === 0) return;
+
+    const initialMapping: any = {};
+
+    complianceSensors.forEach((sensor: any) => {
+      const saved = complianceConfig?.[sensor.id];
+
+      initialMapping[sensor.id] = {
+        enabled: !!saved,
+        type: saved?.type || "",
+        unit: saved?.unit || ""
+      };
+    });
+
+    setComplianceMapping(initialMapping);
+  }, [complianceSensors, complianceConfig, exportMode]);
 
 
   useEffect(() => {
@@ -386,6 +452,34 @@ const Dashboard = () => {
     dispatch(
       saveGrihaConfigThunk({
         site_id: exportSiteId,
+        mapping: finalMapping
+      })
+    );
+  };
+
+  const saveCompliance = () => {
+    if (!exportSiteId) return;
+
+    if (!selectedReportType) {
+      alert("Select reporting type");
+      return;
+    }
+
+    const finalMapping: any = {};
+
+    Object.keys(complianceMapping).forEach((sensorId) => {
+      if (complianceMapping[sensorId]?.enabled) {
+        finalMapping[sensorId] = {
+          type: complianceMapping[sensorId].type,
+          unit: complianceMapping[sensorId].unit
+        };
+      }
+    });
+
+    dispatch(
+      saveComplianceConfigThunk({
+        site_id: exportSiteId,
+        report_type: selectedReportType,
         mapping: finalMapping
       })
     );
@@ -1049,6 +1143,13 @@ const Dashboard = () => {
               >
                 GRIHA Export
               </button>
+
+              <button
+                className={exportMode === "compliance" ? "active" : ""}
+                onClick={() => setExportMode("compliance")}
+              >
+                Compliance Export
+              </button>
             </div>
 
             {/* ================= CLIENT MODE ================= */}
@@ -1195,7 +1296,7 @@ const Dashboard = () => {
                     const month = new Date().getMonth() + 1;
                     const year = new Date().getFullYear();
 
-                    const BASE_URL = "https://34.14.145.160";
+                    const BASE_URL = window.location.origin;
 
                     const apiUrl = `${BASE_URL}/api/griha/sensor/${sensor.id}?month=${month}&year=${year}`;
 
@@ -1297,6 +1398,131 @@ const Dashboard = () => {
                     Close
                   </Button>
 
+                </div>
+              </>
+            )}
+
+            {exportMode === "compliance" && (
+              <>
+                <div className="section-title">Configure Compliance Sensors</div>
+
+                <select
+                  value={selectedReportType || ""}
+                  onChange={(e) => dispatch(setSelectedReportType(e.target.value))}
+                >
+                  <option value="">Select Reporting Type</option>
+
+                  {reportTypes.map((report: any) => (
+                    <option key={report.value} value={report.value}>
+                      {report.label}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedReportType && (
+                  <div className="sensor-container">
+                    {complianceSensors.map((sensor: any) => {
+                      const enabled = complianceMapping[sensor.id]?.enabled;
+
+                      const month = new Date().getMonth() + 1;
+                      const year = new Date().getFullYear();
+
+                      const BASE_URL = window.location.origin;
+
+                      const apiUrl = `${BASE_URL}/api/compliance/${selectedReportType}/sensor/${sensor.id}?month=${month}&year=${year}`;
+
+                      return (
+                        <div key={sensor.id} className="sensor-row">
+                          <input
+                            type="checkbox"
+                            checked={enabled || false}
+                            onChange={(e) => {
+                              setComplianceMapping((prev: any) => ({
+                                ...prev,
+                                [sensor.id]: {
+                                  ...prev[sensor.id],
+                                  enabled: e.target.checked
+                                }
+                              }));
+                            }}
+                          />
+
+                          <div className="sensor-content">
+                            <div className="sensor-name">
+                              {sensor.sensor_name}
+                            </div>
+
+                            <div className="sensor-controls">
+                              <select
+                                value={complianceMapping[sensor.id]?.type || ""}
+                                onChange={(e) =>
+                                  setComplianceMapping((prev: any) => ({
+                                    ...prev,
+                                    [sensor.id]: {
+                                      ...prev[sensor.id],
+                                      type: e.target.value
+                                    }
+                                  }))
+                                }
+                              >
+                                <option value="">Type</option>
+
+                                {reportTypes
+                                  .find((r: any) => r.value === selectedReportType)
+                                  ?.types?.map((type: any) => (
+                                    <option key={type.value} value={type.value}>
+                                      {type.label}
+                                    </option>
+                                  ))}
+                              </select>
+
+                              <select
+                                value={complianceMapping[sensor.id]?.unit || ""}
+                                onChange={(e) =>
+                                  setComplianceMapping((prev: any) => ({
+                                    ...prev,
+                                    [sensor.id]: {
+                                      ...prev[sensor.id],
+                                      unit: e.target.value
+                                    }
+                                  }))
+                                }
+                              >
+                                <option value="">Unit</option>
+                                <option value="kWh">kWh</option>
+                                <option value="kL">kL</option>
+                                <option value="m3">m³</option>
+                                <option value="kgCO2e">kgCO₂e</option>
+                              </select>
+                            </div>
+
+                            <div className="api-box">
+                              <span className="api-text">
+                                {apiUrl}
+                              </span>
+
+                              <button
+                                className="copy-api-btn"
+                                onClick={() => navigator.clipboard.writeText(apiUrl)}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="modal-buttons">
+                  <Button size="medium" onClick={saveCompliance}>
+                    Save Compliance Config
+                  </Button>
+
+                  <Button size="medium" onClick={() => setExportModalOpen(false)}>
+                    Close
+                  </Button>
                 </div>
               </>
             )}
