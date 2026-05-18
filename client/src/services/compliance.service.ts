@@ -67,7 +67,13 @@ export const fetchComplianceReportTypes = async (): Promise<
   ComplianceReportType[]
 > => {
   const res = await apiClient.get("/compliance/report-types");
-  return res.data;
+
+  return res.data.map((item: any) => ({
+    id: item.id || item.report_type,
+    value: item.report_type,
+    label: item.display_name,
+    description: item.description
+  }));
 };
 
 export const fetchComplianceSensors = async (
