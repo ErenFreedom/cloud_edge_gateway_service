@@ -388,6 +388,9 @@ const Dashboard = () => {
     const savedConfigs = complianceConfig?.sensors || [];
     const initialMapping: any = {};
 
+    console.log("UI sensors:", clientState.sensors);
+    console.log("Saved compliance configs:", savedConfigs);
+
     clientState.sensors.forEach((sensor: any) => {
       const sensorKey = getSensorConfigId(sensor);
 
