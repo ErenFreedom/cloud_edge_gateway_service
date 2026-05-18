@@ -669,3 +669,20 @@ button:disabled {
 .copy-api-btn:hover {
   background: #2563eb;
 }
+
+
+.compliance-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.compliance-controls input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: white;
+  margin-top: 10px;
+}

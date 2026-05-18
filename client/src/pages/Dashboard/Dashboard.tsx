@@ -15,12 +15,9 @@ import {
 
 import {
   fetchComplianceReportTypesThunk,
-  fetchComplianceSensorsThunk,
-  fetchComplianceConfigThunk,
-  saveComplianceConfigThunk,
-  setSelectedReportType
+  createComplianceReportTypeThunk,
+  saveMultiComplianceConfigThunk
 } from "../../features/compliance/complianceSlice";
-
 
 import {
   fetchGrihaSensorsThunk,
@@ -136,19 +133,12 @@ const Dashboard = () => {
 
   const complianceState = useSelector((state: RootState) => state.compliance);
 
-  const {
-    reportTypes,
-    selectedReportType,
-    sensors: complianceSensors,
-    config: complianceConfig
-  } = complianceState;
+  const { reportTypes } = complianceState;
 
   const sensors =
     exportMode === "griha"
       ? grihaState.sensors
-      : exportMode === "compliance"
-        ? complianceSensors
-        : clientState.sensors;
+      : clientState.sensors;
 
   const [profileOpen, setProfileOpen] = useState(false);
 
@@ -325,49 +315,72 @@ const Dashboard = () => {
     }
 
     if (exportMode === "compliance") {
+      dispatch(fetchSensorsThunk(exportSiteId));
       dispatch(fetchComplianceReportTypesThunk());
     }
   }, [exportSiteId, exportMode, dispatch]);
 
 
+
+  // useEffect(() => {
+  //   if (!exportSiteId) return;
+  //   if (exportMode !== "compliance") return;
+  //   if (!selectedReportType) return;
+
+  //   dispatch(
+  //     fetchComplianceSensorsThunk({
+  //       site_id: exportSiteId,
+  //       report_type: selectedReportType
+  //     })
+  //   );
+
+  //   dispatch(
+  //     fetchComplianceConfigThunk({
+  //       site_id: exportSiteId,
+  //       report_type: selectedReportType
+  //     })
+  //   );
+  // }, [exportSiteId, exportMode, selectedReportType, dispatch]);
+
+  // useEffect(() => {
+  //   if (exportMode !== "compliance") return;
+  //   if (complianceSensors.length === 0) return;
+
+  //   const initialMapping: any = {};
+
+  //   complianceSensors.forEach((sensor: any) => {
+  //     const saved = complianceConfig?.[sensor.id];
+
+  //     initialMapping[sensor.id] = {
+  //       enabled: !!saved,
+  //       type: saved?.type || "",
+  //       unit: saved?.unit || ""
+  //     };
+  //   });
+
+  //   setComplianceMapping(initialMapping);
+  // }, [complianceSensors, complianceConfig, exportMode]);
+
+
   useEffect(() => {
-    if (!exportSiteId) return;
     if (exportMode !== "compliance") return;
-    if (!selectedReportType) return;
-
-    dispatch(
-      fetchComplianceSensorsThunk({
-        site_id: exportSiteId,
-        report_type: selectedReportType
-      })
-    );
-
-    dispatch(
-      fetchComplianceConfigThunk({
-        site_id: exportSiteId,
-        report_type: selectedReportType
-      })
-    );
-  }, [exportSiteId, exportMode, selectedReportType, dispatch]);
-
-  useEffect(() => {
-    if (exportMode !== "compliance") return;
-    if (complianceSensors.length === 0) return;
+    if (clientState.sensors.length === 0) return;
 
     const initialMapping: any = {};
 
-    complianceSensors.forEach((sensor: any) => {
-      const saved = complianceConfig?.[sensor.id];
-
-      initialMapping[sensor.id] = {
-        enabled: !!saved,
-        type: saved?.type || "",
-        unit: saved?.unit || ""
+    clientState.sensors.forEach((sensor: any) => {
+      initialMapping[sensor.id] = complianceMapping[sensor.id] || {
+        enabled: false,
+        report_type: "",
+        custom_report_type: "",
+        category: "",
+        unit: "",
+        display_name: sensor.sensor_name || "Unnamed Sensor"
       };
     });
 
     setComplianceMapping(initialMapping);
-  }, [complianceSensors, complianceConfig, exportMode]);
+  }, [exportMode, clientState.sensors]);
 
 
   useEffect(() => {
@@ -457,30 +470,75 @@ const Dashboard = () => {
     );
   };
 
-  const saveCompliance = () => {
+  const saveCompliance = async () => {
     if (!exportSiteId) return;
 
-    if (!selectedReportType) {
-      alert("Select reporting type");
+    const selectedItems = Object.keys(complianceMapping)
+      .filter((sensorId) => complianceMapping[sensorId]?.enabled)
+      .map((sensorId) => {
+        const item = complianceMapping[sensorId];
+
+        const finalReportType =
+          item.report_type === "__custom__"
+            ? item.custom_report_type
+            : item.report_type;
+
+        return {
+          sensor_id: sensorId,
+          report_type: finalReportType,
+          category: item.category,
+          display_name: item.display_name,
+          unit: item.unit,
+          active: true
+        };
+      });
+
+    if (selectedItems.length === 0) {
+      alert("Select at least one sensor");
       return;
     }
 
-    const finalMapping: any = {};
-
-    Object.keys(complianceMapping).forEach((sensorId) => {
-      if (complianceMapping[sensorId]?.enabled) {
-        finalMapping[sensorId] = {
-          type: complianceMapping[sensorId].type,
-          unit: complianceMapping[sensorId].unit
-        };
+    for (const item of selectedItems) {
+      if (!item.report_type) {
+        alert("Report type is required for all selected sensors");
+        return;
       }
-    });
+
+      if (!item.category) {
+        alert("Type/category is required for all selected sensors");
+        return;
+      }
+
+      if (!item.unit) {
+        alert("Unit is required for all selected sensors");
+        return;
+      }
+    }
+
+    const customReportTypes = selectedItems
+      .filter((item) => item.report_type)
+      .filter(
+        (item) =>
+          !reportTypes.some((rt: any) => rt.value === item.report_type)
+      );
+
+    for (const item of customReportTypes) {
+      await dispatch(
+        createComplianceReportTypeThunk({
+          report_type: item.report_type,
+          display_name: item.report_type
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          description: "Custom compliance report type",
+          active: true
+        })
+      );
+    }
 
     dispatch(
-      saveComplianceConfigThunk({
+      saveMultiComplianceConfigThunk({
         site_id: exportSiteId,
-        report_type: selectedReportType,
-        mapping: finalMapping
+        sensors: selectedItems
       })
     );
   };
@@ -1406,96 +1464,160 @@ const Dashboard = () => {
               <>
                 <div className="section-title">Configure Compliance Sensors</div>
 
-                <select
-                  value={selectedReportType || ""}
-                  onChange={(e) => dispatch(setSelectedReportType(e.target.value))}
-                >
-                  <option value="">Select Reporting Type</option>
+                {!token && (
+                  <p className="section-subtext">
+                    Generate a client token from Standard Export first. The same token will be used for compliance APIs.
+                  </p>
+                )}
 
-                  {reportTypes.map((report: any) => (
-                    <option key={report.value} value={report.value}>
-                      {report.label}
-                    </option>
-                  ))}
-                </select>
+                {token && (
+                  <div className="token-box">
+                    {token}
+                    <button
+                      className="copy-btn"
+                      onClick={() => navigator.clipboard.writeText(token)}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                )}
 
-                {selectedReportType && (
-                  <div className="sensor-container">
-                    {complianceSensors.map((sensor: any) => {
-                      const enabled = complianceMapping[sensor.id]?.enabled;
+                <div className="modal-divider" />
 
-                      const month = new Date().getMonth() + 1;
-                      const year = new Date().getFullYear();
+                <div className="sensor-container">
+                  {clientState.sensors.map((sensor: any) => {
+                    const item = complianceMapping[sensor.id] || {};
+                    const enabled = item.enabled;
 
-                      const BASE_URL = window.location.origin;
+                    const month = new Date().getMonth() + 1;
+                    const year = new Date().getFullYear();
 
-                      const apiUrl = `${BASE_URL}/api/compliance/${selectedReportType}/sensor/${sensor.id}?month=${month}&year=${year}`;
+                    const finalReportType =
+                      item.report_type === "__custom__"
+                        ? item.custom_report_type
+                        : item.report_type;
 
-                      return (
-                        <div key={sensor.id} className="sensor-row">
-                          <input
-                            type="checkbox"
-                            checked={enabled || false}
-                            onChange={(e) => {
-                              setComplianceMapping((prev: any) => ({
-                                ...prev,
-                                [sensor.id]: {
-                                  ...prev[sensor.id],
-                                  enabled: e.target.checked
-                                }
-                              }));
-                            }}
-                          />
+                    const BASE_URL = window.location.origin;
 
-                          <div className="sensor-content">
-                            <div className="sensor-name">
-                              {sensor.sensor_name}
-                            </div>
+                    const apiUrl =
+                      finalReportType && item.category
+                        ? `${BASE_URL}/api/compliance/reports/${finalReportType}/${item.category}?month=${month}&year=${year}`
+                        : "";
 
-                            <div className="sensor-controls">
-                              <select
-                                value={complianceMapping[sensor.id]?.type || ""}
+                    return (
+                      <div key={sensor.id} className="sensor-row">
+                        <input
+                          type="checkbox"
+                          checked={enabled || false}
+                          onChange={(e) => {
+                            setComplianceMapping((prev: any) => ({
+                              ...prev,
+                              [sensor.id]: {
+                                ...prev[sensor.id],
+                                enabled: e.target.checked,
+                                display_name:
+                                  prev[sensor.id]?.display_name ||
+                                  sensor.sensor_name ||
+                                  "Unnamed Sensor"
+                              }
+                            }));
+                          }}
+                        />
+
+                        <div className="sensor-content">
+                          <div className="sensor-name">
+                            {sensor.sensor_name || "Unnamed Sensor"}
+                          </div>
+
+                          <div className="sensor-meta">
+                            {sensor.sensor_location || "-"} • ID #{sensor.external_sensor_id}
+                          </div>
+
+                          <div className="sensor-controls compliance-controls">
+                            <select
+                              value={item.report_type || ""}
+                              onChange={(e) =>
+                                setComplianceMapping((prev: any) => ({
+                                  ...prev,
+                                  [sensor.id]: {
+                                    ...prev[sensor.id],
+                                    report_type: e.target.value,
+                                    custom_report_type:
+                                      e.target.value === "__custom__"
+                                        ? prev[sensor.id]?.custom_report_type || ""
+                                        : ""
+                                  }
+                                }))
+                              }
+                            >
+                              <option value="">Reporting Type</option>
+
+                              {reportTypes.map((report: any) => (
+                                <option key={report.value} value={report.value}>
+                                  {report.label}
+                                </option>
+                              ))}
+
+                              <option value="__custom__">+ Custom Reporting Type</option>
+                            </select>
+
+                            {item.report_type === "__custom__" && (
+                              <input
+                                placeholder="Custom report type e.g. igbc"
+                                value={item.custom_report_type || ""}
                                 onChange={(e) =>
                                   setComplianceMapping((prev: any) => ({
                                     ...prev,
                                     [sensor.id]: {
                                       ...prev[sensor.id],
-                                      type: e.target.value
+                                      custom_report_type: e.target.value
+                                        .toLowerCase()
+                                        .trim()
+                                        .replace(/\s+/g, "_")
                                     }
                                   }))
                                 }
-                              >
-                                <option value="">Type</option>
+                              />
+                            )}
 
-                                {reportTypes
-                                  .find((r: any) => r.value === selectedReportType)
-                                  ?.types?.map((type: any) => (
-                                    <option key={type.value} value={type.value}>
-                                      {type.label}
-                                    </option>
-                                  ))}
-                              </select>
+                            <input
+                              placeholder="Type / Category e.g. dg_1"
+                              value={item.category || ""}
+                              onChange={(e) =>
+                                setComplianceMapping((prev: any) => ({
+                                  ...prev,
+                                  [sensor.id]: {
+                                    ...prev[sensor.id],
+                                    category: e.target.value
+                                      .toLowerCase()
+                                      .trim()
+                                      .replace(/\s+/g, "_")
+                                  }
+                                }))
+                              }
+                            />
 
-                              <select
-                                value={complianceMapping[sensor.id]?.unit || ""}
-                                onChange={(e) =>
-                                  setComplianceMapping((prev: any) => ({
-                                    ...prev,
-                                    [sensor.id]: {
-                                      ...prev[sensor.id],
-                                      unit: e.target.value
-                                    }
-                                  }))
-                                }
-                              >
-                                <option value="">Unit</option>
-                                <option value="kWh">kWh</option>
-                                <option value="kL">kL</option>
-                                <option value="m3">m³</option>
-                                <option value="kgCO2e">kgCO₂e</option>
-                              </select>
-                            </div>
+                            <select
+                              value={item.unit || ""}
+                              onChange={(e) =>
+                                setComplianceMapping((prev: any) => ({
+                                  ...prev,
+                                  [sensor.id]: {
+                                    ...prev[sensor.id],
+                                    unit: e.target.value
+                                  }
+                                }))
+                              }
+                            >
+                              <option value="">Unit</option>
+                              <option value="kWh">kWh</option>
+                              <option value="kL">kL</option>
+                              <option value="m3">m³</option>
+                              <option value="kgCO2e">kgCO₂e</option>
+                            </select>
+                          </div>
 
+                          {apiUrl && (
                             <div className="api-box">
                               <span className="api-text">
                                 {apiUrl}
@@ -1508,12 +1630,12 @@ const Dashboard = () => {
                                 Copy
                               </button>
                             </div>
-                          </div>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      </div>
+                    );
+                  })}
+                </div>
 
                 <div className="modal-buttons">
                   <Button size="medium" onClick={saveCompliance}>

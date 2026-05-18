@@ -9,58 +9,63 @@ export interface ComplianceReportType {
   value: string;
   label: string;
   description?: string;
-
-  types?: {
-    value: string;
-    label: string;
-  }[];
+  active?: boolean;
 }
 
 export interface ComplianceSensor {
   id: string;
   sensor_name: string;
   site_id?: string;
-  compliance_type?: string;
+  sensor_location?: string;
+  external_sensor_id?: string;
   unit?: string;
 }
 
-export interface ComplianceConfigPayload {
-  site_id: string;
+export interface ComplianceSensorConfigItem {
+  sensor_id: string;
   report_type: string;
-  mapping: Record<
-    string,
-    {
-      type: string;
-      unit: string;
-    }
-  >;
+  category: string;
+  display_name: string;
+  unit: string;
+  sort_order?: number;
+  active?: boolean;
+  description?: string | null;
+  metadata?: any;
+}
+
+export interface MultiComplianceConfigPayload {
+  site_id: string;
+  sensors: ComplianceSensorConfigItem[];
+}
+
+export interface CreateComplianceReportTypePayload {
+  report_type: string;
+  display_name: string;
+  description?: string | null;
+  active?: boolean;
 }
 
 export interface ComplianceExportParams {
   token: string;
   reportType: string;
-  sensorId?: string;
-  complianceType?: string;
+  category: string;
   month: number;
   year: number;
 }
 
 export interface ComplianceExportResponse {
-  report_type: string;
   project_code?: string;
-  type?: string;
-  sensor_id?: string;
+  report_type: string;
+  category?: string;
   month: number;
   year: number;
-  unit?: string;
-  total_consumption?: number | null;
-  from?: string;
-  to?: string;
-  data?: any;
+  generated_at?: string;
+  sensor?: any;
+  sensors?: any[];
 }
 
 /* ========================= */
-/* ADMIN APIs */
+/* ADMIN REPORT TYPES */
 /* ========================= */
 
 export const fetchComplianceReportTypes = async (): Promise<
@@ -72,34 +77,49 @@ export const fetchComplianceReportTypes = async (): Promise<
     id: item.id || item.report_type,
     value: item.report_type,
     label: item.display_name,
-    description: item.description
+    description: item.description,
+    active: item.active
   }));
 };
 
-export const fetchComplianceSensors = async (
-  site_id: string,
-  report_type: string
-): Promise<ComplianceSensor[]> => {
-  const res = await apiClient.get(
-    `/compliance/sensors?site_id=${site_id}&report_type=${report_type}`
-  );
+export const createComplianceReportType = async (
+  payload: CreateComplianceReportTypePayload
+) => {
+  const res = await apiClient.post("/compliance/report-types", payload);
   return res.data;
 };
 
-export const fetchComplianceConfig = async (
+/* ========================= */
+/* ADMIN CONFIG */
+/* ========================= */
+
+/**
+ * Save per-sensor compliance config.
+ *
+ * Backend route:
+ * POST /api/compliance/config/multi
+ */
+export const saveMultiComplianceConfig = async (
+  payload: MultiComplianceConfigPayload
+) => {
+  const res = await apiClient.post("/compliance/config/multi", payload);
+  return res.data;
+};
+
+/**
+ * Optional old route support.
+ * Keep this only if you still want to fetch config report-type-wise.
+ *
+ * Backend route:
+ * GET /api/compliance/config/:reportType?site_id=...
+ */
+export const fetchComplianceConfigByReportType = async (
   site_id: string,
   report_type: string
 ) => {
   const res = await apiClient.get(
-    `/compliance/config?site_id=${site_id}&report_type=${report_type}`
+    `/compliance/config/${report_type}?site_id=${site_id}`
   );
-  return res.data;
-};
-
-export const saveComplianceConfig = async (
-  payload: ComplianceConfigPayload
-) => {
-  const res = await apiClient.post("/compliance/save-config", payload);
   return res.data;
 };
 
@@ -107,15 +127,19 @@ export const saveComplianceConfig = async (
 /* CLIENT EXPORT APIs */
 /* ========================= */
 
-export const fetchComplianceSensorExport = async ({
+/**
+ * Category-wise export:
+ * GET /api/compliance/reports/:reportType/:category
+ */
+export const fetchComplianceCategoryExport = async ({
   token,
   reportType,
-  sensorId,
+  category,
   month,
   year,
 }: ComplianceExportParams): Promise<ComplianceExportResponse> => {
   const res = await apiClient.get(
-    `/compliance/${reportType}/sensor/${sensorId}?month=${month}&year=${year}`,
+    `/compliance/reports/${reportType}/${category}?month=${month}&year=${year}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -126,15 +150,18 @@ export const fetchComplianceSensorExport = async ({
   return res.data;
 };
 
-export const fetchComplianceTypeExport = async ({
+/**
+ * Full monthly report export:
+ * GET /api/compliance/reports/:reportType
+ */
+export const fetchComplianceMonthlyReport = async ({
   token,
   reportType,
-  complianceType,
   month,
   year,
-}: ComplianceExportParams): Promise<ComplianceExportResponse> => {
+}: Omit<ComplianceExportParams, "category">): Promise<ComplianceExportResponse> => {
   const res = await apiClient.get(
-    `/compliance/${reportType}/${complianceType}?month=${month}&year=${year}`,
+    `/compliance/reports/${reportType}?month=${month}&year=${year}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

@@ -225,3 +225,62 @@ export const getMonthlyComplianceCategoryService = async (
     sensor: row
   };
 };
+
+
+export const saveMultiComplianceConfigService = async (
+  admin: any,
+  body: any
+) => {
+  if (!admin.organizationId) {
+    throw new Error("Invalid admin");
+  }
+
+  const { site_id, sensors } = body;
+
+  if (!site_id) throw new Error("site_id required");
+
+  if (!Array.isArray(sensors)) {
+    throw new Error("sensors must be an array");
+  }
+
+  const grouped: Record<string, any[]> = {};
+
+  for (const s of sensors) {
+    if (!s.sensor_id) throw new Error("sensor_id required");
+    if (!s.report_type) throw new Error("report_type required");
+    if (!s.category) throw new Error("category/type required");
+    if (!s.display_name) throw new Error("display_name required");
+    if (!s.unit) throw new Error("unit required");
+
+    if (!grouped[s.report_type]) {
+      grouped[s.report_type] = [];
+    }
+
+    grouped[s.report_type].push({
+      sensor_id: s.sensor_id,
+      category: s.category,
+      display_name: s.display_name,
+      unit: s.unit,
+      sort_order: s.sort_order ?? 999,
+      active: s.active ?? true,
+      description: s.description ?? null,
+      metadata: s.metadata ?? null
+    });
+  }
+
+  for (const reportType of Object.keys(grouped)) {
+    await upsertReportSensorConfigToBQ(
+      admin.organizationId,
+      site_id,
+      reportType,
+      grouped[reportType]
+    );
+  }
+
+  return {
+    message: "Multi compliance config saved",
+    site_id,
+    total: sensors.length,
+    report_types: Object.keys(grouped)
+  };
+};

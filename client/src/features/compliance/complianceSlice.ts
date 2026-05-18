@@ -2,17 +2,17 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
 import {
   fetchComplianceReportTypes,
-  fetchComplianceSensors,
-  fetchComplianceConfig,
-  saveComplianceConfig,
-  fetchComplianceSensorExport,
-  fetchComplianceTypeExport,
+  createComplianceReportType,
+  saveMultiComplianceConfig,
+  fetchComplianceConfigByReportType,
+  fetchComplianceCategoryExport,
+  fetchComplianceMonthlyReport,
 } from "../../services/compliance.service";
 
 import type {
   ComplianceReportType,
-  ComplianceSensor,
-  ComplianceConfigPayload,
+  MultiComplianceConfigPayload,
+  CreateComplianceReportTypePayload,
   ComplianceExportParams,
 } from "../../services/compliance.service";
 
@@ -26,10 +26,6 @@ interface ComplianceState {
   success: boolean;
 
   reportTypes: ComplianceReportType[];
-  selectedReportType: string | null;
-
-  sensors: ComplianceSensor[];
-  selectedSensors: string[];
 
   config: any;
   exportData: any;
@@ -43,10 +39,6 @@ const initialState: ComplianceState = {
   success: false,
 
   reportTypes: [],
-  selectedReportType: null,
-
-  sensors: [],
-  selectedSensors: [],
 
   config: null,
   exportData: null,
@@ -71,30 +63,34 @@ export const fetchComplianceReportTypesThunk = createAsyncThunk(
   }
 );
 
-export const fetchComplianceSensorsThunk = createAsyncThunk(
-  "compliance/fetchSensors",
-  async (
-    payload: {
-      site_id: string;
-      report_type: string;
-    },
-    thunkAPI
-  ) => {
+export const createComplianceReportTypeThunk = createAsyncThunk(
+  "compliance/createReportType",
+  async (payload: CreateComplianceReportTypePayload, thunkAPI) => {
     try {
-      return await fetchComplianceSensors(
-        payload.site_id,
-        payload.report_type
-      );
+      return await createComplianceReportType(payload);
     } catch (err: any) {
       return thunkAPI.rejectWithValue(
-        err.response?.data?.message || "Failed to fetch compliance sensors"
+        err.response?.data?.message || "Failed to create compliance report type"
       );
     }
   }
 );
 
-export const fetchComplianceConfigThunk = createAsyncThunk(
-  "compliance/fetchConfig",
+export const saveMultiComplianceConfigThunk = createAsyncThunk(
+  "compliance/saveMultiConfig",
+  async (payload: MultiComplianceConfigPayload, thunkAPI) => {
+    try {
+      return await saveMultiComplianceConfig(payload);
+    } catch (err: any) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Failed to save compliance config"
+      );
+    }
+  }
+);
+
+export const fetchComplianceConfigByReportTypeThunk = createAsyncThunk(
+  "compliance/fetchConfigByReportType",
   async (
     payload: {
       site_id: string;
@@ -103,7 +99,7 @@ export const fetchComplianceConfigThunk = createAsyncThunk(
     thunkAPI
   ) => {
     try {
-      return await fetchComplianceConfig(
+      return await fetchComplianceConfigByReportType(
         payload.site_id,
         payload.report_type
       );
@@ -115,40 +111,35 @@ export const fetchComplianceConfigThunk = createAsyncThunk(
   }
 );
 
-export const saveComplianceConfigThunk = createAsyncThunk(
-  "compliance/saveConfig",
-  async (payload: ComplianceConfigPayload, thunkAPI) => {
+export const fetchComplianceCategoryExportThunk = createAsyncThunk(
+  "compliance/fetchCategoryExport",
+  async (payload: ComplianceExportParams, thunkAPI) => {
     try {
-      return await saveComplianceConfig(payload);
+      return await fetchComplianceCategoryExport(payload);
     } catch (err: any) {
       return thunkAPI.rejectWithValue(
-        err.response?.data?.message || "Failed to save compliance config"
+        err.response?.data?.message || "Compliance category export failed"
       );
     }
   }
 );
 
-export const fetchComplianceSensorExportThunk = createAsyncThunk(
-  "compliance/fetchSensorExport",
-  async (payload: ComplianceExportParams, thunkAPI) => {
+export const fetchComplianceMonthlyReportThunk = createAsyncThunk(
+  "compliance/fetchMonthlyReport",
+  async (
+    payload: {
+      token: string;
+      reportType: string;
+      month: number;
+      year: number;
+    },
+    thunkAPI
+  ) => {
     try {
-      return await fetchComplianceSensorExport(payload);
+      return await fetchComplianceMonthlyReport(payload);
     } catch (err: any) {
       return thunkAPI.rejectWithValue(
-        err.response?.data?.message || "Compliance sensor export failed"
-      );
-    }
-  }
-);
-
-export const fetchComplianceTypeExportThunk = createAsyncThunk(
-  "compliance/fetchTypeExport",
-  async (payload: ComplianceExportParams, thunkAPI) => {
-    try {
-      return await fetchComplianceTypeExport(payload);
-    } catch (err: any) {
-      return thunkAPI.rejectWithValue(
-        err.response?.data?.message || "Compliance type export failed"
+        err.response?.data?.message || "Compliance monthly report failed"
       );
     }
   }
@@ -172,32 +163,8 @@ const complianceSlice = createSlice({
       state.error = null;
     },
 
-    setSelectedReportType: (state, action) => {
-      state.selectedReportType = action.payload;
-      state.sensors = [];
-      state.config = null;
-      state.exportData = null;
-      state.selectedSensors = [];
-    },
-
-    toggleComplianceSensor: (state, action) => {
-      const sensorId = action.payload;
-
-      if (state.selectedSensors.includes(sensorId)) {
-        state.selectedSensors = state.selectedSensors.filter(
-          (id) => id !== sensorId
-        );
-      } else {
-        state.selectedSensors.push(sensorId);
-      }
-    },
-
-    setSelectedComplianceSensors: (state, action) => {
-      state.selectedSensors = action.payload;
-    },
-
-    clearSelectedComplianceSensors: (state) => {
-      state.selectedSensors = [];
+    clearComplianceSuccess: (state) => {
+      state.success = false;
     },
 
     setComplianceToken: (state, action) => {
@@ -227,75 +194,76 @@ const complianceSlice = createSlice({
         state.error = action.payload as string;
       })
 
-      /* SENSORS */
-      .addCase(fetchComplianceSensorsThunk.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchComplianceSensorsThunk.fulfilled, (state, action) => {
-        state.loading = false;
-        state.sensors = action.payload;
-      })
-      .addCase(fetchComplianceSensorsThunk.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-
-      /* CONFIG */
-      .addCase(fetchComplianceConfigThunk.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(fetchComplianceConfigThunk.fulfilled, (state, action) => {
-        state.loading = false;
-        state.config = action.payload;
-      })
-      .addCase(fetchComplianceConfigThunk.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-      })
-
-      /* SAVE CONFIG */
-      .addCase(saveComplianceConfigThunk.pending, (state) => {
+      /* CREATE REPORT TYPE */
+      .addCase(createComplianceReportTypeThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
         state.success = false;
       })
-      .addCase(saveComplianceConfigThunk.fulfilled, (state) => {
+      .addCase(createComplianceReportTypeThunk.fulfilled, (state) => {
         state.loading = false;
         state.success = true;
       })
-      .addCase(saveComplianceConfigThunk.rejected, (state, action) => {
+      .addCase(createComplianceReportTypeThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
 
-      /* SENSOR EXPORT */
-      .addCase(fetchComplianceSensorExportThunk.pending, (state) => {
+      /* SAVE MULTI CONFIG */
+      .addCase(saveMultiComplianceConfigThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
-        state.exportData = null;
+        state.success = false;
       })
-      .addCase(fetchComplianceSensorExportThunk.fulfilled, (state, action) => {
+      .addCase(saveMultiComplianceConfigThunk.fulfilled, (state) => {
         state.loading = false;
-        state.exportData = action.payload;
+        state.success = true;
       })
-      .addCase(fetchComplianceSensorExportThunk.rejected, (state, action) => {
+      .addCase(saveMultiComplianceConfigThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
 
-      /* TYPE EXPORT */
-      .addCase(fetchComplianceTypeExportThunk.pending, (state) => {
+      /* FETCH CONFIG BY REPORT TYPE */
+      .addCase(fetchComplianceConfigByReportTypeThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchComplianceConfigByReportTypeThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.config = action.payload;
+      })
+      .addCase(fetchComplianceConfigByReportTypeThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      /* CATEGORY EXPORT */
+      .addCase(fetchComplianceCategoryExportThunk.pending, (state) => {
         state.loading = true;
         state.error = null;
         state.exportData = null;
       })
-      .addCase(fetchComplianceTypeExportThunk.fulfilled, (state, action) => {
+      .addCase(fetchComplianceCategoryExportThunk.fulfilled, (state, action) => {
         state.loading = false;
         state.exportData = action.payload;
       })
-      .addCase(fetchComplianceTypeExportThunk.rejected, (state, action) => {
+      .addCase(fetchComplianceCategoryExportThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      /* MONTHLY REPORT */
+      .addCase(fetchComplianceMonthlyReportThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.exportData = null;
+      })
+      .addCase(fetchComplianceMonthlyReportThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.exportData = action.payload;
+      })
+      .addCase(fetchComplianceMonthlyReportThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
@@ -309,10 +277,7 @@ const complianceSlice = createSlice({
 export const {
   resetComplianceState,
   clearComplianceError,
-  setSelectedReportType,
-  toggleComplianceSensor,
-  setSelectedComplianceSensors,
-  clearSelectedComplianceSensors,
+  clearComplianceSuccess,
   setComplianceToken,
   clearComplianceExportData,
 } = complianceSlice.actions;

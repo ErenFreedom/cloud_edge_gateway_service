@@ -6,7 +6,8 @@ import {
   saveComplianceReportCategoryService,
   getComplianceConfigService,
   saveComplianceConfigService,
-  getMonthlyComplianceCategoryService
+  getMonthlyComplianceCategoryService,
+  saveMultiComplianceConfigService,
 } from "./compliance.service";
 
 export const getMonthlyComplianceReport = async (req: any, res: any) => {
@@ -122,4 +123,18 @@ export const getMonthlyComplianceCategoryReport =
       });
 
     }
+};
+
+
+export const saveMultiComplianceConfig = async (req: any, res: any) => {
+  try {
+    const data = await saveMultiComplianceConfigService(
+      req.user,
+      req.body
+    );
+
+    res.json(data);
+  } catch (e: any) {
+    res.status(400).json({ message: e.message });
+  }
 };
