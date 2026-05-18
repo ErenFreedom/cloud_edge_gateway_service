@@ -6,7 +6,8 @@ import {
   upsertReportCategoryToBQ,
   getReportSensorConfigFromBQ,
   upsertReportSensorConfigToBQ,
-  getMonthlyCategoryReportRowFromBQ
+  getMonthlyCategoryReportRowFromBQ,
+  getAllReportSensorConfigsForSiteFromBQ
 } from "./compliance.bigquery.repository";
 
 import {
@@ -282,5 +283,31 @@ export const saveMultiComplianceConfigService = async (
     site_id,
     total: sensors.length,
     report_types: Object.keys(grouped)
+  };
+};
+
+
+export const getAllComplianceConfigsForSiteService = async (
+  admin: any,
+  siteId: string
+) => {
+  if (!admin.organizationId) {
+    throw new Error("Invalid admin");
+  }
+
+  if (!siteId) {
+    throw new Error("site_id required");
+  }
+
+  const rows = await getAllReportSensorConfigsForSiteFromBQ(
+    admin.organizationId,
+    siteId
+  );
+
+  return {
+    organization_id: admin.organizationId,
+    site_id: siteId,
+    total: rows.length,
+    sensors: rows
   };
 };

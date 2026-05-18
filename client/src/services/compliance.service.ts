@@ -12,6 +12,13 @@ export interface ComplianceReportType {
   active?: boolean;
 }
 
+export interface ComplianceSiteConfigResponse {
+  organization_id: string;
+  site_id: string;
+  total: number;
+  sensors: ComplianceSensorConfigItem[];
+}
+
 export interface ComplianceSensor {
   id: string;
   sensor_name: string;
@@ -99,6 +106,15 @@ export const createComplianceReportType = async (
  * Backend route:
  * POST /api/compliance/config/multi
  */
+
+export const fetchComplianceConfigForSite = async (
+  siteId: string
+): Promise<ComplianceSiteConfigResponse> => {
+  const res = await apiClient.get(`/compliance/config/site/${siteId}`);
+  return res.data;
+};
+
+
 export const saveMultiComplianceConfig = async (
   payload: MultiComplianceConfigPayload
 ) => {

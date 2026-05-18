@@ -8,6 +8,7 @@ import {
   saveComplianceConfigService,
   getMonthlyComplianceCategoryService,
   saveMultiComplianceConfigService,
+   getAllComplianceConfigsForSiteService
 } from "./compliance.service";
 
 export const getMonthlyComplianceReport = async (req: any, res: any) => {
@@ -136,5 +137,26 @@ export const saveMultiComplianceConfig = async (req: any, res: any) => {
     res.json(data);
   } catch (e: any) {
     res.status(400).json({ message: e.message });
+  }
+};
+
+
+export const getAllComplianceConfigsForSite = async (
+  req: any,
+  res: any
+) => {
+  try {
+    const { siteId } = req.params;
+
+    const data = await getAllComplianceConfigsForSiteService(
+      req.user,
+      siteId
+    );
+
+    res.json(data);
+  } catch (e: any) {
+    res.status(400).json({
+      message: e.message
+    });
   }
 };

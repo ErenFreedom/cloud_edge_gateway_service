@@ -16,8 +16,10 @@ import {
 import {
   fetchComplianceReportTypesThunk,
   createComplianceReportTypeThunk,
-  saveMultiComplianceConfigThunk
+  saveMultiComplianceConfigThunk,
+  fetchComplianceConfigForSiteThunk
 } from "../../features/compliance/complianceSlice";
+
 
 import {
   fetchGrihaSensorsThunk,
@@ -133,7 +135,10 @@ const Dashboard = () => {
 
   const complianceState = useSelector((state: RootState) => state.compliance);
 
-  const { reportTypes } = complianceState;
+  const {
+    reportTypes,
+    config: complianceConfig
+  } = complianceState;
 
   const sensors =
     exportMode === "griha"
@@ -317,6 +322,7 @@ const Dashboard = () => {
     if (exportMode === "compliance") {
       dispatch(fetchSensorsThunk(exportSiteId));
       dispatch(fetchComplianceReportTypesThunk());
+      dispatch(fetchComplianceConfigForSiteThunk(exportSiteId));
     }
   }, [exportSiteId, exportMode, dispatch]);
 
@@ -366,21 +372,29 @@ const Dashboard = () => {
     if (exportMode !== "compliance") return;
     if (clientState.sensors.length === 0) return;
 
+    const savedConfigs = complianceConfig?.sensors || [];
     const initialMapping: any = {};
 
     clientState.sensors.forEach((sensor: any) => {
-      initialMapping[sensor.id] = complianceMapping[sensor.id] || {
-        enabled: false,
-        report_type: "",
+      const saved = savedConfigs.find(
+        (cfg: any) => cfg.sensor_id === sensor.id
+      );
+
+      initialMapping[sensor.id] = {
+        enabled: !!saved,
+        report_type: saved?.report_type || "",
         custom_report_type: "",
-        category: "",
-        unit: "",
-        display_name: sensor.sensor_name || "Unnamed Sensor"
+        category: saved?.category || "",
+        unit: saved?.unit || "",
+        display_name:
+          saved?.display_name ||
+          sensor.sensor_name ||
+          "Unnamed Sensor"
       };
     });
 
     setComplianceMapping(initialMapping);
-  }, [exportMode, clientState.sensors]);
+  }, [exportMode, clientState.sensors, complianceConfig]);
 
 
   useEffect(() => {

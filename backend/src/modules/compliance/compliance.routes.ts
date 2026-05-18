@@ -9,7 +9,8 @@ import {
   getComplianceConfig,
   saveComplianceConfig,
   getMonthlyComplianceCategoryReport,
-  saveMultiComplianceConfig
+  saveMultiComplianceConfig,
+  getAllComplianceConfigsForSite
 } from "./compliance.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -58,6 +59,12 @@ router.post(
 /* ========================= */
 /* ADMIN REPORT CONFIG */
 /* ========================= */
+
+router.get(
+  "/config/site/:siteId",
+  authMiddleware,
+  getAllComplianceConfigsForSite
+);
 
 router.get(
   "/config/:reportType",

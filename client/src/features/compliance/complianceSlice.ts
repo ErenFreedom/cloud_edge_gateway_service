@@ -5,9 +5,11 @@ import {
   createComplianceReportType,
   saveMultiComplianceConfig,
   fetchComplianceConfigByReportType,
+  fetchComplianceConfigForSite,
   fetchComplianceCategoryExport,
   fetchComplianceMonthlyReport,
 } from "../../services/compliance.service";
+
 
 import type {
   ComplianceReportType,
@@ -88,6 +90,21 @@ export const saveMultiComplianceConfigThunk = createAsyncThunk(
     }
   }
 );
+
+
+export const fetchComplianceConfigForSiteThunk = createAsyncThunk(
+  "compliance/fetchConfigForSite",
+  async (siteId: string, thunkAPI) => {
+    try {
+      return await fetchComplianceConfigForSite(siteId);
+    } catch (err: any) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || "Failed to fetch site compliance config"
+      );
+    }
+  }
+);
+
 
 export const fetchComplianceConfigByReportTypeThunk = createAsyncThunk(
   "compliance/fetchConfigByReportType",
@@ -249,6 +266,20 @@ const complianceSlice = createSlice({
         state.exportData = action.payload;
       })
       .addCase(fetchComplianceCategoryExportThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      /* FETCH SITE CONFIG */
+      .addCase(fetchComplianceConfigForSiteThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchComplianceConfigForSiteThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.config = action.payload;
+      })
+      .addCase(fetchComplianceConfigForSiteThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

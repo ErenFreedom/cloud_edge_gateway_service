@@ -306,3 +306,37 @@ export const getMonthlyCategoryReportRowFromBQ = async (
 
   return rows[0] || null;
 };
+
+
+export const getAllReportSensorConfigsForSiteFromBQ = async (
+  organizationId: string,
+  siteId: string
+) => {
+  const query = `
+    SELECT
+      organization_id,
+      site_id,
+      report_type,
+      sensor_id,
+      display_name,
+      unit,
+      category,
+      sort_order,
+      active,
+      description,
+      metadata,
+      created_at
+    FROM \`${PROJECT_ID}.${DATASET}.report_sensor_config\`
+    WHERE organization_id = @organizationId
+      AND site_id = @siteId
+      AND active = TRUE
+    ORDER BY report_type ASC, sort_order ASC
+  `;
+
+  const [rows] = await bigquery.query({
+    query,
+    params: { organizationId, siteId }
+  });
+
+  return rows;
+};
