@@ -150,6 +150,8 @@ const Dashboard = () => {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
   const getSensorConfigId = (sensor: any) => {
+    if (isUuid(sensor.config_sensor_id)) return sensor.config_sensor_id;
+    if (isUuid(sensor.sensor_uuid)) return sensor.sensor_uuid;
     if (isUuid(sensor.sensor_id)) return sensor.sensor_id;
     if (isUuid(sensor.bank_id)) return sensor.bank_id;
     if (isUuid(sensor.uuid)) return sensor.uuid;
@@ -397,6 +399,8 @@ const Dashboard = () => {
       const saved = savedConfigs.find((cfg: any) => {
         return (
           String(cfg.sensor_id) === String(sensorKey) ||
+          String(cfg.sensor_id) === String(sensor.config_sensor_id) ||
+          String(cfg.sensor_id) === String(sensor.sensor_uuid) ||
           String(cfg.sensor_id) === String(sensor.sensor_id) ||
           String(cfg.sensor_id) === String(sensor.bank_id) ||
           String(cfg.sensor_id) === String(sensor.uuid) ||
