@@ -30,15 +30,15 @@ const SENSOR_MAP: any = {
     unit: "kL"
   },
   dg1: {
-    id: "ec3154e8-9c83-4b2d-a2b6-5fdcc1fc509e",
+    id: "a4e60a55-58ca-4b29-be95-447741c6b273",
     unit: "kWh"
   },
   dg2: {
-    id: "469354aa-4b40-4058-b945-40a4da3285a6",
+    id: "21839d5c-33fe-40f9-b77b-a84081a22a55",
     unit: "kWh"
   },
   dg3: {
-    id: "dc5c182b-b983-46e3-8b2b-9f84547ff7c1",
+    id: "100f29b1-52ff-4a00-be5b-094dea4707b1",
     unit: "kWh"
   },
   renewable_energy: {
