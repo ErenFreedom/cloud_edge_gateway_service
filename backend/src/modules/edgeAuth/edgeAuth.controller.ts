@@ -16,6 +16,7 @@ export const edgeLoginController = async (req: Request, res: Response) => {
     const result = await edgeLoginService(req.body);
     res.json(result);
   } catch (err: any) {
+    console.error("EDGE LOGIN ERROR:", err.message, req.body);
     res.status(400).json({ message: err.message });
   }
 };

@@ -53,7 +53,29 @@ export const edgeLoginService = async (data: EdgeLoginPayload) => {
 
   // prevent replay
   const now = Date.now();
-  if (Math.abs(now - data.timestamp) > 60 * 1000) {
+
+  const rawTimestamp = Number(data.timestamp);
+
+  if (!rawTimestamp || Number.isNaN(rawTimestamp)) {
+    throw new Error("Invalid timestamp");
+  }
+
+  // Support both seconds and milliseconds
+  const normalizedTimestamp =
+    rawTimestamp < 1_000_000_000_000
+      ? rawTimestamp * 1000
+      : rawTimestamp;
+
+  // Allow 5 minutes clock drift for edge machines
+  if (Math.abs(now - normalizedTimestamp) > 5 * 60 * 1000) {
+    console.log("⏰ EDGE LOGIN EXPIRED", {
+      server_now: now,
+      received_timestamp: rawTimestamp,
+      normalized_timestamp: normalizedTimestamp,
+      diff_ms: Math.abs(now - normalizedTimestamp),
+      email: data.email
+    });
+
     throw new Error("Request expired");
   }
 
