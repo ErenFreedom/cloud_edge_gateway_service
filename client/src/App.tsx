@@ -16,6 +16,9 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteDetails from "./pages/SiteDetails/SiteDetails";
 import OrgSiteManagerPage from "./pages/OrgSiteManager/OrgSiteManagerPage";
 
+//Ops module
+import OpsRoutes from "./ops/App/OpsRoutes";
+
 function App() {
   return (
     <BrowserRouter>
@@ -93,7 +96,14 @@ function App() {
           }
         />
 
+        {/* OPS MODULE */}
+        <Route path="/ops/*" element={<OpsRoutes />} />
+
+
       </Routes>
+
+
+
     </BrowserRouter>
   );
 }

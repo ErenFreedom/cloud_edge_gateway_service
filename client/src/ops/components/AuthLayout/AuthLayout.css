@@ -1,0 +1,196 @@
+.ops-auth-layout {
+  min-height: 100vh;
+  width: 100%;
+  background: #02040a;
+  color: #ffffff;
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  overflow: hidden;
+}
+
+.ops-auth-left {
+  position: relative;
+  padding: 0;
+  margin: 0;
+}
+
+.ops-auth-slide {
+  position: relative;
+  height: 100vh;
+  border-radius: 0;
+  overflow: hidden;
+  background: #08111f;
+}
+
+.ops-auth-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.9) contrast(1.08) saturate(1.12);
+}
+
+.ops-auth-slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.12)),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.62), transparent 62%);
+}
+
+.ops-auth-slide-overlay {
+  position: absolute;
+  left: 52px;
+  bottom: 56px;
+  z-index: 2;
+  max-width: 720px;
+}
+
+.ops-auth-slide-kicker {
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+
+.ops-auth-slide-overlay h1 {
+  font-size: 56px;
+  line-height: 1.05;
+  margin: 0 0 18px;
+}
+
+.ops-auth-slide-overlay p {
+  color: #dbeafe;
+  font-size: 18px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.ops-auth-slide-dots {
+  display: flex;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+.ops-auth-slide-dots button {
+  width: 34px;
+  height: 5px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+}
+
+.ops-auth-slide-dots button.active {
+  background: #38bdf8;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.8);
+}
+
+.ops-auth-right {
+  border-left: 1px solid rgba(148, 163, 184, 0.16);
+  background:
+    radial-gradient(circle at top, rgba(14, 165, 233, 0.18), transparent 34%),
+    #050814;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 34px;
+  padding: 42px;
+  position: relative;
+}
+
+.ops-auth-card {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+  transform: translateY(-20px);
+}
+
+.ops-company-logo {
+  width: 230px;
+  height: auto;
+  object-fit: contain;
+  margin: 0 auto 42px;
+  display: block;
+}
+
+.ops-auth-card h2 {
+  font-size: 32px;
+  margin: 0 0 12px;
+}
+
+.ops-auth-card p {
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0 auto 34px;
+  max-width: 360px;
+}
+
+.ops-auth-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+}
+
+.ops-auth-actions .button-81 {
+  width: 100%;
+  max-width: 300px;
+  height: 58px;
+  padding: 0;
+  border-radius: 16px;
+}
+
+.ops-auth-footer {
+  position: absolute;
+  bottom: 34px;
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+
+.ops-auth-footer p {
+  color: #94a3b8;
+  margin-bottom: 14px;
+}
+
+.ops-auth-footer div {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+}
+
+.ops-auth-footer a {
+  color: #e2e8f0;
+  font-size: 22px;
+  transition: 0.2s ease;
+}
+
+.ops-auth-footer a:hover {
+  color: #38bdf8;
+}
+
+@media (max-width: 1100px) {
+  .ops-auth-layout {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .ops-auth-slide {
+    height: 62vh;
+  }
+
+  .ops-auth-right {
+    min-height: 460px;
+    border-left: none;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .ops-auth-slide-overlay h1 {
+    font-size: 42px;
+  }
+}
