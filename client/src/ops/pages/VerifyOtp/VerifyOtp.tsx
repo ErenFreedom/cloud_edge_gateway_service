@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
@@ -12,6 +12,15 @@ import {
 
 import "./VerifyOtp.css";
 
+const OTP_DURATION_SECONDS = 10 * 60;
+
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+};
+
 const VerifyOtp = () => {
   const navigate = useNavigate();
   const dispatch = useOpsDispatch();
@@ -21,6 +30,30 @@ const VerifyOtp = () => {
   );
 
   const [otp, setOtp] = useState("");
+  const [timeLeft, setTimeLeft] = useState(OTP_DURATION_SECONDS);
+
+  useEffect(() => {
+    if (!tempLoginId) return;
+
+    setTimeLeft(OTP_DURATION_SECONDS);
+  }, [tempLoginId]);
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
 
   const handleVerify = async () => {
     dispatch(clearOpsAuthError());
@@ -28,6 +61,11 @@ const VerifyOtp = () => {
     if (!tempLoginId) {
       toast.error("Login session expired. Please login again.");
       navigate("/ops/login");
+      return;
+    }
+
+    if (timeLeft <= 0) {
+      toast.error("OTP expired. Please resend OTP.");
       return;
     }
 
@@ -65,6 +103,8 @@ const VerifyOtp = () => {
     const result = await dispatch(opsResendOtpThunk(tempLoginId));
 
     if (opsResendOtpThunk.fulfilled.match(result)) {
+      setOtp("");
+      setTimeLeft(OTP_DURATION_SECONDS);
       toast.success("A new OTP has been sent.");
     }
 
@@ -72,6 +112,8 @@ const VerifyOtp = () => {
       toast.error((result.payload as string) || "Failed to resend OTP.");
     }
   };
+
+  const isOtpExpired = timeLeft <= 0;
 
   return (
     <div className="ops-auth-card">
@@ -91,9 +133,15 @@ const VerifyOtp = () => {
           maxLength={6}
           placeholder="Enter OTP"
           value={otp}
-          disabled={loading}
+          disabled={loading || isOtpExpired}
           onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
         />
+
+        <p className={isOtpExpired ? "ops-otp-timer expired" : "ops-otp-timer"}>
+          {isOtpExpired
+            ? "OTP expired. Please resend OTP."
+            : `OTP expires in ${formatTime(timeLeft)}`}
+        </p>
 
         {error && <p className="ops-auth-error">{error}</p>}
 
@@ -106,7 +154,7 @@ const VerifyOtp = () => {
         <Button
           size="large"
           onClick={handleVerify}
-          disabled={loading || otp.length !== 6 || !tempLoginId}
+          disabled={loading || otp.length !== 6 || !tempLoginId || isOtpExpired}
         >
           {loading ? "Verifying..." : "Verify OTP"}
         </Button>
