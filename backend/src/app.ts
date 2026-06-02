@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import { authMiddleware } from './middleware/auth.middleware';
 import { roleMiddleware } from './middleware/role.middleware';
 
+//admin modules
 import organizationRoutes from './modules/organization/organization.routes';
 import authRoutes from './modules/auth/auth.routes';
 import siteRoutes from './modules/site/site.routes';
@@ -17,6 +18,9 @@ import clientRoutes from "./modules/client/client.routes";
 import grihaRoutes from "./modules/griha/griha.routes";
 import complianceRoutes from "./modules/compliance/compliance.routes";
 
+//ops modules
+import opsAuthRoutes from "./ops/auth/opsAuth.routes";
+
 
 const app = express();
 
@@ -26,6 +30,9 @@ app.use(express.json());
 app.use(morgan('dev'));
 app.use(cookieParser());
 
+//admin routes
+
+
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/sites', siteRoutes);
@@ -34,6 +41,10 @@ app.use("/api/edge", edgeAuthRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/griha", grihaRoutes);
 app.use("/api/compliance", complianceRoutes);
+
+//ops routes
+
+app.use("/api/ops/auth", opsAuthRoutes);
 
 
 app.use(
