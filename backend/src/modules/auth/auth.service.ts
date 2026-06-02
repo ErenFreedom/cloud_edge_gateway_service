@@ -32,7 +32,7 @@ export const loginService = async (
     throw new Error('Account inactive');
 
   /**
-   * 🔥 PLATFORM ADMIN → DIRECT LOGIN
+   * PLATFORM ADMIN → DIRECT LOGIN
    */
   if (user.role === 'platform_admin') {
     const accessToken = jwt.sign(
@@ -68,7 +68,7 @@ export const loginService = async (
   }
 
   /**
-   * 🔥 OTHER USERS → OTP FLOW
+   * OTHER USERS → OTP FLOW
    */
   const otp = Math.floor(
     100000 + Math.random() * 900000
