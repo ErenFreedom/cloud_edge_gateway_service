@@ -22,11 +22,11 @@ import {
 
 const SENSOR_MAP: any = {
   utility_grid: {
-    id: "7e869bc4-3392-410b-a366-058e2d59b84d",
+    id: "c47667ec-6690-4aca-bafe-d95318a73062",
     unit: "kWh"
   },
   municipal_water: {
-    id: "c36be17d-5dec-4feb-a806-d7f9e4ca10cf",
+    id: "e47ab67f-1770-439d-b8ce-a5885179e6ad",
     unit: "kL"
   },
   dg1: {
@@ -42,11 +42,11 @@ const SENSOR_MAP: any = {
     unit: "kWh"
   },
   renewable_energy: {
-    id: "2214d111-1c64-4e84-8edc-150fda6ec48a",
+    id: "125d64d9-c881-46a3-8ef7-2adc6b2b8f5c",
     unit: "kWh"
   },
   stp_treated_water: {
-    id: "0f1599a1-216b-4971-9d17-a33d8111ac70",
+    id: "90dd860e-f406-4380-a34c-2016968184f9",
     unit: "kL"
   }
 };
