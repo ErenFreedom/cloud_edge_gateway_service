@@ -17,6 +17,7 @@ import edgeAuthRoutes from "./modules/edgeAuth/edgeAuth.routes";
 import clientRoutes from "./modules/client/client.routes";
 import grihaRoutes from "./modules/griha/griha.routes";
 import complianceRoutes from "./modules/compliance/compliance.routes";
+import loadAnalyticsRoutes from "./modules/loadAnalytics/loadAnalytics.routes";
 
 //ops modules
 import opsAuthRoutes from "./ops/auth/opsAuth.routes";
@@ -41,6 +42,7 @@ app.use("/api/edge", edgeAuthRoutes);
 app.use("/api/client", clientRoutes);
 app.use("/api/griha", grihaRoutes);
 app.use("/api/compliance", complianceRoutes);
+app.use("/api/load-analytics", loadAnalyticsRoutes);
 
 //ops routes
 

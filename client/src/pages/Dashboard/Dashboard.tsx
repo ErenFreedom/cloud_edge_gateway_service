@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FaUserCircle, FaEye, FaEdit, FaDownload } from "react-icons/fa";
+import { FaUserCircle, FaEye, FaEdit, FaDownload, FaChartLine } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import type { RootState, AppDispatch } from "../../store/store";
 import SiteLocationPicker from "../../components/maps/SiteLocationPicker";
@@ -42,6 +42,13 @@ import {
   approveActivationThunk,
   rejectActivationThunk
 } from "../../features/activation/activationSlice";
+
+
+import {
+  fetchCurrentLoadAnalyticsThunk,
+  exportLoadAnalyticsThunk,
+  setCurrentRange
+} from "../../features/loadAnalytics/loadAnalyticsSlice";
 
 import Button from "../../components/ui/Button";
 
@@ -135,6 +142,17 @@ const Dashboard = () => {
 
   const complianceState = useSelector((state: RootState) => state.compliance);
 
+  // const loadAnalyticsState = useSelector(
+  //   (state: RootState) => state.loadAnalytics
+  // );
+
+  // const {
+  //   sensors: loadAnalyticsSensors,
+  //   loading: loadAnalyticsLoading,
+  //   exportLoading,
+  //   currentRange
+  // } = loadAnalyticsState;
+
   const {
     reportTypes,
     config: complianceConfig
@@ -169,6 +187,24 @@ const Dashboard = () => {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [minDate, setMinDate] = useState<string | null>(null);
   const [maxDate, setMaxDate] = useState<string | null>(null);
+
+
+  const loadAnalyticsState = useSelector(
+  (state: RootState) => state.loadAnalytics
+);
+
+const {
+  sensors: loadSensors,
+  loading: loadLoading,
+  exportLoading,
+  currentRange
+} = loadAnalyticsState;
+
+const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
+const [analyticsSiteId, setAnalyticsSiteId] = useState<string | null>(null);
+const [analyticsTab, setAnalyticsTab] = useState<"load" | "export">("load");
+
+const [analyticsExportState, setAnalyticsExportState] = useState<any>({});
 
 
 
@@ -239,6 +275,67 @@ const Dashboard = () => {
       })
     );
   };
+
+
+  const openAnalyticsModal = (siteId: string) => {
+    setAnalyticsSiteId(siteId);
+    setAnalyticsModalOpen(true);
+    setAnalyticsTab("load");
+
+    dispatch(
+      fetchCurrentLoadAnalyticsThunk({
+        site_id: siteId,
+        range: currentRange || "1h"
+      })
+    );
+  };
+
+
+  const handleAnalyticsRangeChange = (range: any) => {
+    if (!analyticsSiteId) return;
+
+    dispatch(setCurrentRange(range));
+
+    dispatch(
+      fetchCurrentLoadAnalyticsThunk({
+        site_id: analyticsSiteId,
+        range
+      })
+    );
+  };
+
+
+  const downloadSensorAnalyticsCsv = async (sensor: any) => {
+  if (!analyticsSiteId) return;
+
+  const rowState = analyticsExportState[sensor.logical_sensor_key] || {};
+
+  if (!rowState.from || !rowState.to || !rowState.interval) {
+    alert("Select from, to and interval");
+    return;
+  }
+
+  const result: any = await dispatch(
+    exportLoadAnalyticsThunk({
+      site_id: analyticsSiteId,
+      from: rowState.from,
+      to: rowState.to,
+      interval: rowState.interval,
+      logical_sensor_key: sensor.logical_sensor_key
+    })
+  );
+
+  if (!result.payload) return;
+
+  const url = window.URL.createObjectURL(result.payload);
+  const a = document.createElement("a");
+
+  a.href = url;
+  a.download = `${sensor.sensor_name || "sensor"}-${rowState.interval}.csv`;
+  a.click();
+
+  window.URL.revokeObjectURL(url);
+};
 
 
 
@@ -781,6 +878,20 @@ const Dashboard = () => {
                 </Button>
 
                 <div className="site-icons">
+
+                  <FaChartLine
+                    className={`site-action-icon ${site.status !== "active" ? "disabled" : ""}`}
+                    title={
+                      site.status !== "active"
+                        ? "Activate site to view analytics"
+                        : "Load Analytics"
+                    }
+                    onClick={() => {
+                      if (site.status === "active") {
+                        openAnalyticsModal(site.id);
+                      }
+                    }}
+                  />
 
                   <FaDownload
                     className={`site-action-icon ${site.status !== "active" ? "disabled" : ""}`}
@@ -1700,6 +1811,202 @@ const Dashboard = () => {
             {clientLoading && (
               <p className="loading-text">Loading...</p>
             )}
+
+          </div>
+        </div>
+      )}
+
+      {analyticsModalOpen && (
+        <div className="credential-modal">
+          <div className="modal-content analytics-modal-content">
+
+            <h2>Load Analytics</h2>
+
+            <div className="export-tabs">
+              <button
+                className={analyticsTab === "load" ? "active" : ""}
+                onClick={() => setAnalyticsTab("load")}
+              >
+                Load Overview
+              </button>
+
+              <button
+                className={analyticsTab === "export" ? "active" : ""}
+                onClick={() => setAnalyticsTab("export")}
+              >
+                Data Export
+              </button>
+            </div>
+
+            {analyticsTab === "load" && (
+              <>
+                <div className="analytics-toolbar">
+                  <div>
+                    <div className="section-title">Load Range</div>
+                    <select
+                      value={currentRange}
+                      onChange={(e) => handleAnalyticsRangeChange(e.target.value)}
+                    >
+                      <option value="10m">Last 10 Minutes</option>
+                      <option value="1h">Last 1 Hour</option>
+                      <option value="6h">Last 6 Hours</option>
+                      <option value="24h">Last 24 Hours</option>
+                      <option value="1w">Last 1 Week</option>
+                      <option value="1month">Current Month</option>
+                    </select>
+                  </div>
+                </div>
+
+                {loadLoading && <p className="loading-text">Loading analytics...</p>}
+
+                <div className="analytics-table-wrapper">
+                  <table className="analytics-table">
+                    <thead>
+                      <tr>
+                        <th>Sensor Name</th>
+                        <th>API</th>
+                        <th>Current Reading</th>
+                        <th>Last Reading</th>
+                        <th>Load</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {loadSensors.map((sensor: any) => (
+                        <tr key={sensor.logical_sensor_key}>
+                          <td>{sensor.sensor_name || "-"}</td>
+                          <td className="analytics-api-cell">
+                            {sensor.api_endpoint || "-"}
+                          </td>
+                          <td>{sensor.current_reading ?? "-"}</td>
+                          <td>{sensor.previous_reading ?? "-"}</td>
+                          <td>{sensor.load ?? "-"}</td>
+                          <td>
+                            {sensor.is_valid_load ? (
+                              <span className="analytics-status good">Valid</span>
+                            ) : (
+                              <span className="analytics-status bad">Check</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {analyticsTab === "export" && (
+              <>
+                <div className="section-title">Export Sensor Data</div>
+
+                <div className="analytics-table-wrapper">
+                  <table className="analytics-table">
+                    <thead>
+                      <tr>
+                        <th>Sensor Name</th>
+                        <th>API</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Interval</th>
+                        <th>CSV</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {loadSensors.map((sensor: any) => {
+                        const state =
+                          analyticsExportState[sensor.logical_sensor_key] || {};
+
+                        return (
+                          <tr key={sensor.logical_sensor_key}>
+                            <td>{sensor.sensor_name || "-"}</td>
+
+                            <td className="analytics-api-cell">
+                              {sensor.api_endpoint || "-"}
+                            </td>
+
+                            <td>
+                              <input
+                                type="date"
+                                value={state.from || ""}
+                                onChange={(e) =>
+                                  setAnalyticsExportState((prev: any) => ({
+                                    ...prev,
+                                    [sensor.logical_sensor_key]: {
+                                      ...prev[sensor.logical_sensor_key],
+                                      from: e.target.value
+                                    }
+                                  }))
+                                }
+                              />
+                            </td>
+
+                            <td>
+                              <input
+                                type="date"
+                                value={state.to || ""}
+                                onChange={(e) =>
+                                  setAnalyticsExportState((prev: any) => ({
+                                    ...prev,
+                                    [sensor.logical_sensor_key]: {
+                                      ...prev[sensor.logical_sensor_key],
+                                      to: e.target.value
+                                    }
+                                  }))
+                                }
+                              />
+                            </td>
+
+                            <td>
+                              <select
+                                value={state.interval || "1h"}
+                                onChange={(e) =>
+                                  setAnalyticsExportState((prev: any) => ({
+                                    ...prev,
+                                    [sensor.logical_sensor_key]: {
+                                      ...prev[sensor.logical_sensor_key],
+                                      interval: e.target.value
+                                    }
+                                  }))
+                                }
+                              >
+                                <option value="10m">10 Minutes</option>
+                                <option value="1h">1 Hour</option>
+                                <option value="6h">6 Hours</option>
+                                <option value="24h">24 Hours</option>
+                                <option value="1w">1 Week</option>
+                                <option value="1month">1 Month</option>
+                              </select>
+                            </td>
+
+                            <td>
+                              <button
+                                className="analytics-download-btn"
+                                disabled={exportLoading}
+                                onClick={() => downloadSensorAnalyticsCsv(sensor)}
+                              >
+                                Download
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            <div className="modal-buttons">
+              <Button
+                size="medium"
+                onClick={() => setAnalyticsModalOpen(false)}
+              >
+                Close
+              </Button>
+            </div>
 
           </div>
         </div>

@@ -7,7 +7,7 @@ import activationReducer from "../features/activation/activationSlice";
 import clientReducer from "../features/client/clientSlice";
 import grihaReducer from "../features/griha/grihaSlice";
 import complianceReducer from "../features/compliance/complianceSlice";
-
+import loadAnalyticsReducer from "../features/loadAnalytics/loadAnalyticsSlice";
 
 export const store = configureStore({
 
@@ -21,6 +21,7 @@ export const store = configureStore({
     client: clientReducer,
     griha: grihaReducer,
     compliance: complianceReducer,
+    loadAnalytics: loadAnalyticsReducer,
   }
 
 });
