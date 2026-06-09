@@ -83,12 +83,12 @@ export const getCurrentLoadRowsFromBQ = async (
         AND logical_sensor_key IS NOT NULL
 
         AND (
-          @logicalSensorKey IS NULL
+          @logicalSensorKey = ''
           OR logical_sensor_key = @logicalSensorKey
         )
 
         AND (
-          @sensorId IS NULL
+          @sensorId = ''
           OR logical_sensor_key IN (
             SELECT DISTINCT logical_sensor_key
             FROM \`${LOGICAL_VIEW}\`
@@ -164,8 +164,8 @@ export const getCurrentLoadRowsFromBQ = async (
     params: {
       organizationId,
       siteId,
-      logicalSensorKey: logicalSensorKey || null,
-      sensorId: sensorId || null,
+      logicalSensorKey: logicalSensorKey || "",
+      sensorId: sensorId || "",
     },
   });
 
@@ -206,12 +206,12 @@ export const getExportRowsFromBQ = async (
         AND logical_sensor_key IS NOT NULL
 
         AND (
-          @logicalSensorKey IS NULL
+          @logicalSensorKey = ''
           OR logical_sensor_key = @logicalSensorKey
         )
 
         AND (
-          @sensorId IS NULL
+          @sensorId = ''
           OR logical_sensor_key IN (
             SELECT DISTINCT logical_sensor_key
             FROM \`${LOGICAL_VIEW}\`
@@ -269,8 +269,8 @@ export const getExportRowsFromBQ = async (
       siteId,
       from,
       to,
-      logicalSensorKey: logicalSensorKey || null,
-      sensorId: sensorId || null,
+      logicalSensorKey: logicalSensorKey || "",
+      sensorId: sensorId || "",
     },
   });
 
