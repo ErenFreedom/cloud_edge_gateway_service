@@ -222,23 +222,7 @@ export const getExportRowsFromBQ = async (
       : `TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(timestamp_value), ${bucketSeconds}) * ${bucketSeconds})`;
 
   const query = `
-    WITH selected_keys AS (
-      SELECT DISTINCT logical_sensor_key
-      FROM \`${LOGICAL_VIEW}\`
-      WHERE organization_id = @organizationId
-        AND site_id = @siteId
-        AND logical_sensor_key IS NOT NULL
-        AND (
-          @sensorId = ''
-          OR sensor_id = @sensorId
-        )
-        AND (
-          ARRAY_LENGTH(@sensorIds) = 0
-          OR sensor_id IN UNNEST(@sensorIds)
-        )
-    ),
-
-    base AS (
+    WITH base AS (
       SELECT
         logical_sensor_key,
         sensor_id,
@@ -249,9 +233,13 @@ export const getExportRowsFromBQ = async (
       FROM \`${LOGICAL_VIEW}\`
       WHERE organization_id = @organizationId
         AND site_id = @siteId
+
+        -- date input is YYYY-MM-DD, so make TO inclusive
         AND timestamp_value >= TIMESTAMP(@from)
-        AND timestamp_value < TIMESTAMP(@to)
+        AND timestamp_value < TIMESTAMP_ADD(TIMESTAMP(@to), INTERVAL 1 DAY)
+
         AND value IS NOT NULL
+        AND timestamp_value IS NOT NULL
         AND logical_sensor_key IS NOT NULL
 
         AND (
@@ -265,20 +253,19 @@ export const getExportRowsFromBQ = async (
         )
 
         AND (
-          (
-            @sensorId = ''
-            AND ARRAY_LENGTH(@sensorIds) = 0
-          )
-          OR logical_sensor_key IN (
-            SELECT logical_sensor_key FROM selected_keys
-          )
+          @sensorId = ''
+          OR sensor_id = @sensorId
+        )
+
+        AND (
+          ARRAY_LENGTH(@sensorIds) = 0
+          OR sensor_id IN UNNEST(@sensorIds)
         )
     ),
 
     bucketed AS (
       SELECT
         logical_sensor_key,
-        ARRAY_AGG(sensor_id ORDER BY timestamp_value DESC LIMIT 1)[OFFSET(0)] AS sensor_id,
         ARRAY_AGG(sensor_name ORDER BY timestamp_value DESC LIMIT 1)[OFFSET(0)] AS sensor_name,
         bucket_timestamp,
         ARRAY_AGG(value ORDER BY timestamp_value DESC LIMIT 1)[OFFSET(0)] AS reading
@@ -289,7 +276,6 @@ export const getExportRowsFromBQ = async (
     with_consumption AS (
       SELECT
         logical_sensor_key,
-        sensor_id,
         sensor_name,
         bucket_timestamp,
         reading,
@@ -301,7 +287,7 @@ export const getExportRowsFromBQ = async (
     )
 
     SELECT
-      bucket_timestamp AS timestamp,
+      FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', bucket_timestamp) AS timestamp,
       sensor_name,
       reading,
       CASE
