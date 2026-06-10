@@ -32,7 +32,16 @@ export interface ExportRequest {
 
   sensor_id?: string;
   logical_sensor_key?: string;
+
+  sensor_ids?: string;
+  logical_sensor_keys?: string;
 }
+
+export const buildCsvParam = (values: string[]) => {
+  return values
+    .filter(Boolean)
+    .join(",");
+};
 
 export const fetchCurrentLoadAnalytics = async (
   payload: CurrentLoadRequest

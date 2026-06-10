@@ -48,3 +48,14 @@ export const validateDateRange = (from: any, to: any) => {
     to: toDate.toISOString(),
   };
 };
+
+export const parseCsvParam = (value: any): string[] => {
+  if (!value || typeof value !== "string") {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+};

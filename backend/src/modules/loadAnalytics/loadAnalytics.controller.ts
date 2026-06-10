@@ -18,10 +18,8 @@ const escapeCsv = (value: any): string => {
 
 const toCsv = (rows: any[]) => {
   const headers = [
-    "logical_sensor_key",
-    "sensor_id",
+    "timestamp",
     "sensor_name",
-    "bucket_timestamp",
     "reading",
     "consumption",
   ];
@@ -35,6 +33,7 @@ const toCsv = (rows: any[]) => {
 
   return lines.join("\n");
 };
+
 
 export const getCurrentLoadAnalyticsController = async (
   req: Request,

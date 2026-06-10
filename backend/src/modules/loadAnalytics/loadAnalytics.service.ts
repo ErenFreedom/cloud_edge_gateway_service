@@ -3,6 +3,7 @@ import {
   validateExportInterval,
   validateLoadRange,
   validateSiteId,
+  parseCsvParam,
 } from "./loadAnalytics.validator";
 
 import {
@@ -60,14 +61,21 @@ export const getLoadAnalyticsExportService = async (
 
   const { from, to } = validateDateRange(query.from, query.to);
 
+  const sensorIds = parseCsvParam(query.sensor_ids);
+  const logicalSensorKeys = parseCsvParam(query.logical_sensor_keys);
+
   const rows = await getExportRowsFromBQ(
     organizationId,
     siteId,
     from,
     to,
     interval,
-    query.logical_sensor_key,
-    query.sensor_id
+    {
+      sensorId: query.sensor_id,
+      logicalSensorKey: query.logical_sensor_key,
+      sensorIds,
+      logicalSensorKeys,
+    }
   );
 
   return {
@@ -81,6 +89,9 @@ export const getLoadAnalyticsExportService = async (
 
       sensor_id: query.sensor_id || null,
       logical_sensor_key: query.logical_sensor_key || null,
+
+      sensor_ids: sensorIds,
+      logical_sensor_keys: logicalSensorKeys,
 
       generated_at: new Date().toISOString(),
     },

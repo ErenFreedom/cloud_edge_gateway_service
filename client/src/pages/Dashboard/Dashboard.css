@@ -819,3 +819,43 @@ button:disabled {
   background: #fef3c7;
   color: #92400e;
 }
+
+.analytics-check-col {
+  width: 44px;
+  text-align: center;
+}
+
+.analytics-check-col input {
+  width: 16px;
+  height: 16px;
+  min-width: unset;
+  cursor: pointer;
+}
+
+.analytics-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.analytics-group-download-btn {
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.analytics-group-download-btn:hover {
+  background: #22c55e;
+}
+
+.analytics-group-download-btn:disabled {
+  background: #475569;
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -207,8 +207,12 @@ export const getExportRowsFromBQ = async (
   from: string,
   to: string,
   interval: ExportInterval,
-  logicalSensorKey?: string,
-  sensorId?: string
+  filters: {
+    logicalSensorKey?: string;
+    sensorId?: string;
+    logicalSensorKeys?: string[];
+    sensorIds?: string[];
+  } = {}
 ) => {
   const bucketSeconds = getBucketSeconds(interval);
 
@@ -218,7 +222,23 @@ export const getExportRowsFromBQ = async (
       : `TIMESTAMP_SECONDS(DIV(UNIX_SECONDS(timestamp_value), ${bucketSeconds}) * ${bucketSeconds})`;
 
   const query = `
-    WITH base AS (
+    WITH selected_keys AS (
+      SELECT DISTINCT logical_sensor_key
+      FROM \`${LOGICAL_VIEW}\`
+      WHERE organization_id = @organizationId
+        AND site_id = @siteId
+        AND logical_sensor_key IS NOT NULL
+        AND (
+          @sensorId = ''
+          OR sensor_id = @sensorId
+        )
+        AND (
+          ARRAY_LENGTH(@sensorIds) = 0
+          OR sensor_id IN UNNEST(@sensorIds)
+        )
+    ),
+
+    base AS (
       SELECT
         logical_sensor_key,
         sensor_id,
@@ -240,14 +260,17 @@ export const getExportRowsFromBQ = async (
         )
 
         AND (
-          @sensorId = ''
+          ARRAY_LENGTH(@logicalSensorKeys) = 0
+          OR logical_sensor_key IN UNNEST(@logicalSensorKeys)
+        )
+
+        AND (
+          (
+            @sensorId = ''
+            AND ARRAY_LENGTH(@sensorIds) = 0
+          )
           OR logical_sensor_key IN (
-            SELECT DISTINCT logical_sensor_key
-            FROM \`${LOGICAL_VIEW}\`
-            WHERE organization_id = @organizationId
-              AND site_id = @siteId
-              AND sensor_id = @sensorId
-              AND logical_sensor_key IS NOT NULL
+            SELECT logical_sensor_key FROM selected_keys
           )
         )
     ),
@@ -278,17 +301,15 @@ export const getExportRowsFromBQ = async (
     )
 
     SELECT
-      logical_sensor_key,
-      sensor_id,
+      bucket_timestamp AS timestamp,
       sensor_name,
-      bucket_timestamp,
       reading,
       CASE
         WHEN consumption < 0 THEN NULL
         ELSE consumption
       END AS consumption
     FROM with_consumption
-    ORDER BY sensor_name ASC, bucket_timestamp ASC
+    ORDER BY sensor_name ASC, timestamp ASC
   `;
 
   const [rows] = await bigquery.query({
@@ -298,8 +319,16 @@ export const getExportRowsFromBQ = async (
       siteId,
       from,
       to,
-      logicalSensorKey: logicalSensorKey || "",
-      sensorId: sensorId || "",
+
+      logicalSensorKey: filters.logicalSensorKey || "",
+      sensorId: filters.sensorId || "",
+
+      logicalSensorKeys: filters.logicalSensorKeys || [],
+      sensorIds: filters.sensorIds || [],
+    },
+    types: {
+      logicalSensorKeys: ["STRING"],
+      sensorIds: ["STRING"],
     },
   });
 

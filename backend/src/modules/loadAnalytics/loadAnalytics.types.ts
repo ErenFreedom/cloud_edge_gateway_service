@@ -26,3 +26,11 @@ export interface ExportRow {
   reading: number | null;
   consumption: number | null;
 }
+
+export interface ExportFilterOptions {
+  logicalSensorKey?: string;
+  sensorId?: string;
+
+  logicalSensorKeys?: string[];
+  sensorIds?: string[];
+}

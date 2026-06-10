@@ -205,6 +205,7 @@ const Dashboard = () => {
   const [analyticsTab, setAnalyticsTab] = useState<"load" | "export">("load");
 
   const [analyticsExportState, setAnalyticsExportState] = useState<any>({});
+  const [selectedAnalyticsSensors, setSelectedAnalyticsSensors] = useState<string[]>([]);
 
 
 
@@ -332,6 +333,79 @@ const Dashboard = () => {
 
     a.href = url;
     a.download = `${sensor.sensor_name || "sensor"}-${rowState.interval}.csv`;
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+  };
+
+
+  const toggleAnalyticsSensor = (logicalKey: string) => {
+    setSelectedAnalyticsSensors((prev) =>
+      prev.includes(logicalKey)
+        ? prev.filter((key) => key !== logicalKey)
+        : [...prev, logicalKey]
+    );
+  };
+
+  const toggleAllAnalyticsSensors = () => {
+    if (selectedAnalyticsSensors.length === loadSensors.length) {
+      setSelectedAnalyticsSensors([]);
+      return;
+    }
+
+    setSelectedAnalyticsSensors(
+      loadSensors.map((sensor: any) => sensor.logical_sensor_key)
+    );
+  };
+
+  const getGroupExportConfig = () => {
+    const selected = loadSensors.filter((sensor: any) =>
+      selectedAnalyticsSensors.includes(sensor.logical_sensor_key)
+    );
+
+    if (selected.length === 0) return null;
+
+    const firstState =
+      analyticsExportState[selected[0].logical_sensor_key] || {};
+
+    if (!firstState.from || !firstState.to || !firstState.interval) {
+      return null;
+    }
+
+    return {
+      from: firstState.from,
+      to: firstState.to,
+      interval: firstState.interval,
+    };
+  };
+
+  const downloadSelectedAnalyticsCsv = async () => {
+    if (!analyticsSiteId) return;
+
+    const config = getGroupExportConfig();
+
+    if (!config) {
+      alert("Select sensors and fill From, To, Interval in the first selected row");
+      return;
+    }
+
+    const result: any = await dispatch(
+      exportLoadAnalyticsThunk({
+        site_id: analyticsSiteId,
+        from: config.from,
+        to: config.to,
+        interval: config.interval,
+        logical_sensor_keys: selectedAnalyticsSensors.join(","),
+      })
+    );
+
+    if (!result.payload) return;
+
+    const url = window.URL.createObjectURL(result.payload);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = `selected-sensors-${config.interval}.csv`;
     a.click();
 
     window.URL.revokeObjectURL(url);
@@ -1885,12 +1959,12 @@ const Dashboard = () => {
                           <td>
                             <span
                               className={`analytics-status ${sensor.load_status === "HEALTHY"
-                                  ? "good"
-                                  : sensor.load_status === "NO_CHANGE"
-                                    ? "info"
-                                    : sensor.load_status === "NO_DATA"
-                                      ? "warning"
-                                      : "bad"
+                                ? "good"
+                                : sensor.load_status === "NO_CHANGE"
+                                  ? "info"
+                                  : sensor.load_status === "NO_DATA"
+                                    ? "warning"
+                                    : "bad"
                                 }`}
                             >
                               {sensor.load_status}
@@ -1912,6 +1986,16 @@ const Dashboard = () => {
                   <table className="analytics-table">
                     <thead>
                       <tr>
+                        <th className="analytics-check-col">
+                          <input
+                            type="checkbox"
+                            checked={
+                              loadSensors.length > 0 &&
+                              selectedAnalyticsSensors.length === loadSensors.length
+                            }
+                            onChange={toggleAllAnalyticsSensors}
+                          />
+                        </th>
                         <th>Sensor Name</th>
                         <th>API</th>
                         <th>From</th>
@@ -1928,6 +2012,14 @@ const Dashboard = () => {
 
                         return (
                           <tr key={sensor.logical_sensor_key}>
+                            <td className="analytics-check-col">
+                              <input
+                                type="checkbox"
+                                checked={selectedAnalyticsSensors.includes(sensor.logical_sensor_key)}
+                                onChange={() => toggleAnalyticsSensor(sensor.logical_sensor_key)}
+                              />
+                            </td>
+
                             <td>{sensor.sensor_name || "-"}</td>
 
                             <td className="analytics-api-cell">
@@ -2006,7 +2098,21 @@ const Dashboard = () => {
               </>
             )}
 
-            <div className="modal-buttons">
+            <div className="analytics-modal-footer">
+              {analyticsTab === "export" && (
+                <button
+                  className="analytics-group-download-btn"
+                  disabled={
+                    exportLoading ||
+                    selectedAnalyticsSensors.length === 0 ||
+                    !getGroupExportConfig()
+                  }
+                  onClick={downloadSelectedAnalyticsCsv}
+                >
+                  Download Selected CSV
+                </button>
+              )}
+
               <Button
                 size="medium"
                 onClick={() => setAnalyticsModalOpen(false)}
