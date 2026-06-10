@@ -809,3 +809,13 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.analytics-status.info {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.analytics-status.warning {
+  background: #fef3c7;
+  color: #92400e;
+}

@@ -190,21 +190,21 @@ const Dashboard = () => {
 
 
   const loadAnalyticsState = useSelector(
-  (state: RootState) => state.loadAnalytics
-);
+    (state: RootState) => state.loadAnalytics
+  );
 
-const {
-  sensors: loadSensors,
-  loading: loadLoading,
-  exportLoading,
-  currentRange
-} = loadAnalyticsState;
+  const {
+    sensors: loadSensors,
+    loading: loadLoading,
+    exportLoading,
+    currentRange
+  } = loadAnalyticsState;
 
-const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
-const [analyticsSiteId, setAnalyticsSiteId] = useState<string | null>(null);
-const [analyticsTab, setAnalyticsTab] = useState<"load" | "export">("load");
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
+  const [analyticsSiteId, setAnalyticsSiteId] = useState<string | null>(null);
+  const [analyticsTab, setAnalyticsTab] = useState<"load" | "export">("load");
 
-const [analyticsExportState, setAnalyticsExportState] = useState<any>({});
+  const [analyticsExportState, setAnalyticsExportState] = useState<any>({});
 
 
 
@@ -306,36 +306,36 @@ const [analyticsExportState, setAnalyticsExportState] = useState<any>({});
 
 
   const downloadSensorAnalyticsCsv = async (sensor: any) => {
-  if (!analyticsSiteId) return;
+    if (!analyticsSiteId) return;
 
-  const rowState = analyticsExportState[sensor.logical_sensor_key] || {};
+    const rowState = analyticsExportState[sensor.logical_sensor_key] || {};
 
-  if (!rowState.from || !rowState.to || !rowState.interval) {
-    alert("Select from, to and interval");
-    return;
-  }
+    if (!rowState.from || !rowState.to || !rowState.interval) {
+      alert("Select from, to and interval");
+      return;
+    }
 
-  const result: any = await dispatch(
-    exportLoadAnalyticsThunk({
-      site_id: analyticsSiteId,
-      from: rowState.from,
-      to: rowState.to,
-      interval: rowState.interval,
-      logical_sensor_key: sensor.logical_sensor_key
-    })
-  );
+    const result: any = await dispatch(
+      exportLoadAnalyticsThunk({
+        site_id: analyticsSiteId,
+        from: rowState.from,
+        to: rowState.to,
+        interval: rowState.interval,
+        logical_sensor_key: sensor.logical_sensor_key
+      })
+    );
 
-  if (!result.payload) return;
+    if (!result.payload) return;
 
-  const url = window.URL.createObjectURL(result.payload);
-  const a = document.createElement("a");
+    const url = window.URL.createObjectURL(result.payload);
+    const a = document.createElement("a");
 
-  a.href = url;
-  a.download = `${sensor.sensor_name || "sensor"}-${rowState.interval}.csv`;
-  a.click();
+    a.href = url;
+    a.download = `${sensor.sensor_name || "sensor"}-${rowState.interval}.csv`;
+    a.click();
 
-  window.URL.revokeObjectURL(url);
-};
+    window.URL.revokeObjectURL(url);
+  };
 
 
 
@@ -1883,11 +1883,18 @@ const [analyticsExportState, setAnalyticsExportState] = useState<any>({});
                           <td>{sensor.previous_reading ?? "-"}</td>
                           <td>{sensor.load ?? "-"}</td>
                           <td>
-                            {sensor.is_valid_load ? (
-                              <span className="analytics-status good">Valid</span>
-                            ) : (
-                              <span className="analytics-status bad">Check</span>
-                            )}
+                            <span
+                              className={`analytics-status ${sensor.load_status === "HEALTHY"
+                                  ? "good"
+                                  : sensor.load_status === "NO_CHANGE"
+                                    ? "info"
+                                    : sensor.load_status === "NO_DATA"
+                                      ? "warning"
+                                      : "bad"
+                                }`}
+                            >
+                              {sensor.load_status}
+                            </span>
                           </td>
                         </tr>
                       ))}

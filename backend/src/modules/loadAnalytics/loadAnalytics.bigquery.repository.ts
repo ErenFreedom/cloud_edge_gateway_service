@@ -74,6 +74,7 @@ export const getCurrentLoadRowsFromBQ = async (
         api_endpoint,
         logical_sensor_key,
         value,
+        quality_good,
         timestamp_value
       FROM \`${LOGICAL_VIEW}\`
       WHERE organization_id = @organizationId
@@ -107,6 +108,7 @@ export const getCurrentLoadRowsFromBQ = async (
         sensor_name,
         api_endpoint,
         value AS current_reading,
+        quality_good AS current_quality_good,
         timestamp_value AS current_timestamp
       FROM base
       QUALIFY ROW_NUMBER() OVER (
@@ -147,11 +149,38 @@ export const getCurrentLoadRowsFromBQ = async (
         ELSE c.current_reading - p.previous_reading
       END AS load,
 
-      CASE
-        WHEN c.current_reading IS NULL OR p.previous_reading IS NULL THEN FALSE
-        WHEN c.current_reading - p.previous_reading < 0 THEN FALSE
-        ELSE TRUE
-      END AS is_valid_load
+      c.current_quality_good,
+
+CASE
+  WHEN c.current_quality_good = FALSE
+    THEN 'BAD_QUALITY'
+
+  WHEN c.current_reading IS NULL
+    OR p.previous_reading IS NULL
+    THEN 'NO_DATA'
+
+  WHEN c.current_reading - p.previous_reading < 0
+    THEN 'INVALID_LOAD'
+
+  WHEN c.current_reading - p.previous_reading = 0
+    THEN 'NO_CHANGE'
+
+  ELSE 'HEALTHY'
+END AS load_status,
+
+CASE
+  WHEN c.current_quality_good = FALSE
+    THEN FALSE
+
+  WHEN c.current_reading IS NULL
+    OR p.previous_reading IS NULL
+    THEN FALSE
+
+  WHEN c.current_reading - p.previous_reading < 0
+    THEN FALSE
+
+  ELSE TRUE
+END AS is_valid_load
 
     FROM current_rows c
     LEFT JOIN previous_rows p
