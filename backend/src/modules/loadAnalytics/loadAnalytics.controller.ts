@@ -81,6 +81,10 @@ export const exportLoadAnalyticsController = async (
       `attachment; filename="${filename}"`
     );
 
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
     res.status(200).send(csv);
   } catch (err: any) {
     res.status(400).json({ message: err.message });

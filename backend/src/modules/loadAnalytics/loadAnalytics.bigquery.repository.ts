@@ -233,11 +233,8 @@ export const getExportRowsFromBQ = async (
       FROM \`${LOGICAL_VIEW}\`
       WHERE organization_id = @organizationId
         AND site_id = @siteId
-
-        -- date input is YYYY-MM-DD, so make TO inclusive
         AND timestamp_value >= TIMESTAMP(@from)
         AND timestamp_value < TIMESTAMP_ADD(TIMESTAMP(@to), INTERVAL 1 DAY)
-
         AND value IS NOT NULL
         AND timestamp_value IS NOT NULL
         AND logical_sensor_key IS NOT NULL
@@ -248,8 +245,8 @@ export const getExportRowsFromBQ = async (
         )
 
         AND (
-          ARRAY_LENGTH(@logicalSensorKeys) = 0
-          OR logical_sensor_key IN UNNEST(@logicalSensorKeys)
+          @logicalSensorKeysCsv = ''
+          OR logical_sensor_key IN UNNEST(SPLIT(@logicalSensorKeysCsv, ','))
         )
 
         AND (
@@ -258,8 +255,8 @@ export const getExportRowsFromBQ = async (
         )
 
         AND (
-          ARRAY_LENGTH(@sensorIds) = 0
-          OR sensor_id IN UNNEST(@sensorIds)
+          @sensorIdsCsv = ''
+          OR sensor_id IN UNNEST(SPLIT(@sensorIdsCsv, ','))
         )
     ),
 
@@ -309,12 +306,8 @@ export const getExportRowsFromBQ = async (
       logicalSensorKey: filters.logicalSensorKey || "",
       sensorId: filters.sensorId || "",
 
-      logicalSensorKeys: filters.logicalSensorKeys || [],
-      sensorIds: filters.sensorIds || [],
-    },
-    types: {
-      logicalSensorKeys: ["STRING"],
-      sensorIds: ["STRING"],
+      logicalSensorKeysCsv: (filters.logicalSensorKeys || []).join(","),
+      sensorIdsCsv: (filters.sensorIds || []).join(","),
     },
   });
 
