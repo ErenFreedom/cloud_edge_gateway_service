@@ -50,6 +50,8 @@ import {
   setCurrentRange
 } from "../../features/loadAnalytics/loadAnalyticsSlice";
 
+import type { LoadRange } from "../../services/loadAnalytics.service";
+
 import Button from "../../components/ui/Button";
 
 import "./Dashboard.css";
@@ -292,7 +294,7 @@ const Dashboard = () => {
   };
 
 
-  const handleAnalyticsRangeChange = (range: any) => {
+  const handleAnalyticsRangeChange = (range: LoadRange) => {
     if (!analyticsSiteId) return;
 
     dispatch(setCurrentRange(range));
@@ -300,7 +302,7 @@ const Dashboard = () => {
     dispatch(
       fetchCurrentLoadAnalyticsThunk({
         site_id: analyticsSiteId,
-        range
+        range,
       })
     );
   };
@@ -378,6 +380,9 @@ const Dashboard = () => {
       interval: firstState.interval,
     };
   };
+
+
+
 
   const downloadSelectedAnalyticsCsv = async () => {
     if (!analyticsSiteId) return;
@@ -1919,14 +1924,17 @@ const Dashboard = () => {
                     <div className="section-title">Load Range</div>
                     <select
                       value={currentRange}
-                      onChange={(e) => handleAnalyticsRangeChange(e.target.value)}
+                      onChange={(e) =>
+                        handleAnalyticsRangeChange(e.target.value as LoadRange)
+                      }
                     >
                       <option value="10m">Last 10 Minutes</option>
                       <option value="1h">Last 1 Hour</option>
                       <option value="6h">Last 6 Hours</option>
-                      <option value="24h">Last 24 Hours</option>
-                      <option value="1w">Last 1 Week</option>
+                      <option value="24h">Last Day</option>
+                      <option value="1w">Last Week</option>
                       <option value="1month">Current Month</option>
+                      <option value="lastMonth">Last Month</option>
                     </select>
                   </div>
                 </div>

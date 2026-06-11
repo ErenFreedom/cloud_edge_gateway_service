@@ -8,6 +8,8 @@ import {
     exportLoadAnalyticsCsv,
 } from "../../services/loadAnalytics.service";
 
+import type { LoadRange } from "../../services/loadAnalytics.service";
+
 interface LoadAnalyticsState {
     loading: boolean;
     exportLoading: boolean;
@@ -15,7 +17,7 @@ interface LoadAnalyticsState {
     error: string | null;
     success: boolean;
 
-    currentRange: string;
+    currentRange: LoadRange;
 
     sensors: any[];
 
@@ -83,7 +85,7 @@ const loadAnalyticsSlice = createSlice({
             state.success = false;
         },
 
-        setCurrentRange: (state, action) => {
+        setCurrentRange: (state, action: { payload: LoadRange }) => {
             state.currentRange = action.payload;
         },
     },

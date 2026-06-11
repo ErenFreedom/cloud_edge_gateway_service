@@ -6,7 +6,8 @@ export type LoadRange =
   | "6h"
   | "24h"
   | "1w"
-  | "1month";
+  | "1month"
+  | "lastMonth";
 
 export type ExportInterval =
   | "10m"
