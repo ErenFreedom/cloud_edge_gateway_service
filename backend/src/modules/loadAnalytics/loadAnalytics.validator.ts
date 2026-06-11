@@ -1,6 +1,8 @@
 import { ExportInterval, LoadRange } from "./loadAnalytics.types";
 
-const LOAD_RANGES: LoadRange[] = ["10m", "1h", "6h", "24h", "1w", "1month"];
+
+
+const LOAD_RANGES: LoadRange[] = ["10m", "1h", "6h", "24h", "1w", "1month", "lastMonth"];
 const EXPORT_INTERVALS: ExportInterval[] = ["10m", "1h", "6h", "24h", "1w", "1month"];
 
 export const validateSiteId = (siteId: any): string => {

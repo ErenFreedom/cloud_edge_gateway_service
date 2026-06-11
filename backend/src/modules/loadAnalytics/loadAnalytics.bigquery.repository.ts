@@ -7,20 +7,87 @@ const DATASET = "cloud_edge_gateway_master_data";
 const LOGICAL_VIEW =
   `project-b5045c0e-60ef-4535-bc3.${DATASET}.iot_raw_logical`;
 
-const getRangeSql = (range: LoadRange) => {
+const getCurrentWindowSql = (range: LoadRange) => {
   switch (range) {
     case "10m":
-      return "TIMESTAMP_SUB(c.current_timestamp, INTERVAL 10 MINUTE)";
+      return `
+        SELECT
+          'ROLLING' AS range_mode,
+          CAST(NULL AS TIMESTAMP) AS window_start,
+          CAST(NULL AS TIMESTAMP) AS window_end,
+          TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 10 MINUTE) AS target_timestamp
+      `;
+
     case "1h":
-      return "TIMESTAMP_SUB(c.current_timestamp, INTERVAL 1 HOUR)";
+      return `
+        SELECT
+          'ROLLING' AS range_mode,
+          CAST(NULL AS TIMESTAMP) AS window_start,
+          CAST(NULL AS TIMESTAMP) AS window_end,
+          TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR) AS target_timestamp
+      `;
+
     case "6h":
-      return "TIMESTAMP_SUB(c.current_timestamp, INTERVAL 6 HOUR)";
+      return `
+        SELECT
+          'ROLLING' AS range_mode,
+          CAST(NULL AS TIMESTAMP) AS window_start,
+          CAST(NULL AS TIMESTAMP) AS window_end,
+          TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 6 HOUR) AS target_timestamp
+      `;
+
     case "24h":
-      return "TIMESTAMP_SUB(c.current_timestamp, INTERVAL 24 HOUR)";
+      return `
+        SELECT
+          'PERIOD' AS range_mode,
+          TIMESTAMP_TRUNC(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY), DAY, 'Asia/Kolkata') AS window_start,
+          TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), DAY, 'Asia/Kolkata') AS window_end,
+          CAST(NULL AS TIMESTAMP) AS target_timestamp
+      `;
+
     case "1w":
-      return "TIMESTAMP_SUB(c.current_timestamp, INTERVAL 7 DAY)";
+      return `
+        SELECT
+          'PERIOD' AS range_mode,
+          TIMESTAMP_SUB(
+            TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), WEEK(MONDAY), 'Asia/Kolkata'),
+            INTERVAL 7 DAY
+          ) AS window_start,
+          TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), WEEK(MONDAY), 'Asia/Kolkata') AS window_end,
+          CAST(NULL AS TIMESTAMP) AS target_timestamp
+      `;
+
     case "1month":
-      return "TIMESTAMP_TRUNC(c.current_timestamp, MONTH)";
+      return `
+        SELECT
+          'PERIOD' AS range_mode,
+          TIMESTAMP_SUB(
+            TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH, 'Asia/Kolkata'),
+            INTERVAL 1 MONTH
+          ) AS window_start,
+          TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH, 'Asia/Kolkata') AS window_end,
+          CAST(NULL AS TIMESTAMP) AS target_timestamp
+      `;
+
+      case "lastMonth":
+  return `
+    SELECT
+      'PERIOD' AS range_mode,
+
+      TIMESTAMP_SUB(
+        TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH, 'Asia/Kolkata'),
+        INTERVAL 1 MONTH
+      ) AS window_start,
+
+      TIMESTAMP_TRUNC(
+        CURRENT_TIMESTAMP(),
+        MONTH,
+        'Asia/Kolkata'
+      ) AS window_end,
+
+      CAST(NULL AS TIMESTAMP) AS target_timestamp
+  `;
+
     default:
       throw new Error("Invalid range");
   }
@@ -52,20 +119,14 @@ export const getCurrentLoadRowsFromBQ = async (
   logicalSensorKey?: string,
   sensorId?: string
 ) => {
-  const previousTargetSql = getRangeSql(range);
-
-  const previousOrder =
-    range === "1month"
-      ? "b.timestamp_value ASC"
-      : "b.timestamp_value DESC";
-
-  const previousCondition =
-    range === "1month"
-      ? `b.timestamp_value >= ${previousTargetSql}`
-      : `b.timestamp_value <= ${previousTargetSql}`;
+  const windowSql = getCurrentWindowSql(range);
 
   const query = `
-    WITH base AS (
+    WITH config AS (
+      ${windowSql}
+    ),
+
+    base AS (
       SELECT
         organization_id,
         site_id,
@@ -103,32 +164,57 @@ export const getCurrentLoadRowsFromBQ = async (
 
     current_rows AS (
       SELECT
-        logical_sensor_key,
-        sensor_id,
-        sensor_name,
-        api_endpoint,
-        value AS current_reading,
-        quality_good AS current_quality_good,
-        timestamp_value AS current_timestamp
-      FROM base
+        b.logical_sensor_key,
+        b.sensor_id,
+        b.sensor_name,
+        b.api_endpoint,
+        b.value AS current_reading,
+        b.quality_good AS current_quality_good,
+        b.timestamp_value AS current_timestamp,
+        c.range_mode,
+        c.window_start,
+        c.window_end
+      FROM base b
+      CROSS JOIN config c
+      WHERE
+        c.range_mode = 'ROLLING'
+        OR (
+          c.range_mode = 'PERIOD'
+          AND b.timestamp_value >= c.window_start
+          AND b.timestamp_value < c.window_end
+        )
       QUALIFY ROW_NUMBER() OVER (
-        PARTITION BY logical_sensor_key
-        ORDER BY timestamp_value DESC
+        PARTITION BY b.logical_sensor_key
+        ORDER BY b.timestamp_value DESC
       ) = 1
     ),
 
     previous_rows AS (
       SELECT
-        c.logical_sensor_key,
+        cr.logical_sensor_key,
         b.value AS previous_reading,
+        b.quality_good AS previous_quality_good,
         b.timestamp_value AS previous_timestamp
-      FROM current_rows c
+      FROM current_rows cr
       JOIN base b
-        ON b.logical_sensor_key = c.logical_sensor_key
-      WHERE ${previousCondition}
+        ON b.logical_sensor_key = cr.logical_sensor_key
+      CROSS JOIN config c
+      WHERE
+        (
+          c.range_mode = 'ROLLING'
+          AND b.timestamp_value <= c.target_timestamp
+        )
+        OR
+        (
+          c.range_mode = 'PERIOD'
+          AND b.timestamp_value >= c.window_start
+          AND b.timestamp_value < c.window_end
+        )
       QUALIFY ROW_NUMBER() OVER (
-        PARTITION BY c.logical_sensor_key
-        ORDER BY ${previousOrder}
+        PARTITION BY cr.logical_sensor_key
+        ORDER BY
+          IF(c.range_mode = 'ROLLING', b.timestamp_value, NULL) DESC,
+          IF(c.range_mode = 'PERIOD', b.timestamp_value, NULL) ASC
       ) = 1
     )
 
@@ -138,49 +224,55 @@ export const getCurrentLoadRowsFromBQ = async (
       c.sensor_name,
       c.api_endpoint,
 
+      c.range_mode,
+      c.window_start,
+      c.window_end,
+
       c.current_timestamp,
       c.current_reading,
+      c.current_quality_good,
 
       p.previous_timestamp,
       p.previous_reading,
+      p.previous_quality_good,
 
       CASE
         WHEN c.current_reading IS NULL OR p.previous_reading IS NULL THEN NULL
         ELSE c.current_reading - p.previous_reading
       END AS load,
 
-      c.current_quality_good,
+      CASE
+        WHEN c.current_quality_good = FALSE
+          OR p.previous_quality_good = FALSE
+          THEN 'BAD_QUALITY'
 
-CASE
-  WHEN c.current_quality_good = FALSE
-    THEN 'BAD_QUALITY'
+        WHEN c.current_reading IS NULL
+          OR p.previous_reading IS NULL
+          THEN 'NO_DATA'
 
-  WHEN c.current_reading IS NULL
-    OR p.previous_reading IS NULL
-    THEN 'NO_DATA'
+        WHEN c.current_reading - p.previous_reading < 0
+          THEN 'INVALID_LOAD'
 
-  WHEN c.current_reading - p.previous_reading < 0
-    THEN 'INVALID_LOAD'
+        WHEN c.current_reading - p.previous_reading = 0
+          THEN 'NO_CHANGE'
 
-  WHEN c.current_reading - p.previous_reading = 0
-    THEN 'NO_CHANGE'
+        ELSE 'HEALTHY'
+      END AS load_status,
 
-  ELSE 'HEALTHY'
-END AS load_status,
+      CASE
+        WHEN c.current_quality_good = FALSE
+          OR p.previous_quality_good = FALSE
+          THEN FALSE
 
-CASE
-  WHEN c.current_quality_good = FALSE
-    THEN FALSE
+        WHEN c.current_reading IS NULL
+          OR p.previous_reading IS NULL
+          THEN FALSE
 
-  WHEN c.current_reading IS NULL
-    OR p.previous_reading IS NULL
-    THEN FALSE
+        WHEN c.current_reading - p.previous_reading < 0
+          THEN FALSE
 
-  WHEN c.current_reading - p.previous_reading < 0
-    THEN FALSE
-
-  ELSE TRUE
-END AS is_valid_load
+        ELSE TRUE
+      END AS is_valid_load
 
     FROM current_rows c
     LEFT JOIN previous_rows p

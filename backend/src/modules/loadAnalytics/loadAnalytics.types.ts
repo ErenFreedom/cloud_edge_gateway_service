@@ -1,6 +1,6 @@
-export type LoadRange = "10m" | "1h" | "6h" | "24h" | "1w" | "1month";
+export type LoadRange = "10m" | "1h" | "6h" | "24h" | "1w" | "1month" | "lastMonth";
 
-export type ExportInterval = "10m" | "1h" | "6h" | "24h" | "1w" | "1month";
+export type ExportInterval = "10m" | "1h" | "6h" | "24h" | "1w" | "1month" | "lastMonth";
 
 export interface LoadAnalyticsRow {
   logical_sensor_key: string;
