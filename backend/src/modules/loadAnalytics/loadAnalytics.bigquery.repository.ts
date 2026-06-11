@@ -58,30 +58,44 @@ const getCurrentWindowSql = (range: LoadRange) => {
       `;
 
     case "1month":
-      return `
-        SELECT
-          'PERIOD' AS range_mode,
-          TIMESTAMP_SUB(
-            TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH, 'Asia/Kolkata'),
-            INTERVAL 1 MONTH
-          ) AS window_start,
-          TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH, 'Asia/Kolkata') AS window_end,
-          CAST(NULL AS TIMESTAMP) AS target_timestamp
-      `;
-
-      case "lastMonth":
   return `
     SELECT
       'PERIOD' AS range_mode,
 
-      TIMESTAMP_SUB(
-        TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), MONTH, 'Asia/Kolkata'),
-        INTERVAL 1 MONTH
+      TIMESTAMP(
+        DATETIME_TRUNC(
+          CURRENT_DATETIME('Asia/Kolkata'),
+          MONTH
+        ),
+        'Asia/Kolkata'
       ) AS window_start,
 
-      TIMESTAMP_TRUNC(
-        CURRENT_TIMESTAMP(),
-        MONTH,
+      CURRENT_TIMESTAMP() AS window_end,
+
+      CAST(NULL AS TIMESTAMP) AS target_timestamp
+  `;
+
+case "lastMonth":
+  return `
+    SELECT
+      'PERIOD' AS range_mode,
+
+      TIMESTAMP(
+        DATETIME_SUB(
+          DATETIME_TRUNC(
+            CURRENT_DATETIME('Asia/Kolkata'),
+            MONTH
+          ),
+          INTERVAL 1 MONTH
+        ),
+        'Asia/Kolkata'
+      ) AS window_start,
+
+      TIMESTAMP(
+        DATETIME_TRUNC(
+          CURRENT_DATETIME('Asia/Kolkata'),
+          MONTH
+        ),
         'Asia/Kolkata'
       ) AS window_end,
 
