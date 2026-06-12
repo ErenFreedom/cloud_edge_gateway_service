@@ -2,6 +2,7 @@ import express from "express";
 import {
   exportLoadAnalyticsController,
   getCurrentLoadAnalyticsController,
+  getLiveLoadAnalyticsController,
 } from "./loadAnalytics.controller";
 
 import { authMiddleware } from "../../middleware/auth.middleware";
@@ -18,6 +19,12 @@ router.get(
   "/export",
   authMiddleware,
   exportLoadAnalyticsController
+);
+
+router.get(
+  "/live",
+  authMiddleware,
+  getLiveLoadAnalyticsController
 );
 
 export default router;

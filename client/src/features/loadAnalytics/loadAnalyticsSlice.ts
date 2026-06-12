@@ -5,6 +5,7 @@ import {
 
 import {
     fetchCurrentLoadAnalytics,
+    fetchLiveLoadAnalytics,
     exportLoadAnalyticsCsv,
 } from "../../services/loadAnalytics.service";
 
@@ -13,6 +14,7 @@ import type { LoadRange } from "../../services/loadAnalytics.service";
 interface LoadAnalyticsState {
     loading: boolean;
     exportLoading: boolean;
+    liveLoading: boolean;
 
     error: string | null;
     success: boolean;
@@ -20,13 +22,16 @@ interface LoadAnalyticsState {
     currentRange: LoadRange;
 
     sensors: any[];
+    liveSensors: any[];
 
     exportBlob: Blob | null;
 }
 
+
 const initialState: LoadAnalyticsState = {
     loading: false,
     exportLoading: false,
+    liveLoading: false,
 
     error: null,
     success: false,
@@ -34,9 +39,11 @@ const initialState: LoadAnalyticsState = {
     currentRange: "1h",
 
     sensors: [],
+    liveSensors: [],
 
     exportBlob: null,
 };
+
 
 export const fetchCurrentLoadAnalyticsThunk =
     createAsyncThunk(
@@ -71,6 +78,24 @@ export const exportLoadAnalyticsThunk =
             }
         }
     );
+
+export const fetchLiveLoadAnalyticsThunk =
+    createAsyncThunk(
+        "loadAnalytics/fetchLive",
+        async (payload: any, thunkAPI) => {
+            try {
+                return await fetchLiveLoadAnalytics(
+                    payload
+                );
+            } catch (err: any) {
+                return thunkAPI.rejectWithValue(
+                    err.response?.data?.message ||
+                    "Failed to fetch live analytics"
+                );
+            }
+        }
+    );
+
 
 const loadAnalyticsSlice = createSlice({
     name: "loadAnalytics",
@@ -141,6 +166,33 @@ const loadAnalyticsSlice = createSlice({
                 exportLoadAnalyticsThunk.rejected,
                 (state, action) => {
                     state.exportLoading = false;
+
+                    state.error =
+                        action.payload as string;
+                }
+            )
+
+            .addCase(
+                fetchLiveLoadAnalyticsThunk.pending,
+                (state) => {
+                    state.liveLoading = true;
+                }
+            )
+
+            .addCase(
+                fetchLiveLoadAnalyticsThunk.fulfilled,
+                (state, action) => {
+                    state.liveLoading = false;
+
+                    state.liveSensors =
+                        action.payload?.sensors || [];
+                }
+            )
+
+            .addCase(
+                fetchLiveLoadAnalyticsThunk.rejected,
+                (state, action) => {
+                    state.liveLoading = false;
 
                     state.error =
                         action.payload as string;

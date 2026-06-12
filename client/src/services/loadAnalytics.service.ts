@@ -25,6 +25,13 @@ export interface CurrentLoadRequest {
   logical_sensor_key?: string;
 }
 
+export interface LiveLoadRequest {
+  site_id: string;
+
+  sensor_id?: string;
+  logical_sensor_key?: string;
+}
+
 export interface ExportRequest {
   site_id: string;
   from: string;
@@ -65,6 +72,20 @@ export const exportLoadAnalyticsCsv = async (
     {
       params: payload,
       responseType: "blob",
+    }
+  );
+
+  return response.data;
+};
+
+
+export const fetchLiveLoadAnalytics = async (
+  payload: LiveLoadRequest
+) => {
+  const response = await apiClient.get(
+    "/load-analytics/live",
+    {
+      params: payload,
     }
   );
 

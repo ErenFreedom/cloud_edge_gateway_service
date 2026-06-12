@@ -4,11 +4,13 @@ import {
   validateLoadRange,
   validateSiteId,
   parseCsvParam,
+  validateOptionalSensorFilters,
 } from "./loadAnalytics.validator";
 
 import {
   getCurrentLoadRowsFromBQ,
   getExportRowsFromBQ,
+  getLiveSensorRowsFromBQ
 } from "./loadAnalytics.bigquery.repository";
 
 const getOrganizationId = (user: any): string => {
@@ -95,5 +97,36 @@ export const getLoadAnalyticsExportService = async (
 
       generated_at: new Date().toISOString(),
     },
+  };
+};
+
+
+export const getLiveLoadAnalyticsService = async (
+  user: any,
+  query: any
+) => {
+  const organizationId = getOrganizationId(user);
+  const siteId = validateSiteId(query.site_id);
+
+  const { sensorId, logicalSensorKey } =
+    validateOptionalSensorFilters(query);
+
+  const rows = await getLiveSensorRowsFromBQ(
+    organizationId,
+    siteId,
+    logicalSensorKey,
+    sensorId
+  );
+
+  return {
+    organization_id: organizationId,
+    site_id: siteId,
+
+    sensor_id: sensorId || null,
+    logical_sensor_key: logicalSensorKey || null,
+
+    generated_at: new Date().toISOString(),
+    total_sensors: rows.length,
+    sensors: rows,
   };
 };

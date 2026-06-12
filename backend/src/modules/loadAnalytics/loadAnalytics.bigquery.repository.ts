@@ -419,3 +419,113 @@ export const getExportRowsFromBQ = async (
 
   return rows;
 };
+
+
+export const getLiveSensorRowsFromBQ = async (
+  organizationId: string,
+  siteId: string,
+  logicalSensorKey?: string,
+  sensorId?: string
+) => {
+  const query = `
+    WITH ranked AS (
+      SELECT
+        logical_sensor_key,
+        sensor_id,
+        sensor_name,
+        api_endpoint,
+        value,
+        quality_good,
+        timestamp_value,
+
+        ROW_NUMBER() OVER (
+          PARTITION BY logical_sensor_key
+          ORDER BY timestamp_value DESC
+        ) AS rn
+
+      FROM \`${LOGICAL_VIEW}\`
+      WHERE organization_id = @organizationId
+        AND site_id = @siteId
+        AND logical_sensor_key IS NOT NULL
+        AND timestamp_value IS NOT NULL
+
+        AND (
+          @logicalSensorKey = ''
+          OR logical_sensor_key = @logicalSensorKey
+        )
+
+        AND (
+          @sensorId = ''
+          OR logical_sensor_key IN (
+            SELECT DISTINCT logical_sensor_key
+            FROM \`${LOGICAL_VIEW}\`
+            WHERE organization_id = @organizationId
+              AND site_id = @siteId
+              AND sensor_id = @sensorId
+              AND logical_sensor_key IS NOT NULL
+          )
+        )
+    ),
+
+    latest AS (
+      SELECT *
+      FROM ranked
+      WHERE rn = 1
+    ),
+
+    previous AS (
+      SELECT *
+      FROM ranked
+      WHERE rn = 2
+    )
+
+    SELECT
+      l.logical_sensor_key,
+      l.sensor_id,
+      l.sensor_name,
+      l.api_endpoint,
+
+      l.value AS live_value,
+      p.value AS last_value,
+
+      CASE
+        WHEN l.value IS NULL OR p.value IS NULL THEN NULL
+        ELSE l.value - p.value
+      END AS change_value,
+
+      l.quality_good,
+      FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', l.timestamp_value) AS last_updated_on,
+
+      CASE
+        WHEN l.quality_good = FALSE THEN 'BAD_QUALITY'
+
+        WHEN l.value IS NULL THEN 'NO_DATA'
+
+        WHEN p.value IS NULL THEN 'NO_DATA'
+
+        WHEN l.value - p.value < 0 THEN 'INVALID_CHANGE'
+
+        WHEN l.value - p.value = 0 THEN 'NO_CHANGE'
+
+        ELSE 'HEALTHY'
+      END AS live_status
+
+    FROM latest l
+    LEFT JOIN previous p
+      ON l.logical_sensor_key = p.logical_sensor_key
+
+    ORDER BY l.sensor_name ASC
+  `;
+
+  const [rows] = await bigquery.query({
+    query,
+    params: {
+      organizationId,
+      siteId,
+      logicalSensorKey: logicalSensorKey || "",
+      sensorId: sensorId || "",
+    },
+  });
+
+  return rows;
+};

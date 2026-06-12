@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   getCurrentLoadAnalyticsService,
   getLoadAnalyticsExportService,
+  getLiveLoadAnalyticsService,
 } from "./loadAnalytics.service";
 
 const escapeCsv = (value: any): string => {
@@ -86,6 +87,23 @@ export const exportLoadAnalyticsController = async (
     res.setHeader("Expires", "0");
 
     res.status(200).send(csv);
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+
+export const getLiveLoadAnalyticsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const data = await getLiveLoadAnalyticsService(
+      (req as any).user,
+      req.query
+    );
+
+    res.json(data);
   } catch (err: any) {
     res.status(400).json({ message: err.message });
   }

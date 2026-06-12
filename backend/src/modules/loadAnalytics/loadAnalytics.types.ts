@@ -34,3 +34,24 @@ export interface ExportFilterOptions {
   logicalSensorKeys?: string[];
   sensorIds?: string[];
 }
+
+export interface LiveSensorRow {
+  logical_sensor_key: string;
+  sensor_id: string;
+  sensor_name: string;
+  api_endpoint: string | null;
+
+  live_value: number | null;
+  last_value: number | null;
+  change_value: number | null;
+
+  quality_good: boolean | null;
+  last_updated_on: string | Date | null;
+
+  live_status:
+    | "HEALTHY"
+    | "BAD_QUALITY"
+    | "NO_DATA"
+    | "NO_CHANGE"
+    | "INVALID_CHANGE";
+}

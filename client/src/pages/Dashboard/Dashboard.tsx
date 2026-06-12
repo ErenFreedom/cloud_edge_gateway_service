@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FaUserCircle, FaEye, FaEdit, FaDownload, FaChartLine } from "react-icons/fa";
+import { FaUserCircle, FaEye, FaEdit, FaDownload, FaChartLine, FaBroadcastTower } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import type { RootState, AppDispatch } from "../../store/store";
 import SiteLocationPicker from "../../components/maps/SiteLocationPicker";
@@ -46,6 +46,7 @@ import {
 
 import {
   fetchCurrentLoadAnalyticsThunk,
+  fetchLiveLoadAnalyticsThunk,
   exportLoadAnalyticsThunk,
   setCurrentRange
 } from "../../features/loadAnalytics/loadAnalyticsSlice";
@@ -197,14 +198,16 @@ const Dashboard = () => {
 
   const {
     sensors: loadSensors,
+    liveSensors,
     loading: loadLoading,
+    liveLoading,
     exportLoading,
     currentRange
   } = loadAnalyticsState;
 
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const [analyticsSiteId, setAnalyticsSiteId] = useState<string | null>(null);
-  const [analyticsTab, setAnalyticsTab] = useState<"load" | "export">("load");
+  const [analyticsTab, setAnalyticsTab] = useState<"load" | "export" | "live">("load");
 
   const [analyticsExportState, setAnalyticsExportState] = useState<any>({});
   const [selectedAnalyticsSensors, setSelectedAnalyticsSensors] = useState<string[]>([]);
@@ -303,6 +306,16 @@ const Dashboard = () => {
       fetchCurrentLoadAnalyticsThunk({
         site_id: analyticsSiteId,
         range,
+      })
+    );
+  };
+
+  const fetchLiveAnalytics = () => {
+    if (!analyticsSiteId) return;
+
+    dispatch(
+      fetchLiveLoadAnalyticsThunk({
+        site_id: analyticsSiteId,
       })
     );
   };
@@ -599,6 +612,29 @@ const Dashboard = () => {
 
     setComplianceMapping(initialMapping);
   }, [exportMode, clientState.sensors, complianceConfig]);
+
+
+  useEffect(() => {
+    if (!analyticsModalOpen) return;
+    if (!analyticsSiteId) return;
+    if (analyticsTab !== "live") return;
+
+    dispatch(
+      fetchLiveLoadAnalyticsThunk({
+        site_id: analyticsSiteId,
+      })
+    );
+
+    const timer = window.setInterval(() => {
+      dispatch(
+        fetchLiveLoadAnalyticsThunk({
+          site_id: analyticsSiteId,
+        })
+      );
+    }, 30000);
+
+    return () => window.clearInterval(timer);
+  }, [analyticsModalOpen, analyticsSiteId, analyticsTab, dispatch]);
 
 
   const saveConfig = () => {
@@ -1915,6 +1951,17 @@ const Dashboard = () => {
               >
                 Data Export
               </button>
+
+              <button
+                className={analyticsTab === "live" ? "active live-tab-active" : ""}
+                onClick={() => setAnalyticsTab("live")}
+              >
+                <span className="live-tab-label">
+                  <FaBroadcastTower />
+                  <span className="live-pulse-dot" />
+                  Live Monitoring
+                </span>
+              </button>
             </div>
 
             {analyticsTab === "load" && (
@@ -2100,6 +2147,107 @@ const Dashboard = () => {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+
+            {analyticsTab === "live" && (
+              <>
+                <div className="analytics-live-header">
+                  <div>
+                    <div className="section-title">Live Sensor Monitoring</div>
+                    <p className="analytics-live-subtext">
+                      Auto-refreshes every 30 seconds using latest telemetry.
+                    </p>
+                  </div>
+
+                  <button
+                    className="analytics-refresh-btn"
+                    onClick={fetchLiveAnalytics}
+                    disabled={liveLoading}
+                  >
+                    {liveLoading ? "Refreshing..." : "Refresh Now"}
+                  </button>
+                </div>
+
+                {liveLoading && (
+                  <p className="loading-text">Refreshing live values...</p>
+                )}
+
+                <div className="analytics-table-wrapper">
+                  <table className="analytics-table">
+                    <thead>
+                      <tr>
+                        <th>Live</th>
+                        <th>Sensor Name</th>
+                        <th>API</th>
+                        <th>Live Value</th>
+                        <th>Last Value</th>
+                        <th>Change</th>
+                        <th>Status</th>
+                        <th>Last Updated On</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {liveSensors.map((sensor: any) => (
+                        <tr key={sensor.logical_sensor_key}>
+                          <td>
+                            <span
+                              className={`sensor-live-indicator ${sensor.live_status === "HEALTHY" ||
+                                sensor.live_status === "NO_CHANGE"
+                                ? "online"
+                                : "issue"
+                                }`}
+                            >
+                              <span className="live-pulse-dot" />
+                            </span>
+                          </td>
+
+                          <td>{sensor.sensor_name || "-"}</td>
+
+                          <td className="analytics-api-cell">
+                            {sensor.api_endpoint || "-"}
+                          </td>
+
+                          <td>{sensor.live_value ?? "-"}</td>
+
+                          <td>{sensor.last_value ?? "-"}</td>
+
+                          <td>{sensor.change_value ?? "-"}</td>
+
+                          <td>
+                            <span
+                              className={`analytics-status ${sensor.live_status === "HEALTHY"
+                                ? "good"
+                                : sensor.live_status === "NO_CHANGE"
+                                  ? "info"
+                                  : sensor.live_status === "NO_DATA"
+                                    ? "warning"
+                                    : "bad"
+                                }`}
+                            >
+                              {sensor.live_status}
+                            </span>
+                          </td>
+
+                          <td>
+                            {sensor.last_updated_on
+                              ? new Date(sensor.last_updated_on).toLocaleString()
+                              : "-"}
+                          </td>
+                        </tr>
+                      ))}
+
+                      {!liveLoading && liveSensors.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="analytics-empty-cell">
+                            No live telemetry found.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>

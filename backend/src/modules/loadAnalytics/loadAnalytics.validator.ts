@@ -5,6 +5,21 @@ import { ExportInterval, LoadRange } from "./loadAnalytics.types";
 const LOAD_RANGES: LoadRange[] = ["10m", "1h", "6h", "24h", "1w", "1month", "lastMonth"];
 const EXPORT_INTERVALS: ExportInterval[] = ["10m", "1h", "6h", "24h", "1w", "1month"];
 
+export const validateOptionalSensorFilters = (query: any) => {
+  return {
+    sensorId:
+      typeof query.sensor_id === "string" && query.sensor_id.trim()
+        ? query.sensor_id.trim()
+        : "",
+
+    logicalSensorKey:
+      typeof query.logical_sensor_key === "string" && query.logical_sensor_key.trim()
+        ? query.logical_sensor_key.trim()
+        : "",
+  };
+};
+
+
 export const validateSiteId = (siteId: any): string => {
   if (!siteId || typeof siteId !== "string") {
     throw new Error("site_id required");
