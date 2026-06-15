@@ -227,7 +227,7 @@ export const verifyEmailChange = async (
 
 export const editSiteUser = async (
   payload: {
-    userId: string
+    user_id?: string
     full_name?: string
     phone?: string
     birthdate?: string
@@ -236,12 +236,10 @@ export const editSiteUser = async (
     email?: string
   }
 ) => {
-
   const response = await apiClient.put(
     "/sites/users/edit",
     payload
   )
 
   return response.data
-
 }

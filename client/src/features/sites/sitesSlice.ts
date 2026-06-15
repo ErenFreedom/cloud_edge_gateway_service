@@ -552,7 +552,7 @@ const sitesSlice = createSlice({
         state.loading = false;
 
         state.emailChangeRequested = true;
-        state.emailChangeOtpId = action.payload.otpId;
+        state.emailChangeOtpId = action.payload.otp_id;
 
       })
 

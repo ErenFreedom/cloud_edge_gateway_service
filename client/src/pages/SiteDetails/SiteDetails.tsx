@@ -107,9 +107,8 @@ const SiteDetails = () => {
     };
 
     const saveAdminChanges = () => {
-
         dispatch(editSiteUserThunk({
-            userId: adminForm.id,
+            user_id: adminForm.id,
             full_name: adminForm.full_name,
             phone: adminForm.phone,
             birthdate: adminForm.birthdate,
@@ -117,18 +116,15 @@ const SiteDetails = () => {
         }));
 
         setEditingAdmin(false);
-
     };
 
     const removeAdmin = () => {
-
         if (!admin) return;
 
         dispatch(editSiteUserThunk({
             action: "remove_admin",
-            userId: admin.id
+            user_id: admin.id
         }));
-
     };
 
 
@@ -146,12 +142,10 @@ const SiteDetails = () => {
     };
 
     const removeViewer = (viewerId: string) => {
-
         dispatch(editSiteUserThunk({
             action: "remove_viewer",
-            userId: viewerId
+            user_id: viewerId
         }));
-
     };
 
     const requestEmailChange = () => {
