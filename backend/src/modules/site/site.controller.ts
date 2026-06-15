@@ -1,4 +1,4 @@
-import { Request,Response } from "express";
+import { Response } from "express";
 
 import { AuthRequest } from "../../middleware/auth.middleware";
 
@@ -258,33 +258,32 @@ export const editSiteUser = async (
 
 
 export const getSiteDetailsController = async (
-  req: Request<{ siteId: string }>,
+  req: AuthRequest,
   res: Response
 ) => {
-
   try {
+    const user = req.user;
 
-    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
 
-    const { siteId } = req.params;
+    const siteId = req.params.siteId as string;
 
-    const result =
-      await getSiteDetailsService(
-        user.userId,
-        user.role,
-        siteId
-      );
+    const result = await getSiteDetailsService(
+      user.userId,
+      user.role,
+      siteId
+    );
 
     res.json(result);
-
   } catch (error: any) {
-
     res.status(400).json({
-      message: error.message
+      message: error.message,
     });
-
   }
-
 };
 
 

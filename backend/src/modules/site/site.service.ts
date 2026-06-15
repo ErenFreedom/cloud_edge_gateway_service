@@ -25,7 +25,9 @@ import {
   getSiteDetailsRepo,
   createEmailChangeOtpRepo,
   findValidEmailChangeOtpRepo,
-  markEmailChangeOtpVerifiedRepo
+  markEmailChangeOtpVerifiedRepo,
+  getMonitorAssignedSiteIdsRepo,
+  verifyMonitorSiteAccessRepo
 
 } from "./site.repository";
 import { EditSitePayload } from "./site.types"
@@ -399,56 +401,89 @@ export const verifySiteAdminOtpService = async (
 
 
 
+const attachSiteAccess = (
+  site: any,
+  role: string,
+  assignedSiteIds: string[] = []
+) => {
+  const assignedSet = new Set(assignedSiteIds);
+  const assigned = assignedSet.has(site.id);
+
+  if (role === "site_monitor") {
+    return {
+      ...site,
+      access: {
+        assigned,
+        can_view: assigned,
+        can_edit: false,
+        can_download: false,
+        can_manage_credentials: false,
+        can_view_load_analytics: assigned,
+      },
+    };
+  }
+
+  return {
+    ...site,
+    access: {
+      assigned: true,
+      can_view: true,
+      can_edit: true,
+      can_download: true,
+      can_manage_credentials: true,
+      can_view_load_analytics: true,
+    },
+  };
+};
+
 export const getSitesService = async (
   userId: string,
   role: string,
   organizationId: string | null
 ) => {
-
-  if (!organizationId)
+  if (!organizationId) {
     throw new Error("User not linked to organization");
-
-
-
-  if (role === "super_admin") {
-
-    const sites = await getSitesByOrganizationRepo(
-      organizationId
-    );
-
-    return sites;
-
   }
 
+  const client = await pool.connect();
 
+  try {
+    if (role === "super_admin") {
+      const sites = await getSitesByOrganizationRepo(organizationId);
 
-  if (role === "org_site_manager") {
-
-    const client = await pool.connect();
-
-    try {
-
-      const sites =
-        await getSitesForManagerRepo(
-          client,
-          userId
-        );
-
-      return sites;
-
-    }
-    finally {
-
-      client.release();
-
+      return sites.map((site: any) =>
+        attachSiteAccess(site, role)
+      );
     }
 
+    if (role === "org_site_manager") {
+      const sites = await getSitesForManagerRepo(client, userId);
+
+      return sites.map((site: any) =>
+        attachSiteAccess(site, role)
+      );
+    }
+
+    if (role === "site_monitor") {
+      const allOrgSites = await getSitesByOrganizationRepo(organizationId);
+
+      const assignedSiteIds = await getMonitorAssignedSiteIdsRepo(
+        client,
+        userId
+      );
+
+      return allOrgSites.map((site: any) =>
+        attachSiteAccess(site, role, assignedSiteIds)
+      );
+    }
+
+    throw new Error("Unauthorized to view sites");
+  } finally {
+    client.release();
   }
-
-
-  throw new Error("Unauthorized to view sites");
-
 };
+
+
 
 export const unlockSiteCredentialsService = async (
   userId: string,
@@ -991,48 +1026,51 @@ export const getSiteDetailsService = async (
   role: string,
   siteId: string
 ) => {
-
   const client = await pool.connect();
 
   try {
-
     if (
       role !== "super_admin" &&
-      role !== "org_site_manager"
+      role !== "org_site_manager" &&
+      role !== "site_monitor"
     ) {
       throw new Error("Unauthorized");
     }
 
-    /* MANAGER SITE ACCESS CHECK */
-
     if (role === "org_site_manager") {
+      const hasAccess = await verifyManagerSiteAccessRepo(
+        client,
+        userId,
+        siteId
+      );
 
-      const hasAccess =
-        await verifyManagerSiteAccessRepo(
-          client,
-          userId,
-          siteId
-        );
-
-      if (!hasAccess)
+      if (!hasAccess) {
         throw new Error("Access denied for this site");
+      }
     }
 
-    const result =
-      await getSiteDetailsRepo(client, siteId);
+    if (role === "site_monitor") {
+      const hasAccess = await verifyMonitorSiteAccessRepo(
+        client,
+        userId,
+        siteId
+      );
 
-    if (!result)
+      if (!hasAccess) {
+        throw new Error("Access denied for this site");
+      }
+    }
+
+    const result = await getSiteDetailsRepo(client, siteId);
+
+    if (!result) {
       throw new Error("Site not found");
+    }
 
     return result;
-
-  }
-  finally {
-
+  } finally {
     client.release();
-
   }
-
 };
 
 

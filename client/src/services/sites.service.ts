@@ -72,7 +72,6 @@ export interface SiteInfo {
 
   site_uuid: string | null
 
-  /* 🔥 ADD THESE */
   site_secret: string | null
   device_secret: string | null
 
@@ -194,8 +193,9 @@ export const updateSite = async (
 
 export const requestEmailChange = async (
   payload: {
-    userId: string;
-    newEmail: string;
+    user_id: string;
+    old_email: string;
+    new_email: string;
   }
 ) => {
 
@@ -205,13 +205,12 @@ export const requestEmailChange = async (
   );
 
   return response.data;
-
 };
 
 
 export const verifyEmailChange = async (
   payload: {
-    otpId: string;
+    otp_id: string;
     otp: string;
   }
 ) => {

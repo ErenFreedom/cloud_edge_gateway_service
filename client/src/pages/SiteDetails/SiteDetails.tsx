@@ -14,6 +14,14 @@ import {
     verifyEmailChangeThunk
 } from "../../features/sites/sitesSlice";
 
+import {
+    inviteSiteMonitorThunk,
+    verifySiteMonitorOtpThunk,
+    fetchSiteMonitorsThunk,
+} from "../../features/siteMonitor/siteMonitorSlice";
+
+
+
 import Button from "../../components/ui/Button";
 
 import "./SiteDetails.css";
@@ -52,6 +60,23 @@ const SiteDetails = () => {
 
     const [formData, setFormData] = useState<any>({});
 
+    const [monitorModal, setMonitorModal] = useState(false);
+    const [monitorStep, setMonitorStep] = useState<"invite" | "verify">("invite");
+
+    const [monitorForm, setMonitorForm] = useState({
+        full_name: "",
+        email: "",
+        otp: "",
+    });
+
+    const { monitors, inviteLoading, verifyLoading } = useSelector(
+        (state: RootState) => state.siteMonitor
+    );
+
+
+
+
+
     useEffect(() => {
 
         if (siteId) {
@@ -59,6 +84,10 @@ const SiteDetails = () => {
         }
 
     }, [siteId, dispatch]);
+
+    useEffect(() => {
+        dispatch(fetchSiteMonitorsThunk());
+    }, [dispatch]);
 
     useEffect(() => {
 
@@ -126,18 +155,22 @@ const SiteDetails = () => {
     };
 
     const requestEmailChange = () => {
+        if (!adminForm.id || !adminForm.email || !newEmail.trim()) {
+            alert("Please enter a valid new email");
+            return;
+        }
 
         dispatch(requestEmailChangeThunk({
-            userId: adminForm.id,
-            newEmail
+            user_id: adminForm.id,
+            old_email: adminForm.email,
+            new_email: newEmail.trim()
         }));
-
     };
 
     const verifyEmailOtp = (otpId: string) => {
 
         dispatch(verifyEmailChangeThunk({
-            otpId,
+            otp_id: otpId,
             otp
         })).then(() => {
             if (siteId) {
@@ -191,6 +224,49 @@ const SiteDetails = () => {
     const admin = selectedSite.site_admin;
 
     const viewers = selectedSite.viewers || [];
+
+    const siteMonitors = monitors.filter((monitor) =>
+        monitor.sites?.some((s) => s.site_id === siteId)
+    );
+
+    const inviteMonitor = async () => {
+        if (!siteId) return;
+        if (!monitorForm.full_name || !monitorForm.email) return;
+
+        const result = await dispatch(
+            inviteSiteMonitorThunk({
+                full_name: monitorForm.full_name,
+                email: monitorForm.email,
+                site_ids: [siteId],
+            })
+        );
+
+        if (inviteSiteMonitorThunk.fulfilled.match(result)) {
+            setMonitorStep("verify");
+        }
+    };
+
+    const verifyMonitorOtp = async () => {
+        if (!monitorForm.email || !monitorForm.otp) return;
+
+        const result = await dispatch(
+            verifySiteMonitorOtpThunk({
+                email: monitorForm.email,
+                otp: monitorForm.otp,
+            })
+        );
+
+        if (verifySiteMonitorOtpThunk.fulfilled.match(result)) {
+            setMonitorModal(false);
+            setMonitorStep("invite");
+            setMonitorForm({
+                full_name: "",
+                email: "",
+                otp: "",
+            });
+            dispatch(fetchSiteMonitorsThunk());
+        }
+    };
 
     return (
 
@@ -504,6 +580,38 @@ const SiteDetails = () => {
 
                     </div>
 
+                    {/* SITE MONITORS */}
+
+                    <div className="user-block">
+                        <div className="viewer-header">
+                            <h3>Site Monitors</h3>
+
+                            <FaUserPlus
+                                className="user-icon"
+                                onClick={() => {
+                                    setMonitorModal(true);
+                                    setMonitorStep("invite");
+                                }}
+                            />
+                        </div>
+
+                        {siteMonitors.length === 0 && <p>No site monitors assigned</p>}
+
+                        {siteMonitors.map((monitor) => (
+                            <div key={monitor.id} className="user-card">
+                                <p><strong>Name:</strong> {monitor.full_name}</p>
+                                <p><strong>Email:</strong> {monitor.email}</p>
+                                <p><strong>Phone:</strong> {monitor.phone || "-"}</p>
+                                <p>
+                                    <strong>Status:</strong>{" "}
+                                    <span className={`status ${monitor.status}`}>
+                                        {monitor.status}
+                                    </span>
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+
                 </div>
 
                 {isEditMode && (
@@ -557,6 +665,96 @@ const SiteDetails = () => {
 
                     </div>
 
+                )}
+
+                {monitorModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-card">
+                            {monitorStep === "invite" ? (
+                                <>
+                                    <h3>Add Site Monitor</h3>
+
+                                    <input
+                                        placeholder="Full name"
+                                        value={monitorForm.full_name}
+                                        onChange={(e) =>
+                                            setMonitorForm({
+                                                ...monitorForm,
+                                                full_name: e.target.value,
+                                            })
+                                        }
+                                    />
+
+                                    <input
+                                        placeholder="Email"
+                                        value={monitorForm.email}
+                                        onChange={(e) =>
+                                            setMonitorForm({
+                                                ...monitorForm,
+                                                email: e.target.value,
+                                            })
+                                        }
+                                    />
+
+                                    <div className="modal-actions">
+                                        <Button
+                                            size="medium"
+                                            onClick={inviteMonitor}
+                                            disabled={inviteLoading}
+                                        >
+                                            {inviteLoading ? "Sending..." : "Send OTP"}
+                                        </Button>
+
+                                        <Button
+                                            size="medium"
+                                            onClick={() => setMonitorModal(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h3>Verify Site Monitor OTP</h3>
+
+                                    <p style={{ fontSize: "13px", color: "#9ca3af" }}>
+                                        OTP sent to {monitorForm.email}
+                                    </p>
+
+                                    <input
+                                        placeholder="Enter OTP"
+                                        value={monitorForm.otp}
+                                        onChange={(e) =>
+                                            setMonitorForm({
+                                                ...monitorForm,
+                                                otp: e.target.value,
+                                            })
+                                        }
+                                    />
+
+                                    <div className="modal-actions">
+                                        <Button
+                                            size="medium"
+                                            onClick={verifyMonitorOtp}
+                                            disabled={verifyLoading}
+                                        >
+                                            {verifyLoading ? "Verifying..." : "Verify"}
+                                        </Button>
+
+                                        <Button
+                                            size="medium"
+                                            onClick={() => {
+                                                setMonitorModal(false);
+                                                setMonitorStep("invite");
+                                            }}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
                 )}
             </div>
 

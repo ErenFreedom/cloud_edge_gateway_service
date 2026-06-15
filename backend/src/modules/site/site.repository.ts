@@ -715,3 +715,42 @@ export const markEmailChangeOtpVerifiedRepo = async (
   )
 
 }
+
+
+
+export const getMonitorAssignedSiteIdsRepo = async (
+  client: PoolClient,
+  userId: string
+): Promise<string[]> => {
+  const { rows } = await client.query(
+    `
+    SELECT site_id AS id
+    FROM site_user_roles
+    WHERE user_id = $1
+      AND role = 'site_monitor'
+    `,
+    [userId]
+  );
+
+  return rows.map((r) => r.id);
+};
+
+export const verifyMonitorSiteAccessRepo = async (
+  client: PoolClient,
+  userId: string,
+  siteId: string
+): Promise<boolean> => {
+  const { rowCount } = await client.query(
+    `
+    SELECT 1
+    FROM site_user_roles
+    WHERE user_id = $1
+      AND site_id = $2
+      AND role = 'site_monitor'
+    LIMIT 1
+    `,
+    [userId, siteId]
+  );
+
+  return (rowCount ?? 0) > 0;
+};

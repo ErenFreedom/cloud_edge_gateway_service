@@ -284,25 +284,22 @@ export const updateSiteThunk = createAsyncThunk(
 export const requestEmailChangeThunk = createAsyncThunk(
   "sites/requestEmailChange",
   async (
-    payload: { userId: string; newEmail: string },
+    payload: {
+      user_id: string;
+      old_email: string;
+      new_email: string;
+    },
     thunkAPI
   ) => {
-
     try {
-
       const data = await requestEmailChange(payload);
-
       return data;
-
     } catch (error: any) {
-
       return thunkAPI.rejectWithValue(
         error.response?.data?.message ||
         "Failed to request email change"
       );
-
     }
-
   }
 );
 
@@ -310,28 +307,23 @@ export const requestEmailChangeThunk = createAsyncThunk(
 export const verifyEmailChangeThunk = createAsyncThunk(
   "sites/verifyEmailChange",
   async (
-    payload: { otpId: string; otp: string },
+    payload: {
+      otp_id: string;
+      otp: string;
+    },
     thunkAPI
   ) => {
-
     try {
-
       const data = await verifyEmailChange(payload);
-
       return data;
-
     } catch (error: any) {
-
       return thunkAPI.rejectWithValue(
         error.response?.data?.message ||
         "Failed to verify email change"
       );
-
     }
-
   }
 );
-
 
 export const editSiteUserThunk = createAsyncThunk(
   "sites/editSiteUser",

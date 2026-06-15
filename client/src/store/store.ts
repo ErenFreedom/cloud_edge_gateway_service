@@ -8,6 +8,7 @@ import clientReducer from "../features/client/clientSlice";
 import grihaReducer from "../features/griha/grihaSlice";
 import complianceReducer from "../features/compliance/complianceSlice";
 import loadAnalyticsReducer from "../features/loadAnalytics/loadAnalyticsSlice";
+import siteMonitorReducer from "../features/siteMonitor/siteMonitorSlice";
 
 export const store = configureStore({
 
@@ -22,6 +23,7 @@ export const store = configureStore({
     griha: grihaReducer,
     compliance: complianceReducer,
     loadAnalytics: loadAnalyticsReducer,
+    siteMonitor: siteMonitorReducer,
   }
 
 });

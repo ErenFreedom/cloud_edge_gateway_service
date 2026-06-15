@@ -126,6 +126,13 @@ const Dashboard = () => {
     otpId
   } = useSelector((state: RootState) => state.sites);
 
+  const canManageDashboard = sites.some(
+    (site: any) =>
+      site.access?.can_edit ||
+      site.access?.can_manage_credentials ||
+      site.access?.can_download
+  );
+
 
   const {
     requests: activationRequests,
@@ -929,118 +936,132 @@ const Dashboard = () => {
             <p>No sites created yet.</p>
           )}
 
-          {sites.map((site: any) => (
+          {sites.map((site: any) => {
+            const access = site.access || {};
 
-            <div key={site.id} className="site-card">
+            const canView = !!access.can_view;
+            const canEdit = !!access.can_edit;
 
-              <div className="site-card-header">
+            const canDownload =
+              site.status === "active" && !!access.can_download;
 
-                <h2>{site.site_name}</h2>
+            const canManageCredentials =
+              !!access.can_manage_credentials;
 
-                <span className={`status ${site.status}`}>
-                  {site.status}
-                </span>
+            const canAnalytics =
+              site.status === "active" &&
+              !!access.can_view_load_analytics;
 
-              </div>
+            const isCardDisabled =
+              access.assigned === false;
 
+            return (
+              <div
+                key={site.id}
+                className={`site-card ${isCardDisabled ? "site-card-disabled" : ""}`}
+              >
+                <div className="site-card-header">
+                  <h2>{site.site_name}</h2>
 
-              <div className="site-info">
-
-                <div>
-                  <p><strong>Phone:</strong> {site.phone || "-"}</p>
-                  <p><strong>GST:</strong> {site.gst_number || "-"}</p>
+                  <span className={`status ${site.status}`}>
+                    {site.status}
+                  </span>
                 </div>
 
-                <div>
+                <div className="site-info">
+                  <div>
+                    <p><strong>Phone:</strong> {site.phone || "-"}</p>
+                    <p><strong>GST:</strong> {site.gst_number || "-"}</p>
+                  </div>
 
+                  <div>
+                    <p>
+                      <strong>Address:</strong>{" "}
+                      {site.address_line1} {site.address_line2 || ""}
+                    </p>
+
+                    <p>
+                      <strong>Location:</strong>{" "}
+                      {site.state}, {site.country}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="site-credentials">
                   <p>
-                    <strong>Address:</strong>{" "}
-                    {site.address_line1} {site.address_line2 || ""}
+                    <strong>Site UUID:</strong> ************
                   </p>
 
                   <p>
-                    <strong>Location:</strong>{" "}
-                    {site.state}, {site.country}
+                    <strong>Secret:</strong> ************
                   </p>
-
                 </div>
 
-              </div>
+                <div className="site-actions">
+                  {canManageCredentials && (
+                    <Button
+                      size="small"
+                      onClick={() => openCredentialModal(site.id)}
+                    >
+                      Generate New Credentials
+                    </Button>
+                  )}
 
+                  {!canManageCredentials && <div />}
 
-              {/* MASKED CREDENTIALS */}
-
-              <div className="site-credentials">
-
-                <p>
-                  <strong>Site UUID:</strong> ************
-                </p>
-
-                <p>
-                  <strong>Secret:</strong> ************
-                </p>
-
-              </div>
-
-
-              <div className="site-actions">
-
-                <Button
-                  size="small"
-                  onClick={() => openCredentialModal(site.id)}
-                >
-                  Generate New Credentials
-                </Button>
-
-                <div className="site-icons">
-
-                  <FaChartLine
-                    className={`site-action-icon ${site.status !== "active" ? "disabled" : ""}`}
-                    title={
-                      site.status !== "active"
-                        ? "Activate site to view analytics"
-                        : "Load Analytics"
-                    }
-                    onClick={() => {
-                      if (site.status === "active") {
-                        openAnalyticsModal(site.id);
+                  <div className="site-icons">
+                    <FaChartLine
+                      className={`site-action-icon ${!canAnalytics ? "disabled" : ""}`}
+                      title={
+                        canAnalytics
+                          ? "Load Analytics"
+                          : "No analytics access"
                       }
-                    }}
-                  />
+                      onClick={() => {
+                        if (canAnalytics) {
+                          openAnalyticsModal(site.id);
+                        }
+                      }}
+                    />
 
-                  <FaDownload
-                    className={`site-action-icon ${site.status !== "active" ? "disabled" : ""}`}
-                    title={
-                      site.status !== "active"
-                        ? "Activate site to export data"
-                        : "Export Data"
-                    }
-                    onClick={() => {
-                      if (site.status === "active") {
-                        openExportModal(site.id);
+                    <FaDownload
+                      className={`site-action-icon ${!canDownload ? "disabled" : ""}`}
+                      title={
+                        canDownload
+                          ? "Export Data"
+                          : "No export access"
                       }
-                    }}
-                  />
+                      onClick={() => {
+                        if (canDownload) {
+                          openExportModal(site.id);
+                        }
+                      }}
+                    />
 
-                  <FaEye
-                    className="site-action-icon"
-                    title="View Site"
-                    onClick={() => viewSite(site.id)}
-                  />
+                    <FaEye
+                      className={`site-action-icon ${!canView ? "disabled" : ""}`}
+                      title={canView ? "View Site" : "No view access"}
+                      onClick={() => {
+                        if (canView) {
+                          viewSite(site.id);
+                        }
+                      }}
+                    />
 
-                  <FaEdit
-                    className="site-action-icon"
-                    title="Edit Site"
-                    onClick={() => editSite(site.id)}
-                  />
-
+                    <FaEdit
+                      className={`site-action-icon ${!canEdit ? "disabled" : ""}`}
+                      title={canEdit ? "Edit Site" : "No edit access"}
+                      onClick={() => {
+                        if (canEdit) {
+                          editSite(site.id);
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
-
               </div>
-
-            </div>
-
-          ))}
+            );
+          })}
 
         </div>
 
@@ -1945,12 +1966,14 @@ const Dashboard = () => {
                 Load Overview
               </button>
 
-              <button
-                className={analyticsTab === "export" ? "active" : ""}
-                onClick={() => setAnalyticsTab("export")}
-              >
-                Data Export
-              </button>
+              {canManageDashboard && (
+                <button
+                  className={analyticsTab === "export" ? "active" : ""}
+                  onClick={() => setAnalyticsTab("export")}
+                >
+                  Data Export
+                </button>
+              )}
 
               <button
                 className={analyticsTab === "live" ? "active live-tab-active" : ""}

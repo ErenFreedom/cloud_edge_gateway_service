@@ -18,7 +18,7 @@ import clientRoutes from "./modules/client/client.routes";
 import grihaRoutes from "./modules/griha/griha.routes";
 import complianceRoutes from "./modules/compliance/compliance.routes";
 import loadAnalyticsRoutes from "./modules/loadAnalytics/loadAnalytics.routes";
-
+import siteMonitorRoutes from "./modules/siteMonitor/siteMonitor.routes";
 //ops modules
 import opsAuthRoutes from "./ops/auth/opsAuth.routes";
 
@@ -43,6 +43,7 @@ app.use("/api/client", clientRoutes);
 app.use("/api/griha", grihaRoutes);
 app.use("/api/compliance", complianceRoutes);
 app.use("/api/load-analytics", loadAnalyticsRoutes);
+app.use("/api/site-monitors", siteMonitorRoutes);
 
 //ops routes
 

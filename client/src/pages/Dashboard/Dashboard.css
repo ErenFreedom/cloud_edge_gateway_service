@@ -1046,3 +1046,29 @@ button:disabled {
 .live-tab-label svg {
   font-size: 14px;
 }
+
+
+.site-card-disabled {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.site-card-disabled:hover {
+  border-color: #333;
+  transform: none;
+}
+
+.site-card-disabled .site-action-icon:not(.disabled) {
+  opacity: 1;
+}
+
+.site-action-icon.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.site-action-icon.disabled:hover {
+  transform: none;
+  color: #bbb;
+}
