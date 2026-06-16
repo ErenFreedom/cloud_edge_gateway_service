@@ -91,6 +91,7 @@ router.get(
 
 router.post(
   "/user/request-email-change",
+  authMiddleware,
   requestEmailChangeValidator,
   validateRequest,
   requestEmailChangeController
@@ -98,9 +99,11 @@ router.post(
 
 router.post(
   "/user/verify-email-change",
+  authMiddleware,
   verifyEmailChangeValidator,
   validateRequest,
   verifyEmailChangeController
 );
+
 
 export default router;
