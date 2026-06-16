@@ -312,3 +312,53 @@ gap:12px;
   color: white;
   outline: none;
 }
+
+
+.user-section-header {
+  margin-bottom: 12px;
+}
+
+.user-section-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.user-icon-primary {
+  font-size: 20px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #1f2937;
+  border: 1px solid #374151;
+}
+
+.user-icon-primary:hover {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.empty-user-card {
+  margin-top: 12px;
+  padding: 22px;
+  border: 1px dashed #374151;
+  border-radius: 10px;
+  background: #111827;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.empty-user-card p {
+  color: #9ca3af;
+}
+
+.admin-modal-card {
+  width: 380px;
+}
+
+.modal-helper-text {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-bottom: 10px;
+}

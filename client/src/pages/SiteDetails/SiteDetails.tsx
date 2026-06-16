@@ -74,6 +74,10 @@ const SiteDetails = () => {
     );
 
 
+    const [adminModal, setAdminModal] = useState(false);
+    const [newAdminEmail, setNewAdminEmail] = useState("");
+
+
 
 
 
@@ -139,6 +143,26 @@ const SiteDetails = () => {
 
         setNewViewerEmail("");
 
+    };
+
+    const assignSiteAdmin = async () => {
+        if (!siteId || !newAdminEmail.trim()) {
+            alert("Please enter admin email");
+            return;
+        }
+
+        const result = await dispatch(updateSiteThunk({
+            siteId,
+            data: {
+                new_admin_email: newAdminEmail.trim()
+            }
+        }));
+
+        if (updateSiteThunk.fulfilled.match(result)) {
+            setAdminModal(false);
+            setNewAdminEmail("");
+            dispatch(fetchSiteDetailsThunk(siteId));
+        }
     };
 
     const removeViewer = (viewerId: string) => {
@@ -443,7 +467,20 @@ const SiteDetails = () => {
 
                     <div className="user-block">
 
-                        <h3>Site Admin</h3>
+                        <div className="viewer-header user-section-header">
+                            <div>
+                                <h3>Site Admin</h3>
+                                <p className="user-section-subtitle">
+                                    Assign or manage the primary site administrator
+                                </p>
+                            </div>
+
+                            <FaUserPlus
+                                className="user-icon user-icon-primary"
+                                title={admin ? "Change Site Admin" : "Add Site Admin"}
+                                onClick={() => setAdminModal(true)}
+                            />
+                        </div>
 
                         {admin && (
 
@@ -537,6 +574,20 @@ const SiteDetails = () => {
 
                         )}
 
+
+                        {!admin && (
+                            <div className="empty-user-card">
+                                <p>No site admin assigned</p>
+
+                                <Button
+                                    size="medium"
+                                    onClick={() => setAdminModal(true)}
+                                >
+                                    Add Site Admin
+                                </Button>
+                            </div>
+                        )}
+
                     </div>
 
                     {/* VIEWERS */}
@@ -618,6 +669,43 @@ const SiteDetails = () => {
 
                     </div>
 
+                )}
+
+                {adminModal && (
+                    <div className="modal-overlay">
+                        <div className="modal-card admin-modal-card">
+                            <h3>{admin ? "Change Site Admin" : "Add Site Admin"}</h3>
+
+                            <p className="modal-helper-text">
+                                Enter the email of an existing user to assign them as site admin.
+                            </p>
+
+                            <input
+                                placeholder="Admin email"
+                                value={newAdminEmail}
+                                onChange={(e) => setNewAdminEmail(e.target.value)}
+                            />
+
+                            <div className="modal-actions">
+                                <Button
+                                    size="medium"
+                                    onClick={assignSiteAdmin}
+                                >
+                                    {admin ? "Change Admin" : "Add Admin"}
+                                </Button>
+
+                                <Button
+                                    size="medium"
+                                    onClick={() => {
+                                        setAdminModal(false);
+                                        setNewAdminEmail("");
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {viewerModal && (

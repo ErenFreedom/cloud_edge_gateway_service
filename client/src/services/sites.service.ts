@@ -144,6 +144,8 @@ export interface UpdateSitePayload {
 
   latitude?: number;
   longitude?: number;
+
+  new_admin_email?: string;
 }
 
 
