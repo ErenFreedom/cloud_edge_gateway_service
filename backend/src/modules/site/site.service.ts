@@ -1208,33 +1208,61 @@ export const verifyEmailChangeService = async (
 
     /* ✅ MANAGER ACCESS CHECK */
 
-    const siteLinks = await client.query(`
-      SELECT site_id
-      FROM site_user_roles
-      WHERE user_id = $1
-    `, [record.user_id])
+    const requester = await client.query(
+      `
+  SELECT role
+  FROM users
+  WHERE id = $1
+  `,
+      [requestedBy]
+    )
 
-    if (!siteLinks.rows.length)
-      throw new Error("User not linked to any site")
-
-    let hasAccess = false
-
-    for (const row of siteLinks.rows) {
-      const access = await verifyManagerSiteAccessRepo(
-        client,
-        requestedBy,
-        row.site_id
-      )
-
-      if (access) {
-        hasAccess = true
-        break
-      }
+    if (!requester.rows.length) {
+      throw new Error("User not found")
     }
 
-    if (!hasAccess)
-      throw new Error("Access denied")
+    const requesterRole = requester.rows[0].role
 
+    if (
+      requesterRole !== "super_admin" &&
+      requesterRole !== "org_site_manager"
+    ) {
+      throw new Error("Unauthorized")
+    }
+
+    const siteLinks = await client.query(
+      `
+  SELECT site_id
+  FROM site_user_roles
+  WHERE user_id = $1
+  `,
+      [record.user_id]
+    )
+
+    if (!siteLinks.rows.length) {
+      throw new Error("User not linked to any site")
+    }
+
+    if (requesterRole === "org_site_manager") {
+      let hasAccess = false
+
+      for (const row of siteLinks.rows) {
+        const access = await verifyManagerSiteAccessRepo(
+          client,
+          requestedBy,
+          row.site_id
+        )
+
+        if (access) {
+          hasAccess = true
+          break
+        }
+      }
+
+      if (!hasAccess) {
+        throw new Error("Access denied")
+      }
+    }
 
     await markEmailChangeOtpVerifiedRepo(
       client,
