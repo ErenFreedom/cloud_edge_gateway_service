@@ -74,4 +74,14 @@ export const env = {
   /* EMAIL */
   EMAIL_USER: required("EMAIL_USER"),
   EMAIL_PASS: required("EMAIL_PASS"),
+
+  /* REDIS */
+  REDIS_URL:
+    process.env.REDIS_URL ||
+    "redis://127.0.0.1:6379",
+
+  SESSION_TTL_SECONDS: Number(
+    process.env.SESSION_TTL_SECONDS ||
+    2592000
+  ),
 };
