@@ -1,24 +1,237 @@
 .landing-container {
-  height: 100vh;
+
   width: 100%;
+  height: 100vh;
+
   background: #000;
+
+  display: flex;
+
+  overflow: hidden;
+
+}
+
+
+/* LEFT SIDE */
+
+.landing-left {
+
+  flex: 1;
+
+  position: relative;
+
+  overflow: hidden;
+
   display: flex;
   justify-content: center;
   align-items: center;
+
 }
 
-.landing-content {
-  text-align: center;
+.landing-slide-image {
+
+  position: absolute;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  transition: opacity .7s ease;
+
+}
+
+.landing-left::after{
+
+  content:"";
+
+  position:absolute;
+
+  inset:0;
+
+  background:
+      linear-gradient(
+          rgba(0,0,0,.25),
+          rgba(0,0,0,.55)
+      );
+
+}
+
+
+.landing-slide-content{
+
+  position:relative;
+
+  z-index:5;
+
+  margin-top:auto;
+
+  margin-bottom:70px;
+
+  width:80%;
+
+  text-align:center;
+
+}
+
+.landing-left h2{
+
+  color:white;
+
+  font-size:44px;
+
+  font-weight:700;
+
+  margin-bottom:25px;
+
+}
+
+.landing-left p{
+
+  color:#ececec;
+
+  font-size:21px;
+
+  line-height:1.7;
+
+  width:100%;
+
+}
+
+
+/* DOTS */
+
+.landing-dots{
+
+  display:flex;
+
+  justify-content:center;
+
+  gap:12px;
+
+  margin-top:35px;
+
+}
+
+.landing-dot {
+
+  width: 11px;
+  height: 11px;
+
+  border-radius: 50%;
+
+  background: #555;
+
+}
+
+.landing-dot.active {
+
+  background: #86d14d;
+
+}
+
+
+/* RIGHT SIDE */
+
+.landing-right {
+
+  flex: 1;
+
+  display: flex;
+
+  flex-direction: column;
+
+  justify-content: center;
+  align-items: center;
+
+  background: #000;
+
 }
 
 .landing-logo {
-  width: 1000px;
+
+  width: 540px;
   max-width: 90%;
-  margin-bottom: 90px;
+
+}
+
+.landing-heading {
+
+  margin-top: 35px;
+
+  color: white;
+
+  font-size: 28px;
+
+  font-weight: 400;
+
+}
+
+.landing-subheading {
+
+  margin-top: 8px;
+  margin-bottom: 60px;
+
+  color: #9EEA56;
+
+  font-size: 42px;
+
+  font-weight: 700;
+
 }
 
 .landing-buttons {
+
   display: flex;
-  justify-content: center;
-  gap: 120px;  
+
+  flex-direction: column;
+
+  gap: 28px;
+
+  width: 280px;
+
+}
+
+.landing-buttons button{
+
+  width:100%;
+
+}
+
+
+/* Responsive */
+
+@media(max-width:1100px){
+
+.landing-container{
+
+flex-direction:column;
+
+overflow:auto;
+
+}
+
+.landing-left,
+.landing-right{
+
+width:100%;
+
+padding:40px;
+
+}
+
+.landing-slide-image{
+
+height:300px;
+
+}
+
+.landing-logo{
+
+width:380px;
+
+}
+
 }
