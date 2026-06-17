@@ -1,9 +1,18 @@
-import { Request, Response } from 'express';
+import { Request, Response } from "express";
+
 import {
   loginService,
   verifyLoginOtpService,
   refreshService,
-} from './auth.service';
+  logoutService,
+} from "./auth.service";
+
+const refreshCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+};
 
 export const login = async (
   req: Request,
@@ -11,7 +20,31 @@ export const login = async (
 ) => {
   const { email, password } = req.body;
 
-  const result = await loginService(email, password);
+  const result = await loginService(
+    email,
+    password,
+    {
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+    }
+  );
+
+  if (
+    result.requiresOtp === false &&
+    "refreshToken" in result
+  ) {
+    res.cookie(
+      "refreshToken",
+      result.refreshToken,
+      refreshCookieOptions
+    );
+
+    return res.json({
+      accessToken: result.accessToken,
+      requiresOtp: false,
+      user: result.user,
+    });
+  }
 
   res.json(result);
 };
@@ -22,17 +55,29 @@ export const verifyLoginOtp = async (
 ) => {
   const { tempLoginId, otp } = req.body;
 
-  const { accessToken, refreshToken } =
-    await verifyLoginOtpService(tempLoginId, otp);
+  const {
+    accessToken,
+    refreshToken,
+    user,
+  } = await verifyLoginOtpService(
+    tempLoginId,
+    otp,
+    {
+      ip: req.ip,
+      userAgent: req.headers["user-agent"],
+    }
+  );
 
-  res.cookie('refreshToken', refreshToken, {
-    httpOnly: true,
-    secure: false, // true in production
-    sameSite: 'strict',
-    maxAge: 30 * 24 * 60 * 60 * 1000,
+  res.cookie(
+    "refreshToken",
+    refreshToken,
+    refreshCookieOptions
+  );
+
+  res.json({
+    accessToken,
+    user,
   });
-
-  res.json({ accessToken });
 };
 
 export const refresh = async (
@@ -41,20 +86,40 @@ export const refresh = async (
 ) => {
   const token = req.cookies.refreshToken;
 
-  if (!token)
+  if (!token) {
     return res.status(401).json({
-      message: 'No refresh token',
+      message: "No refresh token",
     });
+  }
 
   const result = await refreshService(token);
 
-  res.json(result);
+  res.cookie(
+    "refreshToken",
+    result.refreshToken,
+    refreshCookieOptions
+  );
+
+  res.json({
+    accessToken: result.accessToken,
+  });
 };
 
 export const logout = async (
   req: Request,
   res: Response
 ) => {
-  res.clearCookie('refreshToken');
-  res.json({ message: 'Logged out' });
+  const token = req.cookies.refreshToken;
+
+  await logoutService(token);
+
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  res.json({
+    message: "Logged out",
+  });
 };

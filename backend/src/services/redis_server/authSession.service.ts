@@ -5,6 +5,7 @@ import { env } from "../../config/env";
 export type DashboardType = "admin" | "ops";
 
 export interface AuthSessionPayload {
+  sessionId?: string;
   userId: string;
   role: string;
   organizationId: string | null;
@@ -57,7 +58,7 @@ export const createAuthSession = async (
     );
   }
 
-  const sessionId = crypto.randomUUID();
+  const sessionId = payload.sessionId || crypto.randomUUID();
 
   const now = new Date().toISOString();
 
