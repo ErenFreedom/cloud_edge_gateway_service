@@ -8,11 +8,12 @@ import { store } from "../../store/store";
 import toast from "react-hot-toast";
 
 import type { RootState, AppDispatch } from "../../store/store";
-
 import { loginThunk } from "../../features/auth/authSlice";
 
-import "./Login.css";
 import Button from "../../components/ui/Button";
+import AuthLayout from "../../components/auth/AuthLayout/AuthLayout";
+
+import "./Login.css";
 
 type LoginForm = {
   email: string;
@@ -20,7 +21,6 @@ type LoginForm = {
 };
 
 const Login = () => {
-
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
@@ -29,124 +29,101 @@ const Login = () => {
     error,
     loginSuccess,
     loginOtpVerified,
-    //user
   } = useSelector((state: RootState) => state.auth);
 
   const [form, setForm] = useState<LoginForm>({
     email: "",
-    password: ""
+    password: "",
   });
 
-  /* ---------- LOGIN SUCCESS ---------- */
-
   useEffect(() => {
-
     const state = store.getState().auth;
 
-    /* PLATFORM ADMIN DIRECT LOGIN */
-
     if (loginOtpVerified && state.user?.role === "platform_admin") {
-
       toast.success("Welcome Platform Admin");
-
       navigate("/platform");
-
       return;
-
     }
 
-    /* NORMAL USER OTP FLOW */
-
     if (loginSuccess) {
-
       const { pendingLoginId, pendingLoginEmail } = state;
 
       if (pendingLoginId) {
-
-        sessionStorage.setItem(
-          "pendingLoginId",
-          pendingLoginId
-        );
-
-        sessionStorage.setItem(
-          "pendingLoginEmail",
-          pendingLoginEmail ?? ""
-        );
-
+        sessionStorage.setItem("pendingLoginId", pendingLoginId);
+        sessionStorage.setItem("pendingLoginEmail", pendingLoginEmail ?? "");
       }
 
       toast.success("OTP sent to your email");
-
       navigate("/otp/login");
-
     }
-
   }, [loginSuccess, loginOtpVerified, navigate]);
 
-  /* ---------- ERROR ---------- */
-
   useEffect(() => {
-
     if (error) {
       toast.error(error);
     }
-
   }, [error]);
-
-
-  /* ---------- INPUT ---------- */
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement>
   ) => {
-
     const { name, value } = e.target;
 
     setForm((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
-
   };
-
-
-  /* ---------- SUBMIT ---------- */
 
   const handleSubmit = (
     e: FormEvent<HTMLFormElement>
   ) => {
-
     e.preventDefault();
+
+    if (!form.email.trim() || !form.password.trim()) {
+      toast.error("Please enter email and password");
+      return;
+    }
+
+    toast.loading("Logging in...", {
+      id: "login",
+    });
 
     dispatch(
       loginThunk({
-        email: form.email,
-        password: form.password
+        email: form.email.trim(),
+        password: form.password,
       })
-    );
-
+    ).finally(() => {
+      toast.dismiss("login");
+    });
   };
-
 
   const isDisabled =
     form.email.trim() === "" ||
     form.password.trim() === "";
 
-
   return (
-
-    <div className="login-container">
-
+    <AuthLayout>
       <div className="login-card">
+        <img
+          src="/logo.png"
+          alt="Koncept Engineers"
+          className="login-logo"
+        />
 
         <h1>Login</h1>
 
-        <form onSubmit={handleSubmit}>
+        <p className="login-subtitle">
+          Access your Administrator Ops dashboard
+        </p>
 
+        <form onSubmit={handleSubmit}>
           <input
             name="email"
             type="email"
             placeholder="Email"
+            value={form.email}
             onChange={handleChange}
             required
           />
@@ -155,29 +132,23 @@ const Login = () => {
             name="password"
             type="password"
             placeholder="Password"
+            value={form.password}
             onChange={handleChange}
             required
           />
 
           <div className="login-button">
-
             <Button
               disabled={isDisabled || loading}
               type="submit"
             >
               {loading ? "Logging in..." : "Login"}
             </Button>
-
           </div>
-
         </form>
-
       </div>
-
-    </div>
-
+    </AuthLayout>
   );
-
 };
 
 export default Login;

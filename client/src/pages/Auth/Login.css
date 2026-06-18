@@ -1,79 +1,68 @@
-.login-container {
-
-  min-height: 100vh;
-
-  background: black;
-
-  display: flex;
-
-  justify-content: center;
-
-  align-items: center;
-
+.login-card {
+  width: 480px;
+  padding: 50px;
+  background: #000;
+  color: white;
+  text-align: center;
 }
 
-.login-card {
-
-  width: 500px;
-
-  padding: 50px;
-
-  background: black;
-
-  border-radius: 20px;
-
-  color: white;
-
+.login-logo {
+  width: 340px;
+  max-width: 90%;
+  margin-bottom: 35px;
 }
 
 .login-card h1 {
+  font-size: 34px;
+  margin-bottom: 10px;
+}
 
-  text-align: center;
-
-  margin-bottom: 40px;
-
+.login-subtitle {
+  color: #9ca3af;
+  font-size: 15px;
+  margin-bottom: 38px;
 }
 
 .login-card form {
-
   display: flex;
-
   flex-direction: column;
-
   gap: 22px;
-
 }
 
 .login-card input {
-
-  padding: 16px;
-
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 18px;
   border-radius: 1.5rem;
-
   border: 1px solid #444;
-
   background: black;
-
   color: white;
-
   font-size: 16px;
-
 }
 
 .login-card input:focus {
-
   outline: none;
-
-  border-color: #777;
-
+  border-color: #86d14d;
+  box-shadow: 0 0 0 2px rgba(134, 209, 77, 0.12);
 }
 
 .login-button {
-
   margin-top: 20px;
-
   display: flex;
-
   justify-content: center;
+}
 
+.login-button button {
+  width: 240px;
+}
+
+@media (max-width: 600px) {
+  .login-card {
+    width: 100%;
+    padding: 35px 24px;
+  }
+
+  .login-logo {
+    width: 260px;
+  }
 }

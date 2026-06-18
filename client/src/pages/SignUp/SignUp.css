@@ -1,141 +1,105 @@
-.signup-container {
-
-  min-height: 100vh;
-
-  background: black;
-
-  display: flex;
-
-  justify-content: center;
-
-  align-items: center;
-
+.signup-card {
+  width: 620px;
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 44px 52px;
+  background: #000;
+  color: white;
+  text-align: center;
 }
 
-/* remove grey background */
+.signup-card::-webkit-scrollbar {
+  width: 6px;
+}
 
-.signup-card {
+.signup-card::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
 
-  width: 650px;
-
-  padding: 50px;
-
-  background: black;
-
-  border-radius: 20px;
-
-  color: white;
-
+.signup-logo {
+  width: 300px;
+  max-width: 90%;
+  margin-bottom: 26px;
 }
 
 .signup-card h1 {
-
-  text-align: center;
-
-  margin-bottom: 30px;
-
+  font-size: 32px;
+  margin-bottom: 8px;
 }
 
-/* section headings */
+.signup-subtitle {
+  color: #9ca3af;
+  font-size: 15px;
+  margin-bottom: 30px;
+}
 
 .section-title {
-
-  margin-top: 20px;
-
-  margin-bottom: 10px;
-
-  font-size: 18px;
-
-  font-weight: 500;
-
-  color: #aaa;
-
+  margin-top: 18px;
+  margin-bottom: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #86d14d;
+  text-align: left;
 }
 
 .signup-card form {
-
   display: flex;
-
   flex-direction: column;
-
-  gap: 18px;
-
+  gap: 16px;
 }
 
 .signup-card input,
 .signup-card select {
-
-  padding: 16px;
-
+  width: 100%;
+  box-sizing: border-box;
+  padding: 15px 18px;
   border-radius: 1.5rem;
-
   border: 1px solid #444;
-
   background: black;
-
   color: white;
-
-  font-size: 16px;
-
+  font-size: 15px;
 }
 
 .signup-card input:focus,
 .signup-card select:focus {
-
   outline: none;
-
-  border-color: #777;
-
+  border-color: #86d14d;
+  box-shadow: 0 0 0 2px rgba(134, 209, 77, 0.12);
 }
 
-/* PHONE INPUT FIX */
+.signup-card select option {
+  color: black;
+}
+
+/* PHONE INPUT */
 
 .phone-container {
-
   width: 100%;
-
 }
 
 .phone-input {
-
   width: 100% !important;
-
   height: 52px !important;
-
   background: black !important;
-
   color: white !important;
-
   border: 1px solid #444 !important;
-
   border-radius: 1.5rem !important;
-
   padding-left: 60px !important;
+  font-size: 15px !important;
+}
 
+.phone-input:focus {
+  border-color: #86d14d !important;
+  box-shadow: 0 0 0 2px rgba(134, 209, 77, 0.12) !important;
 }
 
 .phone-button {
-
   background: black !important;
-
   border: none !important;
-
   border-right: 1px solid #444 !important;
-
+  border-radius: 1.5rem 0 0 1.5rem !important;
 }
-
-.signup-button {
-
-  margin-top: 20px;
-
-  display: flex;
-
-  justify-content: center;
-
-}
-
-
-/* PHONE DROPDOWN FIX */
 
 .react-tel-input .country-list {
   background: white !important;
@@ -150,7 +114,6 @@
   background: #f0f0f0 !important;
 }
 
-
 /* VERIFY FIELD */
 
 .verify-field {
@@ -161,35 +124,60 @@
 
 .verify-field input {
   width: 100%;
+  padding-right: 56px;
 }
-
-/* VERIFY CIRCLE */
 
 .verify-circle {
-
+  position: absolute;
+  right: 18px;
   width: 22px;
   height: 22px;
-
   border-radius: 50%;
-
   border: 2px solid #888;
-
   background: transparent;
-
   cursor: pointer;
-
-  margin-left: -40px;
-
   transition: all 0.3s;
-
 }
 
-/* VERIFIED STATE */
+.verify-circle:hover {
+  border-color: #86d14d;
+}
 
 .verify-circle.verified {
-
   background: #00ff88;
-
   border-color: #00ff88;
+  box-shadow: 0 0 12px rgba(0, 255, 136, 0.5);
+}
 
+.signup-button {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+}
+
+.signup-button button {
+  width: 240px;
+}
+
+.info {
+  color: #9ca3af;
+}
+
+.error {
+  color: #ef4444;
+}
+
+.success {
+  color: #86d14d;
+}
+
+@media (max-width: 700px) {
+  .signup-card {
+    width: 100%;
+    padding: 34px 24px;
+  }
+
+  .signup-logo {
+    width: 240px;
+  }
 }
