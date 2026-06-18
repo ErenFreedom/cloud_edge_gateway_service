@@ -110,6 +110,7 @@ export const opsLoginService = async (
   password: string
 ) => {
   const user = await findOpsUserByEmail(email);
+ 
 
   if (!user) throw new Error("Invalid credentials");
 
@@ -117,6 +118,8 @@ export const opsLoginService = async (
     password,
     user.password_hash
   );
+
+  
 
   if (!match) throw new Error("Invalid credentials");
 
