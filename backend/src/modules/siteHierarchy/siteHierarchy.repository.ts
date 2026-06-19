@@ -42,7 +42,7 @@ export const getSiteByIdRepo = async (
 ) => {
   const { rows } = await client.query(
     `
-    SELECT id, organization_id, site_name
+    SELECT id, organization_id, site_name, status
     FROM sites
     WHERE id = $1
     LIMIT 1

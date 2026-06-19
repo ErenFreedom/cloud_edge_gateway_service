@@ -20,6 +20,7 @@ import {
     fetchSiteMonitorsThunk,
 } from "../../features/siteMonitor/siteMonitorSlice";
 
+import SiteHierarchySection from "../../components/siteHierarchy/SiteHierarchySection";
 
 
 import Button from "../../components/ui/Button";
@@ -658,6 +659,13 @@ const SiteDetails = () => {
                     </div>
 
                 </div>
+
+                <SiteHierarchySection
+                    siteId={siteId as string}
+                    siteName={site.site_name}
+                    siteStatus={site.status}
+                />
+
 
                 {isEditMode && (
 

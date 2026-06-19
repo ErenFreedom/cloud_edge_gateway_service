@@ -161,6 +161,10 @@ const assertCanManageHierarchy = async (
     organizationId
   );
 
+  if (site.status !== "active") {
+    throw new Error("Site must be active before hierarchy can be modified");
+  }
+
   if (user.role === "super_admin") {
     return site;
   }
@@ -751,12 +755,12 @@ export const bulkAssignSensorLocationService = async (
       tagValue: string;
       tagType: "system";
     }[] = [
-      {
-        tagKey: "building",
-        tagValue: location.building.building_name,
-        tagType: "system",
-      },
-    ];
+        {
+          tagKey: "building",
+          tagValue: location.building.building_name,
+          tagType: "system",
+        },
+      ];
 
     if (location.floor) {
       systemTags.push({
