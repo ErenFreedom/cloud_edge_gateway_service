@@ -817,7 +817,7 @@ export const getSensorAssignmentsRepo = async (
     SELECT
       s.id AS sensor_id,
       s.sensor_name,
-      s.external_id,
+      s.external_sensor_id,
       s.sensor_type,
       s.unit,
       s.status,
