@@ -817,10 +817,13 @@ export const getSensorAssignmentsRepo = async (
     SELECT
       s.id AS sensor_id,
       s.sensor_name,
-      s.external_sensor_id,
+      s.external_sensor_id AS external_id,
       s.sensor_type,
       s.unit,
-      s.status,
+      CASE
+        WHEN s.active = true THEN 'active'
+        ELSE 'inactive'
+      END AS status,
 
       s.building_id,
       b.building_name,
@@ -858,9 +861,18 @@ export const getSensorAssignmentsRepo = async (
 
     GROUP BY
       s.id,
+      s.sensor_name,
+      s.external_sensor_id,
+      s.sensor_type,
+      s.unit,
+      s.active,
+      s.building_id,
       b.building_name,
+      s.floor_id,
       f.floor_name,
+      s.room_id,
       r.room_name,
+      s.component_id,
       c.component_name
 
     ORDER BY s.sensor_name ASC
