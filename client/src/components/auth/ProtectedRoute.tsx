@@ -4,20 +4,22 @@ import { getUserFromToken } from "../../utils/auth";
 type Props = {
   children: React.ReactNode;
   role?: string;
+  roles?: string[];
 };
 
-const ProtectedRoute = ({ children, role }: Props) => {
-
+const ProtectedRoute = ({ children, role, roles }: Props) => {
   const user = getUserFromToken();
 
-  /* NOT LOGGED IN */
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  /* ROLE CHECK */
   if (role && user.role !== role) {
-    return <Navigate to="/" replace />; // safe fallback
+    return <Navigate to="/" replace />;
+  }
+
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

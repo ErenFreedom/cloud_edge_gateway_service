@@ -48,32 +48,38 @@ const LoginOtp = () => {
 
   /* ---------- SUCCESS ---------- */
   useEffect(() => {
-  if (loginOtpVerified) {
+    if (loginOtpVerified) {
 
-    sessionStorage.removeItem("pendingLoginId");
-    sessionStorage.removeItem("pendingLoginEmail");
+      sessionStorage.removeItem("pendingLoginId");
+      sessionStorage.removeItem("pendingLoginEmail");
 
-    toast.success("Login successful");
+      toast.success("Login successful");
 
-    const token = localStorage.getItem("accessToken");
+      const token = localStorage.getItem("accessToken");
 
-    if (token) {
-      const payload = JSON.parse(atob(token.split(".")[1]));
+      if (token) {
+        const payload = JSON.parse(atob(token.split(".")[1]));
 
-      if (payload.role === "super_admin") {
-        navigate("/dashboard");
+        if (payload.role === "super_admin") {
+          navigate("/dashboard");
+        }
+        else if (payload.role === "org_site_manager") {
+          navigate("/manager-dashboard");
+        }
+        else if (payload.role === "site_monitor") {
+          navigate("/dashboard");
+        }
+        else if (payload.role === "site_admin") {
+          navigate("/dashboard");
+        }
+        else {
+          navigate("/login");
+        }
       }
-      else if (payload.role === "org_site_manager") {
-        navigate("/manager-dashboard");
-      }
-      else {
-        navigate("/login");
-      }
+
+      dispatch(resetAuthState());
     }
-
-    dispatch(resetAuthState());
-  }
-}, [loginOtpVerified]);
+  }, [loginOtpVerified]);
 
   /* ---------- ERROR ---------- */
   useEffect(() => {
