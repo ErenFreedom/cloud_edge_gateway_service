@@ -608,12 +608,12 @@ export const getExportRowsFromBQ = async (
       WHERE CAST(organization_id AS STRING) = @organizationId
         AND CAST(site_id AS STRING) = @siteId
         AND timestamp_value >= TIMESTAMP(
-        DATETIME(PARSE_DATE('%Y-%m-%d', @from)),
+        DATETIME(DATE(TIMESTAMP(@from), '${IST_TIMEZONE}')),
         '${IST_TIMEZONE}'
       )
       AND timestamp_value < TIMESTAMP_ADD(
         TIMESTAMP(
-          DATETIME(PARSE_DATE('%Y-%m-%d', @to)),
+          DATETIME(DATE(TIMESTAMP(@to), '${IST_TIMEZONE}')),
           '${IST_TIMEZONE}'
         ),
         INTERVAL 1 DAY
