@@ -218,6 +218,14 @@ const SiteMonitorDashboardPanel = ({
 
   const selectedSensorCount = selectedSensors?.total_sensors || 0;
 
+  const [exportSensorMode, setExportSensorMode] = useState<
+    "all" | "selected"
+  >("all");
+
+  const [selectedExportSensorIds, setSelectedExportSensorIds] = useState<string[]>(
+    []
+  );
+
   /* ========================= */
   /* INITIAL LOAD */
   /* ========================= */
@@ -385,12 +393,71 @@ const SiteMonitorDashboardPanel = ({
       return;
     }
 
+    const sensorIds = getSelectedExportBQSensorIds();
+
+    if (exportSensorMode === "selected" && sensorIds.length === 0) {
+      alert("Select at least one sensor");
+      return;
+    }
+
     dispatch(
       downloadDashboardExportCsvThunk({
         siteId,
         from: exportFrom,
         to: exportTo,
         interval: exportInterval,
+        sensorIds,
+        fileName:
+          exportSensorMode === "all"
+            ? `all-dashboard-sensors-${exportInterval}.csv`
+            : `selected-dashboard-sensors-${exportInterval}.csv`,
+      })
+    );
+  };
+
+
+  const getSelectedExportBQSensorIds = (): string[] => {
+    if (exportSensorMode === "all") {
+      return [];
+    }
+
+    return selectedExportSensorIds;
+  };
+
+  const toggleExportSensor = (bqSensorId?: string | null) => {
+    if (!bqSensorId) return;
+
+    setSelectedExportSensorIds((prev) =>
+      prev.includes(bqSensorId)
+        ? prev.filter((id) => id !== bqSensorId)
+        : [...prev, bqSensorId]
+    );
+  };
+
+  const toggleAllExportSensors = () => {
+    const allIds = selectedSensorRows
+      .map((sensor) => sensor.bq_sensor_id || sensor.sensor_uuid)
+      .filter((id): id is string => Boolean(id));
+
+    if (selectedExportSensorIds.length === allIds.length) {
+      setSelectedExportSensorIds([]);
+      return;
+    }
+
+    setSelectedExportSensorIds(allIds);
+  };
+
+  const downloadSingleSensorCsv = (bqSensorId?: string | null, name?: string | null) => {
+    if (!bqSensorId) return;
+
+    dispatch(
+      downloadDashboardExportCsvThunk({
+        siteId,
+        from: exportFrom,
+        to: exportTo,
+        interval: exportInterval,
+        sensorIds: [bqSensorId],
+        fileName: `${name || "sensor"}-${exportInterval}.csv`,
       })
     );
   };
@@ -507,8 +574,8 @@ const SiteMonitorDashboardPanel = ({
           <div>
             <h3>Download CSV Report</h3>
             <p>
-              Export only the sensors configured for this dashboard. Site
-              monitors can download reports but cannot modify the sensor list.
+              Export all configured sensors, selected sensors, or a single sensor.
+              Site monitors can download reports but cannot modify the sensor list.
             </p>
           </div>
 
@@ -551,24 +618,143 @@ const SiteMonitorDashboardPanel = ({
             <button
               className="smd-primary-btn"
               type="button"
-              disabled={csvDownloading || selectedSensorCount === 0}
+              disabled={
+                csvDownloading ||
+                selectedSensorCount === 0 ||
+                (exportSensorMode === "selected" &&
+                  selectedExportSensorIds.length === 0)
+              }
               onClick={handleCsvDownload}
             >
               <FaDownload />
-              {csvDownloading ? "Downloading..." : "Download CSV"}
+              {csvDownloading
+                ? "Downloading..."
+                : exportSensorMode === "all"
+                  ? "Download All CSV"
+                  : "Download Selected CSV"}
+            </button>
+          </div>
+
+          <div className="smd-export-mode-row">
+            <button
+              type="button"
+              className={exportSensorMode === "all" ? "active" : ""}
+              onClick={() => setExportSensorMode("all")}
+            >
+              All Sensors
+            </button>
+
+            <button
+              type="button"
+              className={exportSensorMode === "selected" ? "active" : ""}
+              onClick={() => setExportSensorMode("selected")}
+            >
+              Selected Sensors
             </button>
           </div>
         </div>
+
+        {exportSensorMode === "selected" && (
+          <div className="smd-table-wrapper smd-export-sensor-table">
+            <table className="smd-table">
+              <thead>
+                <tr>
+                  <th className="smd-check-col">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedSensorRows.length > 0 &&
+                        selectedExportSensorIds.length === selectedSensorRows.length
+                      }
+                      onChange={toggleAllExportSensors}
+                    />
+                  </th>
+                  <th>Sensor Name</th>
+                  <th>Location</th>
+                  <th>External ID</th>
+                  <th>API</th>
+                  <th>Single CSV</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {selectedSensorRows.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="smd-empty-cell">
+                      No sensors configured yet.
+                    </td>
+                  </tr>
+                )}
+
+                {selectedSensorRows.map((sensor) => {
+                  const bqSensorId = sensor.bq_sensor_id || sensor.sensor_uuid;
+
+                  return (
+                    <tr key={sensor.id}>
+                      <td className="smd-check-col">
+                        <input
+                          type="checkbox"
+                          disabled={!bqSensorId}
+                          checked={
+                            !!bqSensorId &&
+                            selectedExportSensorIds.includes(bqSensorId)
+                          }
+                          onChange={() => toggleExportSensor(bqSensorId)}
+                        />
+                      </td>
+
+                      <td>
+                        <strong>{sensor.sensor_name || "-"}</strong>
+                      </td>
+
+                      <td>{sensor.location || "-"}</td>
+                      <td>{sensor.external_sensor_id || "-"}</td>
+
+                      <td className="smd-api-cell">
+                        {sensor.api_endpoint || "-"}
+                      </td>
+
+                      <td>
+                        <button
+                          className="smd-download-mini-btn"
+                          type="button"
+                          disabled={csvDownloading || !bqSensorId}
+                          onClick={() =>
+                            downloadSingleSensorCsv(
+                              bqSensorId,
+                              sensor.sensor_name
+                            )
+                          }
+                        >
+                          <FaDownload />
+                          One
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {selectedSensorCount === 0 && (
           <div className="smd-info-box">
             No sensors are configured yet, so CSV export is disabled.
           </div>
         )}
+
+        {exportSensorMode === "selected" &&
+          selectedSensorCount > 0 &&
+          selectedExportSensorIds.length === 0 && (
+            <div className="smd-info-box">
+              Select one or more sensors to download a grouped CSV, or use the
+              One button to download a single sensor.
+            </div>
+          )}
       </div>
     );
   };
-
   const renderLiveTab = () => {
     return (
       <div className="smd-tab-panel">

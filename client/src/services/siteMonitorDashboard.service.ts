@@ -241,6 +241,7 @@ export interface FetchExportParams {
   from: string;
   to: string;
   interval: ExportInterval;
+  sensorIds?: string[];
 }
 
 export interface DownloadExportCsvParams extends FetchExportParams {
@@ -386,6 +387,7 @@ export const fetchDashboardExport = async ({
   from,
   to,
   interval,
+  sensorIds = [],
 }: FetchExportParams): Promise<ExportAnalyticsResponse> => {
   const res = await apiClient.get(
     `/site-monitor-dashboard/sites/${siteId}/export`,
@@ -395,6 +397,7 @@ export const fetchDashboardExport = async ({
         to,
         interval,
         format: "json",
+        sensor_ids: sensorIds.join(","),
       },
     }
   );
@@ -436,6 +439,7 @@ export const downloadDashboardExportCsv = async ({
   from,
   to,
   interval,
+  sensorIds = [],
   fileName,
 }: DownloadExportCsvParams): Promise<void> => {
   const res = await apiClient.get(
@@ -446,6 +450,7 @@ export const downloadDashboardExportCsv = async ({
         to,
         interval,
         format: "csv",
+        sensor_ids: sensorIds.join(","),
       },
       responseType: "blob",
     }

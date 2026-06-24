@@ -129,6 +129,33 @@ const assertSiteAccess = async (
   }
 };
 
+
+const parseRequestedExportSensorIds = (
+  value: unknown
+): string[] => {
+  if (!value || typeof value !== "string") {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+};
+
+const getAllowedExportSensorIds = (
+  selectedBQSensorIds: string[],
+  requestedSensorIds: string[]
+): string[] => {
+  if (requestedSensorIds.length === 0) {
+    return selectedBQSensorIds;
+  }
+
+  const selectedSet = new Set(selectedBQSensorIds);
+
+  return requestedSensorIds.filter((id) => selectedSet.has(id));
+};
+
 const getSelectedBQSensorIdsOrEmpty = async (
   access: DashboardAccessContext,
   siteId: string
@@ -389,6 +416,29 @@ export const getDashboardExportService = async (
     };
   }
 
+  const requestedSensorIds = parseRequestedExportSensorIds(query.sensor_ids);
+
+  const exportSensorIds = getAllowedExportSensorIds(
+    selectedBQSensorIds,
+    requestedSensorIds
+  );
+
+  if (exportSensorIds.length === 0) {
+    return {
+      rows: [],
+      meta: {
+        organization_id: organizationId,
+        site_id: siteId,
+        from,
+        to,
+        interval,
+        generated_at: new Date().toISOString(),
+        total_sensors: 0,
+        selected_sensor_ids: [],
+      },
+    };
+  }
+
   const rows = await getExportRowsFromBQ(
     organizationId,
     siteId,
@@ -396,7 +446,7 @@ export const getDashboardExportService = async (
     to,
     interval,
     {
-      sensorIds: selectedBQSensorIds,
+      sensorIds: exportSensorIds,
     }
   );
 
@@ -409,8 +459,8 @@ export const getDashboardExportService = async (
       to,
       interval,
       generated_at: new Date().toISOString(),
-      total_sensors: selectedBQSensorIds.length,
-      selected_sensor_ids: selectedBQSensorIds,
+      total_sensors: exportSensorIds.length,
+      selected_sensor_ids: exportSensorIds,
     },
   };
 };
