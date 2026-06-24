@@ -72,24 +72,24 @@ const LOAD_RANGES: { value: LoadRange; label: string; helper: string }[] = [
     helper: "Latest reading today minus first reading of today",
   },
   {
-    value: "24h",
-    label: "Yesterday",
-    helper: "Yesterday closing reading minus yesterday opening reading",
+    value: "currentWeek",
+    label: "Current Week",
+    helper: "Latest reading this week minus first reading of this week",
   },
   {
-    value: "1w",
-    label: "Previous Week",
-    helper: "Previous completed week consumption",
+    value: "lastWeek",
+    label: "Last Week",
+    helper: "Last reading of previous week minus first reading of previous week",
   },
   {
     value: "1month",
     label: "Current Month",
-    helper: "Current month consumption till now",
+    helper: "Latest reading this month minus first reading of this month",
   },
   {
     value: "lastMonth",
     label: "Last Month",
-    helper: "Previous completed calendar month consumption",
+    helper: "Last reading of previous month minus first reading of previous month",
   },
 ];
 
@@ -445,10 +445,19 @@ const SiteMonitorDashboardPanel = ({
               {!currentLoadLoading && loadRows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="smd-empty-cell">
-                    No sensors configured yet.{" "}
-                    {canManageSensors
-                      ? "Open the Sensors tab and add sensors."
-                      : "Please contact your administrator."}
+                    {selectedSensorCount === 0 ? (
+                      <>
+                        No sensors configured yet.{" "}
+                        {canManageSensors
+                          ? "Open the Sensors tab and add sensors."
+                          : "Please contact your administrator."}
+                      </>
+                    ) : (
+                      <>
+                        No telemetry found for this range. Try another range or check if the
+                        edge gateway is currently publishing data.
+                      </>
+                    )}
                   </td>
                 </tr>
               )}
@@ -611,9 +620,8 @@ const SiteMonitorDashboardPanel = ({
                 <tr key={sensor.logical_sensor_key}>
                   <td>
                     <span
-                      className={`smd-live-indicator ${
-                        sensor.live_status === "HEALTHY" ? "" : "issue"
-                      }`}
+                      className={`smd-live-indicator ${sensor.live_status === "HEALTHY" ? "" : "issue"
+                        }`}
                     >
                       <span className="smd-live-dot" />
                     </span>
@@ -798,9 +806,8 @@ const SiteMonitorDashboardPanel = ({
 
   const panelContent = (
     <div
-      className={`smd-panel ${
-        embedded ? "smd-panel-embedded" : "smd-panel-modal"
-      }`}
+      className={`smd-panel ${embedded ? "smd-panel-embedded" : "smd-panel-modal"
+        }`}
     >
       <div className="smd-header">
         <div>
@@ -863,9 +870,8 @@ const SiteMonitorDashboardPanel = ({
           <span>Address</span>
           <strong>
             {selectedSite?.address ||
-              `${selectedSite?.address_line1 || ""} ${
-                selectedSite?.address_line2 || ""
-              }`.trim() ||
+              `${selectedSite?.address_line1 || ""} ${selectedSite?.address_line2 || ""
+                }`.trim() ||
               "-"}
           </strong>
         </div>

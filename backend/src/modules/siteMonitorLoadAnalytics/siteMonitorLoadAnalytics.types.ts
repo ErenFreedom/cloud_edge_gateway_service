@@ -8,9 +8,9 @@ export type LoadRange =
   | "10m"
   | "1h"
   | "6h"
-  | "today"  
-  | "24h"
-  | "1w"
+  | "today"
+  | "currentWeek"
+  | "lastWeek"
   | "1month"
   | "lastMonth";
 

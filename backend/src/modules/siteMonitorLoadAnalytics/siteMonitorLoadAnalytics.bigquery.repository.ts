@@ -1,4 +1,5 @@
 import { BigQuery } from "@google-cloud/bigquery";
+
 import {
   CurrentLoadAnalyticsRow,
   DashboardSensorFilterOptions,
@@ -16,6 +17,10 @@ const LOGICAL_VIEW =
   `project-b5045c0e-60ef-4535-bc3.${DATASET}.iot_raw_logical`;
 
 const IST_TIMEZONE = "Asia/Kolkata";
+
+/* ========================= */
+/* WINDOW HELPERS */
+/* ========================= */
 
 const getCurrentWindowSql = (range: LoadRange): string => {
   switch (range) {
@@ -46,27 +51,6 @@ const getCurrentWindowSql = (range: LoadRange): string => {
           TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 6 HOUR) AS target_timestamp
       `;
 
-    case "24h":
-      return `
-        SELECT
-          'PERIOD' AS range_mode,
-
-          TIMESTAMP(
-            DATETIME_SUB(
-              DATETIME_TRUNC(CURRENT_DATETIME('${IST_TIMEZONE}'), DAY),
-              INTERVAL 1 DAY
-            ),
-            '${IST_TIMEZONE}'
-          ) AS window_start,
-
-          TIMESTAMP(
-            DATETIME_TRUNC(CURRENT_DATETIME('${IST_TIMEZONE}'), DAY),
-            '${IST_TIMEZONE}'
-          ) AS window_end,
-
-          CAST(NULL AS TIMESTAMP) AS target_timestamp
-      `;
-
     case "today":
       return `
         SELECT
@@ -85,13 +69,33 @@ const getCurrentWindowSql = (range: LoadRange): string => {
           CAST(NULL AS TIMESTAMP) AS target_timestamp
       `;
 
-    case "1w":
+    case "currentWeek":
+      return `
+        SELECT
+          'PERIOD' AS range_mode,
+
+          TIMESTAMP_TRUNC(
+            CURRENT_TIMESTAMP(),
+            WEEK(MONDAY),
+            '${IST_TIMEZONE}'
+          ) AS window_start,
+
+          CURRENT_TIMESTAMP() AS window_end,
+
+          CAST(NULL AS TIMESTAMP) AS target_timestamp
+      `;
+
+    case "lastWeek":
       return `
         SELECT
           'PERIOD' AS range_mode,
 
           TIMESTAMP_SUB(
-            TIMESTAMP_TRUNC(CURRENT_TIMESTAMP(), WEEK(MONDAY), '${IST_TIMEZONE}'),
+            TIMESTAMP_TRUNC(
+              CURRENT_TIMESTAMP(),
+              WEEK(MONDAY),
+              '${IST_TIMEZONE}'
+            ),
             INTERVAL 7 DAY
           ) AS window_start,
 
@@ -207,6 +211,10 @@ const buildFilterParams = (filters: DashboardSensorFilterOptions = {}) => {
   };
 };
 
+/* ========================= */
+/* CURRENT LOAD */
+/* ========================= */
+
 export const getCurrentLoadRowsFromBQ = async (
   organizationId: string,
   siteId: string,
@@ -218,6 +226,34 @@ export const getCurrentLoadRowsFromBQ = async (
   const query = `
     WITH config AS (
       ${windowSql}
+    ),
+
+    selected_logical_keys AS (
+      SELECT DISTINCT logical_sensor_key
+      FROM \`${LOGICAL_VIEW}\`
+      WHERE CAST(organization_id AS STRING) = @organizationId
+        AND CAST(site_id AS STRING) = @siteId
+        AND logical_sensor_key IS NOT NULL
+
+        AND (
+          @sensorIdsCsv = ''
+          OR CAST(sensor_id AS STRING) IN UNNEST(SPLIT(@sensorIdsCsv, ','))
+        )
+
+        AND (
+          @sensorId = ''
+          OR CAST(sensor_id AS STRING) = @sensorId
+        )
+
+        AND (
+          @logicalSensorKeysCsv = ''
+          OR logical_sensor_key IN UNNEST(SPLIT(@logicalSensorKeysCsv, ','))
+        )
+
+        AND (
+          @logicalSensorKey = ''
+          OR logical_sensor_key = @logicalSensorKey
+        )
     ),
 
     base AS (
@@ -239,23 +275,16 @@ export const getCurrentLoadRowsFromBQ = async (
         AND logical_sensor_key IS NOT NULL
 
         AND (
-          @logicalSensorKey = ''
-          OR logical_sensor_key = @logicalSensorKey
-        )
-
-        AND (
-          @logicalSensorKeysCsv = ''
-          OR logical_sensor_key IN UNNEST(SPLIT(@logicalSensorKeysCsv, ','))
-        )
-
-        AND (
-          @sensorId = ''
-          OR CAST(sensor_id AS STRING) = @sensorId
-        )
-
-        AND (
-          @sensorIdsCsv = ''
-          OR CAST(sensor_id AS STRING) IN UNNEST(SPLIT(@sensorIdsCsv, ','))
+          (
+            @sensorIdsCsv = ''
+            AND @sensorId = ''
+            AND @logicalSensorKeysCsv = ''
+            AND @logicalSensorKey = ''
+          )
+          OR logical_sensor_key IN (
+            SELECT logical_sensor_key
+            FROM selected_logical_keys
+          )
         )
     ),
 
@@ -389,13 +418,45 @@ export const getCurrentLoadRowsFromBQ = async (
   return rows as CurrentLoadAnalyticsRow[];
 };
 
+/* ========================= */
+/* LIVE LOAD */
+/* ========================= */
+
 export const getLiveSensorRowsFromBQ = async (
   organizationId: string,
   siteId: string,
   filters: DashboardSensorFilterOptions = {}
 ): Promise<LiveSensorRow[]> => {
   const query = `
-    WITH ranked AS (
+    WITH selected_logical_keys AS (
+      SELECT DISTINCT logical_sensor_key
+      FROM \`${LOGICAL_VIEW}\`
+      WHERE CAST(organization_id AS STRING) = @organizationId
+        AND CAST(site_id AS STRING) = @siteId
+        AND logical_sensor_key IS NOT NULL
+
+        AND (
+          @sensorIdsCsv = ''
+          OR CAST(sensor_id AS STRING) IN UNNEST(SPLIT(@sensorIdsCsv, ','))
+        )
+
+        AND (
+          @sensorId = ''
+          OR CAST(sensor_id AS STRING) = @sensorId
+        )
+
+        AND (
+          @logicalSensorKeysCsv = ''
+          OR logical_sensor_key IN UNNEST(SPLIT(@logicalSensorKeysCsv, ','))
+        )
+
+        AND (
+          @logicalSensorKey = ''
+          OR logical_sensor_key = @logicalSensorKey
+        )
+    ),
+
+    ranked AS (
       SELECT
         logical_sensor_key,
         CAST(sensor_id AS STRING) AS sensor_id,
@@ -417,23 +478,16 @@ export const getLiveSensorRowsFromBQ = async (
         AND timestamp_value IS NOT NULL
 
         AND (
-          @logicalSensorKey = ''
-          OR logical_sensor_key = @logicalSensorKey
-        )
-
-        AND (
-          @logicalSensorKeysCsv = ''
-          OR logical_sensor_key IN UNNEST(SPLIT(@logicalSensorKeysCsv, ','))
-        )
-
-        AND (
-          @sensorId = ''
-          OR CAST(sensor_id AS STRING) = @sensorId
-        )
-
-        AND (
-          @sensorIdsCsv = ''
-          OR CAST(sensor_id AS STRING) IN UNNEST(SPLIT(@sensorIdsCsv, ','))
+          (
+            @sensorIdsCsv = ''
+            AND @sensorId = ''
+            AND @logicalSensorKeysCsv = ''
+            AND @logicalSensorKey = ''
+          )
+          OR logical_sensor_key IN (
+            SELECT logical_sensor_key
+            FROM selected_logical_keys
+          )
         )
     ),
 
@@ -499,6 +553,10 @@ export const getLiveSensorRowsFromBQ = async (
   return rows as LiveSensorRow[];
 };
 
+/* ========================= */
+/* EXPORT */
+/* ========================= */
+
 export const getExportRowsFromBQ = async (
   organizationId: string,
   siteId: string,
@@ -510,7 +568,35 @@ export const getExportRowsFromBQ = async (
   const bucketExpression = getBucketExpression(interval);
 
   const query = `
-    WITH base AS (
+    WITH selected_logical_keys AS (
+      SELECT DISTINCT logical_sensor_key
+      FROM \`${LOGICAL_VIEW}\`
+      WHERE CAST(organization_id AS STRING) = @organizationId
+        AND CAST(site_id AS STRING) = @siteId
+        AND logical_sensor_key IS NOT NULL
+
+        AND (
+          @sensorIdsCsv = ''
+          OR CAST(sensor_id AS STRING) IN UNNEST(SPLIT(@sensorIdsCsv, ','))
+        )
+
+        AND (
+          @sensorId = ''
+          OR CAST(sensor_id AS STRING) = @sensorId
+        )
+
+        AND (
+          @logicalSensorKeysCsv = ''
+          OR logical_sensor_key IN UNNEST(SPLIT(@logicalSensorKeysCsv, ','))
+        )
+
+        AND (
+          @logicalSensorKey = ''
+          OR logical_sensor_key = @logicalSensorKey
+        )
+    ),
+
+    base AS (
       SELECT
         logical_sensor_key,
         CAST(sensor_id AS STRING) AS sensor_id,
@@ -522,29 +608,22 @@ export const getExportRowsFromBQ = async (
       WHERE CAST(organization_id AS STRING) = @organizationId
         AND CAST(site_id AS STRING) = @siteId
         AND timestamp_value >= TIMESTAMP(@from)
-        AND timestamp_value < TIMESTAMP(@to)
+        AND timestamp_value < TIMESTAMP_ADD(TIMESTAMP(@to), INTERVAL 1 DAY)
         AND value IS NOT NULL
         AND timestamp_value IS NOT NULL
         AND logical_sensor_key IS NOT NULL
 
         AND (
-          @logicalSensorKey = ''
-          OR logical_sensor_key = @logicalSensorKey
-        )
-
-        AND (
-          @logicalSensorKeysCsv = ''
-          OR logical_sensor_key IN UNNEST(SPLIT(@logicalSensorKeysCsv, ','))
-        )
-
-        AND (
-          @sensorId = ''
-          OR CAST(sensor_id AS STRING) = @sensorId
-        )
-
-        AND (
-          @sensorIdsCsv = ''
-          OR CAST(sensor_id AS STRING) IN UNNEST(SPLIT(@sensorIdsCsv, ','))
+          (
+            @sensorIdsCsv = ''
+            AND @sensorId = ''
+            AND @logicalSensorKeysCsv = ''
+            AND @logicalSensorKey = ''
+          )
+          OR logical_sensor_key IN (
+            SELECT logical_sensor_key
+            FROM selected_logical_keys
+          )
         )
     ),
 

@@ -15,8 +15,8 @@ const LOAD_RANGES: readonly LoadRange[] = [
   "1h",
   "6h",
   "today",
-  "24h",
-  "1w",
+  "currentWeek",
+  "lastWeek",
   "1month",
   "lastMonth",
 ];
