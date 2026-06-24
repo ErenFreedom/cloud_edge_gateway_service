@@ -10,6 +10,7 @@ import complianceReducer from "../features/compliance/complianceSlice";
 import loadAnalyticsReducer from "../features/loadAnalytics/loadAnalyticsSlice";
 import siteMonitorReducer from "../features/siteMonitor/siteMonitorSlice";
 import siteHierarchyReducer from "../features/siteHierarchy/siteHierarchySlice";
+import siteMonitorDashboardReducer from "../features/siteMonitorDashboard/siteMonitorDashboardSlice";
 
 export const store = configureStore({
 
@@ -26,6 +27,7 @@ export const store = configureStore({
     loadAnalytics: loadAnalyticsReducer,
     siteMonitor: siteMonitorReducer,
     siteHierarchy: siteHierarchyReducer,
+    siteMonitorDashboard: siteMonitorDashboardReducer
   }
 
 });

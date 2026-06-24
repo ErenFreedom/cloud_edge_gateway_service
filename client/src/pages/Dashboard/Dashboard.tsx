@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FaUserCircle, FaEye, FaEdit, FaDownload, FaChartLine, FaBroadcastTower } from "react-icons/fa";
+import { FaUserCircle, FaEye, FaEdit, FaDownload, FaChartLine, FaBroadcastTower, FaTachometerAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import type { RootState, AppDispatch } from "../../store/store";
 import SiteLocationPicker from "../../components/maps/SiteLocationPicker";
@@ -54,6 +54,8 @@ import {
 import type { LoadRange } from "../../services/loadAnalytics.service";
 
 import Button from "../../components/ui/Button";
+
+import SiteMonitorDashboardPanel from "../../components/siteMonitorDashboard/SiteMonitorDashboardPanel";
 
 import "./Dashboard.css";
 
@@ -219,6 +221,9 @@ const Dashboard = () => {
   const [analyticsExportState, setAnalyticsExportState] = useState<any>({});
   const [selectedAnalyticsSensors, setSelectedAnalyticsSensors] = useState<string[]>([]);
 
+  const [monitorDashboardOpen, setMonitorDashboardOpen] = useState(false);
+  const [monitorDashboardSite, setMonitorDashboardSite] = useState<any>(null);
+
 
 
 
@@ -301,6 +306,11 @@ const Dashboard = () => {
         range: currentRange || "1h"
       })
     );
+  };
+
+  const openMonitorDashboard = (site: any) => {
+    setMonitorDashboardSite(site);
+    setMonitorDashboardOpen(true);
   };
 
 
@@ -955,6 +965,11 @@ const Dashboard = () => {
             const isCardDisabled =
               access.assigned === false;
 
+            const canOpenMonitorDashboard =
+              site.status === "active" && canView && !isCardDisabled;
+
+
+
             return (
               <div
                 key={site.id}
@@ -1020,6 +1035,21 @@ const Dashboard = () => {
                       onClick={() => {
                         if (canAnalytics) {
                           openAnalyticsModal(site.id);
+                        }
+                      }}
+                    />
+
+                    <FaTachometerAlt
+                      className={`site-action-icon site-monitor-dashboard-icon ${!canOpenMonitorDashboard ? "disabled" : ""
+                        }`}
+                      title={
+                        canOpenMonitorDashboard
+                          ? "Site Monitor Dashboard"
+                          : "Site monitor dashboard available only for active sites"
+                      }
+                      onClick={() => {
+                        if (canOpenMonitorDashboard) {
+                          openMonitorDashboard(site);
                         }
                       }}
                     />
@@ -2302,6 +2332,18 @@ const Dashboard = () => {
 
           </div>
         </div>
+      )}
+
+      {monitorDashboardOpen && monitorDashboardSite && (
+        <SiteMonitorDashboardPanel
+          siteId={monitorDashboardSite.id}
+          siteName={monitorDashboardSite.site_name}
+          mode="admin"
+          onClose={() => {
+            setMonitorDashboardOpen(false);
+            setMonitorDashboardSite(null);
+          }}
+        />
       )}
 
     </div>
