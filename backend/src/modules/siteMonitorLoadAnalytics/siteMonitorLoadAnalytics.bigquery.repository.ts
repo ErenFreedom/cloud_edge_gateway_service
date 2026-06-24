@@ -163,21 +163,21 @@ const getBucketExpression = (interval: ExportInterval): string => {
     case "10m":
       return `
         TIMESTAMP_SECONDS(
-          DIV(UNIX_SECONDS(timestamp_value), 600) * 600
+          DIV(UNIX_SECONDS(timestamp_value) + 19800, 600) * 600 - 19800
         )
       `;
 
     case "1h":
       return `
         TIMESTAMP_SECONDS(
-          DIV(UNIX_SECONDS(timestamp_value), 3600) * 3600
+          DIV(UNIX_SECONDS(timestamp_value) + 19800, 3600) * 3600 - 19800
         )
       `;
 
     case "6h":
       return `
         TIMESTAMP_SECONDS(
-          DIV(UNIX_SECONDS(timestamp_value), 21600) * 21600
+          DIV(UNIX_SECONDS(timestamp_value) + 19800, 21600) * 21600 - 19800
         )
       `;
 
@@ -607,8 +607,17 @@ export const getExportRowsFromBQ = async (
       FROM \`${LOGICAL_VIEW}\`
       WHERE CAST(organization_id AS STRING) = @organizationId
         AND CAST(site_id AS STRING) = @siteId
-        AND timestamp_value >= TIMESTAMP(@from)
-        AND timestamp_value < TIMESTAMP_ADD(TIMESTAMP(@to), INTERVAL 1 DAY)
+        AND timestamp_value >= TIMESTAMP(
+        DATETIME(PARSE_DATE('%Y-%m-%d', @from)),
+        '${IST_TIMEZONE}'
+      )
+      AND timestamp_value < TIMESTAMP_ADD(
+        TIMESTAMP(
+          DATETIME(PARSE_DATE('%Y-%m-%d', @to)),
+          '${IST_TIMEZONE}'
+        ),
+        INTERVAL 1 DAY
+      )
         AND value IS NOT NULL
         AND timestamp_value IS NOT NULL
         AND logical_sensor_key IS NOT NULL
@@ -651,7 +660,7 @@ export const getExportRowsFromBQ = async (
     )
 
     SELECT
-      FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%SZ', bucket_timestamp) AS timestamp,
+      FORMAT_TIMESTAMP('%Y-%m-%d %H:%M:%S', bucket_timestamp, '${IST_TIMEZONE}') AS timestamp,
       sensor_name,
       reading,
       CASE
