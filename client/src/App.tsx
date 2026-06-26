@@ -16,6 +16,8 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteDetails from "./pages/SiteDetails/SiteDetails";
 import OrgSiteManagerPage from "./pages/OrgSiteManager/OrgSiteManagerPage";
 
+import SiteMonitorDashboard from "./pages/SiteMonitorDashboard/SiteMonitorDashboard";
+
 //Ops module
 import OpsRoutes from "./ops/App/OpsRoutes";
 
@@ -40,9 +42,18 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute
-              roles={["super_admin", "site_admin", "site_monitor"]}
+              roles={["super_admin", "site_admin"]}
             >
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/site-monitor-dashboard"
+          element={
+            <ProtectedRoute role="site_monitor">
+              <SiteMonitorDashboard />
             </ProtectedRoute>
           }
         />

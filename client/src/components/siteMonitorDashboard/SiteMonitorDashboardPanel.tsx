@@ -43,6 +43,7 @@ interface SiteMonitorDashboardPanelProps {
   siteName?: string;
   mode: DashboardPanelMode;
   embedded?: boolean;
+  showSensorsTab?: boolean;
   onClose?: () => void;
 }
 
@@ -168,6 +169,7 @@ const SiteMonitorDashboardPanel = ({
   siteName,
   mode,
   embedded = false,
+  showSensorsTab = true,
   onClose,
 }: SiteMonitorDashboardPanelProps) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -1072,7 +1074,7 @@ const SiteMonitorDashboardPanel = ({
 
       {siteDetailsLoading && <p className="smd-muted">Loading site details...</p>}
 
-      <div className="smd-tabs">
+      <div className={`smd-tabs ${!showSensorsTab ? "smd-tabs-3" : ""}`}>
         <button
           className={activeTab === "load" ? "active" : ""}
           type="button"
@@ -1101,19 +1103,21 @@ const SiteMonitorDashboardPanel = ({
           </span>
         </button>
 
-        <button
-          className={activeTab === "sensors" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("sensors")}
-        >
-          Sensors
-        </button>
+        {showSensorsTab && (
+          <button
+            className={activeTab === "sensors" ? "active" : ""}
+            type="button"
+            onClick={() => setActiveTab("sensors")}
+          >
+            Sensors
+          </button>
+        )}
       </div>
 
       {activeTab === "load" && renderLoadTab()}
       {activeTab === "export" && renderExportTab()}
       {activeTab === "live" && renderLiveTab()}
-      {activeTab === "sensors" && renderSensorsTab()}
+      {showSensorsTab && activeTab === "sensors" && renderSensorsTab()}
     </div>
   );
 

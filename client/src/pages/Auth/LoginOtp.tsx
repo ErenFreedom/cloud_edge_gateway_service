@@ -67,7 +67,7 @@ const LoginOtp = () => {
           navigate("/manager-dashboard");
         }
         else if (payload.role === "site_monitor") {
-          navigate("/dashboard");
+          navigate("/site-monitor-dashboard");
         }
         else if (payload.role === "site_admin") {
           navigate("/dashboard");

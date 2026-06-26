@@ -661,6 +661,16 @@
   cursor: not-allowed;
 }
 
+.smd-tabs.smd-tabs-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 900px) {
+  .smd-tabs.smd-tabs-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .smd-modal-backdrop {
     padding: 12px;
