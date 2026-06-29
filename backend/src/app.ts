@@ -21,6 +21,7 @@ import loadAnalyticsRoutes from "./modules/loadAnalytics/loadAnalytics.routes";
 import siteMonitorRoutes from "./modules/siteMonitor/siteMonitor.routes";
 import siteHierarchyRoutes from "./modules/siteHierarchy/siteHierarchy.routes";
 import siteMonitorLoadAnalyticsRoutes from "./modules/siteMonitorLoadAnalytics/siteMonitorLoadAnalytics.routes";
+import userManagementRoutes from "./modules/userManagement/userManagement.routes";
 
 
 //ops modules
@@ -50,6 +51,7 @@ app.use("/api/load-analytics", loadAnalyticsRoutes);
 app.use("/api/site-monitors", siteMonitorRoutes);
 app.use("/api/site-hierarchy", siteHierarchyRoutes);
 app.use("/api/site-monitor-dashboard", siteMonitorLoadAnalyticsRoutes);
+app.use("/api/user-management", userManagementRoutes);
 
 //ops routes
 

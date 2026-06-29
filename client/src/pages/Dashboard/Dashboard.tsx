@@ -1,6 +1,16 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { FaUserCircle, FaEye, FaEdit, FaDownload, FaChartLine, FaBroadcastTower, FaTachometerAlt } from "react-icons/fa";
+import {
+  FaUserCircle,
+  FaEye,
+  FaEdit,
+  FaDownload,
+  FaChartLine,
+  FaBroadcastTower,
+  FaTachometerAlt,
+  FaUsers,
+  FaTimes,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import type { RootState, AppDispatch } from "../../store/store";
 import SiteLocationPicker from "../../components/maps/SiteLocationPicker";
@@ -56,6 +66,8 @@ import type { LoadRange } from "../../services/loadAnalytics.service";
 import Button from "../../components/ui/Button";
 
 import SiteMonitorDashboardPanel from "../../components/siteMonitorDashboard/SiteMonitorDashboardPanel";
+
+import UserManagementPanel from "../../components/userManagement/UserManagementPanel";
 
 import "./Dashboard.css";
 
@@ -191,6 +203,8 @@ const Dashboard = () => {
   };
 
   const [profileOpen, setProfileOpen] = useState(false);
+
+  const [userManagementOpen, setUserManagementOpen] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -909,15 +923,29 @@ const Dashboard = () => {
             />
 
             {profileOpen && (
-
               <div className="profile-dropdown">
-
-                <button onClick={logout}>
-                  Logout
+                <button
+                  type="button"
+                  className="profile-dropdown-item"
+                  onClick={() => {
+                    setUserManagementOpen(true);
+                    setProfileOpen(false);
+                  }}
+                >
+                  <FaUsers />
+                  User Management
                 </button>
 
-              </div>
+                <div className="profile-dropdown-divider" />
 
+                <button
+                  type="button"
+                  className="profile-dropdown-item logout"
+                  onClick={logout}
+                >
+                  Logout
+                </button>
+              </div>
             )}
 
           </div>
@@ -1096,6 +1124,33 @@ const Dashboard = () => {
         </div>
 
       </div>
+
+      {userManagementOpen && (
+        <div className="user-management-modal-backdrop">
+          <div className="user-management-modal-shell">
+            <div className="user-management-modal-topbar">
+              <div>
+                <p>User Management</p>
+                <h2>Organization Access Control</h2>
+                <span>
+                  View organization users, assignment health, orphan accounts and access status.
+                </span>
+              </div>
+
+              <button
+                className="user-management-close-btn"
+                type="button"
+                onClick={() => setUserManagementOpen(false)}
+              >
+                <FaTimes />
+                Close
+              </button>
+            </div>
+
+            <UserManagementPanel />
+          </div>
+        </div>
+      )}
 
 
 
