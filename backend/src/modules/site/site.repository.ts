@@ -754,3 +754,78 @@ export const verifyMonitorSiteAccessRepo = async (
 
   return (rowCount ?? 0) > 0;
 };
+
+
+export const getSiteForAdminMutationRepo = async (
+  client: PoolClient,
+  siteId: string,
+  organizationId: string
+) => {
+  const { rows } = await client.query(
+    `
+    SELECT
+      id,
+      organization_id,
+      status,
+      site_name,
+      site_admin_email_activation_pending
+    FROM sites
+    WHERE id = $1
+      AND organization_id = $2
+    `,
+    [siteId, organizationId]
+  );
+
+  return rows[0];
+};
+
+export const verifyUserIsSiteAdminRepo = async (
+  client: PoolClient,
+  siteId: string,
+  userId: string
+): Promise<boolean> => {
+  const { rowCount } = await client.query(
+    `
+    SELECT 1
+    FROM site_user_roles
+    WHERE site_id = $1
+      AND user_id = $2
+      AND role = 'site_admin'
+    LIMIT 1
+    `,
+    [siteId, userId]
+  );
+
+  return (rowCount ?? 0) > 0;
+};
+
+export const removeSiteAdminRepo = async (
+  client: PoolClient,
+  siteId: string,
+  userId: string
+) => {
+  await client.query(
+    `
+    DELETE FROM site_user_roles
+    WHERE site_id = $1
+      AND user_id = $2
+      AND role = 'site_admin'
+    `,
+    [siteId, userId]
+  );
+};
+
+export const markSiteAdminPendingRepo = async (
+  client: PoolClient,
+  siteId: string,
+  pending: boolean
+) => {
+  await client.query(
+    `
+    UPDATE sites
+    SET site_admin_email_activation_pending = $2
+    WHERE id = $1
+    `,
+    [siteId, pending]
+  );
+};

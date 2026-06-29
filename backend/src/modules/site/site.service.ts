@@ -27,7 +27,11 @@ import {
   findValidEmailChangeOtpRepo,
   markEmailChangeOtpVerifiedRepo,
   getMonitorAssignedSiteIdsRepo,
-  verifyMonitorSiteAccessRepo
+  verifyMonitorSiteAccessRepo,
+  getSiteForAdminMutationRepo,
+  verifyUserIsSiteAdminRepo,
+  removeSiteAdminRepo,
+  markSiteAdminPendingRepo,
 
 } from "./site.repository";
 import { EditSitePayload } from "./site.types"
@@ -847,6 +851,98 @@ export const editSiteService = async (
   }
 };
 
+
+const handleSiteAdminMutation = async (
+  client: PoolClient,
+  requesterId: string,
+  requesterRole: string,
+  organizationId: string,
+  payload: EditSiteUserPayload
+) => {
+  if (!payload.site_id) {
+    throw new Error("site_id is required");
+  }
+
+  const site = await getSiteForAdminMutationRepo(
+    client,
+    payload.site_id,
+    organizationId
+  );
+
+  if (!site) {
+    throw new Error("Site not found");
+  }
+
+  if (requesterRole === "org_site_manager") {
+    const hasAccess = await verifyManagerSiteAccessRepo(
+      client,
+      requesterId,
+      payload.site_id
+    );
+
+    if (!hasAccess) {
+      throw new Error("Access denied for this site");
+    }
+  }
+
+  const isCurrentAdmin = await verifyUserIsSiteAdminRepo(
+    client,
+    payload.site_id,
+    payload.user_id
+  );
+
+  if (!isCurrentAdmin) {
+    throw new Error("User is not the site admin for this site");
+  }
+
+  if (payload.action === "remove_admin") {
+    if (site.status === "active") {
+      throw new Error(
+        "Active site must have a site admin. Please assign a new site admin before removing the current one."
+      );
+    }
+
+    await removeSiteAdminRepo(client, payload.site_id, payload.user_id);
+    await markSiteAdminPendingRepo(client, payload.site_id, true);
+
+    return {
+      message: "Site admin removed successfully",
+    };
+  }
+
+  if (payload.action === "replace_admin") {
+    if (!payload.new_admin_email) {
+      throw new Error("new_admin_email is required");
+    }
+
+    const newAdmin = await findUserByEmailRepo(
+      client,
+      payload.new_admin_email
+    );
+
+    if (!newAdmin) {
+      throw new Error("New admin user not found");
+    }
+
+    if (newAdmin.role !== "site_admin") {
+      throw new Error("New admin user must have site_admin role");
+    }
+
+    await replaceSiteAdminRepo(client, payload.site_id, newAdmin.id);
+    await markSiteAdminPendingRepo(
+      client,
+      payload.site_id,
+      !newAdmin.email_verified
+    );
+
+    return {
+      message: "Site admin replaced successfully",
+    };
+  }
+
+  throw new Error("Invalid site admin action");
+};
+
 export const editSiteUserService = async (
   superAdminId: string,
   payload: EditSiteUserPayload
@@ -859,14 +955,19 @@ export const editSiteUserService = async (
     await client.query("BEGIN")
 
     const superAdmin = await client.query(
-      `SELECT role FROM users WHERE id=$1`,
+      `
+      SELECT role, organization_id
+      FROM users
+      WHERE id = $1
+  `,
       [superAdminId]
-    )
+    );
 
     if (!superAdmin.rows.length)
       throw new Error("Super admin not found")
 
     const role = superAdmin.rows[0].role
+    const organizationId = superAdmin.rows[0].organization_id;
 
     if (role !== "super_admin" && role !== "org_site_manager")
       throw new Error("Unauthorized")
@@ -878,6 +979,23 @@ export const editSiteUserService = async (
 
     if (!user)
       throw new Error("User not found")
+
+    if (
+      payload.action === "remove_admin" ||
+      payload.action === "replace_admin"
+    ) {
+      const result = await handleSiteAdminMutation(
+        client,
+        superAdminId,
+        role,
+        organizationId,
+        payload
+      );
+
+      await client.query("COMMIT");
+
+      return result;
+    }
 
 
     /*MANAGER SITE ACCESS CHECK (FIXED) */

@@ -77,6 +77,7 @@ const SiteDetails = () => {
 
     const [adminModal, setAdminModal] = useState(false);
     const [newAdminEmail, setNewAdminEmail] = useState("");
+    const [removeAdminModal, setRemoveAdminModal] = useState(false);
 
 
 
@@ -124,26 +125,52 @@ const SiteDetails = () => {
     };
 
     const removeAdmin = () => {
-        if (!admin) return;
+        if (!admin || !siteId) return;
 
-        dispatch(editSiteUserThunk({
-            action: "remove_admin",
-            user_id: admin.id
-        }));
+        if (site.status === "active") {
+            alert("Active site must have a site admin. Please assign a new site admin instead.");
+            setAdminModal(true);
+            return;
+        }
+
+        setRemoveAdminModal(true);
+    };
+
+    const confirmRemoveAdmin = async () => {
+        if (!admin || !siteId) return;
+
+        const result = await dispatch(
+            editSiteUserThunk({
+                action: "remove_admin",
+                site_id: siteId,
+                user_id: admin.id,
+            })
+        );
+
+        if (editSiteUserThunk.fulfilled.match(result)) {
+            setRemoveAdminModal(false);
+            dispatch(fetchSiteDetailsThunk(siteId));
+        }
     };
 
 
-    const addViewer = () => {
+    const addViewer = async () => {
+        if (!siteId || !newViewerEmail.trim()) return;
 
-        if (!newViewerEmail) return;
+        const result = await dispatch(
+            updateSiteThunk({
+                siteId,
+                data: {
+                    add_viewers: [newViewerEmail.trim()],
+                },
+            })
+        );
 
-        dispatch(editSiteUserThunk({
-            action: "add_viewer",
-            email: newViewerEmail
-        }));
-
-        setNewViewerEmail("");
-
+        if (updateSiteThunk.fulfilled.match(result)) {
+            setNewViewerEmail("");
+            setViewerModal(false);
+            dispatch(fetchSiteDetailsThunk(siteId));
+        }
     };
 
     const assignSiteAdmin = async () => {
@@ -152,25 +179,54 @@ const SiteDetails = () => {
             return;
         }
 
-        const result = await dispatch(updateSiteThunk({
-            siteId,
-            data: {
-                new_admin_email: newAdminEmail.trim()
-            }
-        }));
+        let result;
 
-        if (updateSiteThunk.fulfilled.match(result)) {
+        if (admin) {
+            result = await dispatch(
+                editSiteUserThunk({
+                    action: "replace_admin",
+                    site_id: siteId,
+                    user_id: admin.id,
+                    new_admin_email: newAdminEmail.trim(),
+                })
+            );
+        } else {
+            result = await dispatch(
+                updateSiteThunk({
+                    siteId,
+                    data: {
+                        new_admin_email: newAdminEmail.trim(),
+                    },
+                })
+            );
+        }
+
+        if (
+            editSiteUserThunk.fulfilled.match(result as any) ||
+            updateSiteThunk.fulfilled.match(result as any)
+        ) {
             setAdminModal(false);
             setNewAdminEmail("");
             dispatch(fetchSiteDetailsThunk(siteId));
         }
     };
 
-    const removeViewer = (viewerId: string) => {
-        dispatch(editSiteUserThunk({
-            action: "remove_viewer",
-            user_id: viewerId
-        }));
+
+    const removeViewer = async (viewerEmail: string) => {
+        if (!siteId || !viewerEmail) return;
+
+        const result = await dispatch(
+            updateSiteThunk({
+                siteId,
+                data: {
+                    remove_viewers: [viewerEmail],
+                },
+            })
+        );
+
+        if (updateSiteThunk.fulfilled.match(result)) {
+            dispatch(fetchSiteDetailsThunk(siteId));
+        }
     };
 
     const requestEmailChange = () => {
@@ -555,15 +611,23 @@ const SiteDetails = () => {
 
                                         <div className="user-actions">
 
-                                            <FaUserEdit
-                                                className="user-icon"
+                                            <button
+                                                className="user-action-btn edit"
+                                                type="button"
                                                 onClick={() => setEditingAdmin(true)}
-                                            />
+                                            >
+                                                <FaUserEdit />
+                                                Edit
+                                            </button>
 
-                                            <FaUserMinus
-                                                className="user-icon"
+                                            <button
+                                                className="user-action-btn danger"
+                                                type="button"
                                                 onClick={removeAdmin}
-                                            />
+                                            >
+                                                <FaUserMinus />
+                                                {site.status === "active" ? "Replace Required" : "Remove Admin"}
+                                            </button>
 
                                         </div>
 
@@ -677,6 +741,44 @@ const SiteDetails = () => {
 
                     </div>
 
+                )}
+
+                {removeAdminModal && admin && (
+                    <div className="modal-overlay">
+                        <div className="modal-card admin-danger-modal-card">
+                            <div className="danger-modal-icon">
+                                <FaUserMinus />
+                            </div>
+
+                            <h3>Remove Site Admin?</h3>
+
+                            <p className="modal-helper-text">
+                                This will remove <strong>{admin.full_name}</strong> as the site admin
+                                for this site.
+                            </p>
+
+                            <div className="admin-warning-box">
+                                This is allowed because the site is not active yet. Active sites must
+                                always have a site admin assigned.
+                            </div>
+
+                            <div className="modal-actions">
+                                <Button
+                                    size="medium"
+                                    onClick={confirmRemoveAdmin}
+                                >
+                                    Remove Admin
+                                </Button>
+
+                                <Button
+                                    size="medium"
+                                    onClick={() => setRemoveAdminModal(false)}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {adminModal && (

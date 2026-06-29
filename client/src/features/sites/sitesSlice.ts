@@ -15,11 +15,12 @@ import {
 } from "../../services/sites.service";
 
 import type {
- SiteInfo,
- // SiteUser,
+  SiteInfo,
+  // SiteUser,
   SiteDetails,
   CreateSitePayload,
-  UpdateSitePayload
+  UpdateSitePayload,
+  EditSiteUserPayload
 } from "../../services/sites.service";
 
 
@@ -327,25 +328,22 @@ export const verifyEmailChangeThunk = createAsyncThunk(
 
 export const editSiteUserThunk = createAsyncThunk(
   "sites/editSiteUser",
-  async (payload: any, thunkAPI) => {
-
+  async (payload: EditSiteUserPayload, thunkAPI) => {
     try {
+      const result = await editSiteUser(payload);
 
-      const result = await editSiteUser(payload)
-
-      return result
-
+      return {
+        ...result,
+        request: payload,
+      };
     } catch (error: any) {
-
       return thunkAPI.rejectWithValue(
         error.response?.data?.message ||
         "Failed to update site user"
-      )
-
+      );
     }
-
   }
-)
+);
 
 
 const sitesSlice = createSlice({
@@ -594,11 +592,23 @@ const sitesSlice = createSlice({
 
       })
 
-      .addCase(editSiteUserThunk.fulfilled, (state) => {
+      .addCase(editSiteUserThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.siteUserUpdated = true;
 
-        state.loading = false
-        state.siteUserUpdated = true
+        const request = action.payload.request;
 
+        if (request.action === "remove_admin") {
+          const selectedSite = state.selectedSite;
+
+          if (
+            selectedSite &&
+            selectedSite.site_admin &&
+            selectedSite.site_admin.id === request.user_id
+          ) {
+            selectedSite.site_admin = null;
+          }
+        }
       })
 
       .addCase(editSiteUserThunk.rejected, (state, action) => {

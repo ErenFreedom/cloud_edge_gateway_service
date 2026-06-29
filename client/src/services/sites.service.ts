@@ -146,6 +146,9 @@ export interface UpdateSitePayload {
   longitude?: number;
 
   new_admin_email?: string;
+
+  add_viewers?: string[];
+  remove_viewers?: string[];
 }
 
 
@@ -226,22 +229,69 @@ export const verifyEmailChange = async (
 
 };
 
+export type EditSiteUserAction =
+  | "update_user"
+  | "remove_admin"
+  | "replace_admin";
+
+export interface EditSiteUserPayload {
+  user_id: string;
+
+  action?: EditSiteUserAction;
+
+  site_id?: string;
+  new_admin_email?: string;
+
+  full_name?: string;
+  phone?: string;
+  birthdate?: string;
+  gender?: string;
+  aadhaar_pan?: string;
+
+  new_password?: string;
+  old_password?: string;
+
+  new_email?: string;
+  current_password?: string;
+}
+
 
 export const editSiteUser = async (
-  payload: {
-    user_id?: string
-    full_name?: string
-    phone?: string
-    birthdate?: string
-    gender?: string
-    action?: "add_viewer" | "remove_viewer" | "remove_admin"
-    email?: string
-  }
+  payload: EditSiteUserPayload
 ) => {
   const response = await apiClient.put(
     "/sites/users/edit",
     payload
-  )
+  );
 
-  return response.data
-}
+  return response.data;
+};
+
+
+export const removeSiteAdmin = async (
+  payload: {
+    site_id: string;
+    user_id: string;
+  }
+) => {
+  return editSiteUser({
+    action: "remove_admin",
+    site_id: payload.site_id,
+    user_id: payload.user_id,
+  });
+};
+
+export const replaceSiteAdmin = async (
+  payload: {
+    site_id: string;
+    user_id: string;
+    new_admin_email: string;
+  }
+) => {
+  return editSiteUser({
+    action: "replace_admin",
+    site_id: payload.site_id,
+    user_id: payload.user_id,
+    new_admin_email: payload.new_admin_email,
+  });
+};

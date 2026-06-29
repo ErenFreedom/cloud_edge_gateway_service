@@ -94,21 +94,24 @@ export interface SiteUser {
 }
 
 export interface EditSiteUserPayload {
+  user_id: string;
 
-  user_id: string
+  action?: "update_user" | "remove_admin" | "replace_admin";
 
-  full_name?: string
-  phone?: string
-  birthdate?: string
-  gender?: string
-  aadhaar_pan?: string
+  site_id?: string;
+  new_admin_email?: string;
 
-  new_password?: string
-  old_password?: string
+  full_name?: string;
+  phone?: string;
+  birthdate?: string;
+  gender?: string;
+  aadhaar_pan?: string;
 
-  new_email?: string
-  current_password?: string
+  new_password?: string;
+  old_password?: string;
 
+  new_email?: string;
+  current_password?: string;
 }
 
 
